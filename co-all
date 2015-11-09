@@ -1,0 +1,48 @@
+#!/bin/sh
+# $Id: co-all,v 45.0 1997/09/19 05:40:42 jthomas Exp $
+# Copyright (C) 1995, The University of Texas at Austin.
+#
+# Program to check out (co) all P2 source files assuming that the
+# corresponding file in the user's directory is writable
+# (which usually indicates that the file not already checked out locked).
+#
+
+#
+# This program should only be run from the root directory of the P2
+# developer's source hierarchy.
+#
+
+#
+# The list sub_dirs is a list of the sub-directories of the root.
+#
+sub_dirs="common ddl doc gc info paces pb rl tools x xp"
+
+#
+# Iterate over all P2 src directories and all files in those directories.
+#
+for dir in . $sub_dirs
+do
+  #
+  # cd to $dir
+  #
+  echo "cd $dir"
+  cd $dir
+  #
+  # Check-out all RCS files
+  #
+  for file in RCS/*,v
+  do
+    name=`echo $file | sed -e 's,^.*/,,' -e 's/,v$//'`
+    if [ ! -w $name ]; then
+      co $* $file
+    fi
+  done
+  if [ $dir != . ]; then
+    cd ..
+  fi
+done
+
+#
+# Exit.
+#
+exit 0

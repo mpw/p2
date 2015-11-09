@@ -1,0 +1,26 @@
+/* $Id: gcc6.p2,v 45.0 1997/09/19 05:43:24 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* gcc-specific extensions: typeof */
+
+int *xxx;
+
+typeof (*xxx) yyy1 = 0;
+typeof (*xxx) yyy2[4];
+typeof (typeof (char *)[4]) yyy3;
+
+int foobar1 = sizeof (typeof (char *)[4]);
+int foobar2 = sizeof (typeof (12));
+
+#define pointer(T)  typeof(T *)
+#define array(T, N) typeof(T [N])
+
+array (pointer (char), 4) yyy4;
+
+int
+main()
+{
+  typeof (yyy1) zzz = 0;
+  yyy1 = zzz;
+  return yyy1;
+}

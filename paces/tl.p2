@@ -1,0 +1,172 @@
+/* $Id: tl.p2,v 45.0 1997/09/19 05:44:24 jthomas Exp $ */
+
+#include        <stdio.h>
+/* #include "P2_paces.h" */
+
+#define ITERATOR	foreach
+#define	ALL_CURSORS	1
+#define ALL_DATA	1
+#define DELETE		1
+#define BINTREE		0
+#define CONCEPTUAL	1
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+   int   tfield; /* timestamp field */
+} emp_type;
+
+
+emp_type rawdata[] = {
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10070,22,"Biology","Andrews, Kay" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10010,40,"Biology","Akin, Monica" },
+   { 10050,42,"Biology","Akerson, Suzanne" },
+   { 10040,53,"Biology","Akerson, Mary" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10030,23,"Biology","Akerson, Gwyn" },
+   { -1 }
+};
+
+typex {
+  t = conceptual[vtimestamp[cardinality[tlist[malloc[transient]]]]];
+}
+
+container <emp_type> stored_as t with {
+  tlist key is  tfield;
+  vtimestamp field is tfield counter is counter1; 
+} emp_cont;
+
+int counter1 = 1;
+
+typedef cursor <emp_cont> basic_type;
+basic_type all_emp, c1,c2,c3;
+
+cursor <emp_cont> orderby ascending name  name_emp;
+
+cursor <emp_cont> where "$.empno > 10040 && $.tfield > 5"  orderby descending name c4;
+
+cursor <emp_cont> where "$.age > 50" orderby  ascending age   old_emp;
+
+
+
+typedef generic_cursor <emp_type> GC;
+
+
+void print_data( GC gc, char *cursor_name )
+{
+  printf( "contents of %s:\n", cursor_name );
+  foreach( gc ) {
+    printf( "       name: %s", gc.name );
+    printf( "  dept_name: %s\n", gc.dept_name );
+    printf( "        age: %d", gc.age );
+    printf( "      empno: %d", gc.empno );
+    printf( "       time: %d\n", gc.tfield );
+  }
+}
+
+void print_all()
+{
+    foreach (name_emp) { 
+    printf( "       name: %s", name_emp.name );
+    printf( "  dept_name: %s\n", name_emp.dept_name );
+    printf( "        age: %d", name_emp.age );
+    printf( "      empno: %d", name_emp.empno );
+    printf( "       time: %d\n", name_emp.tfield );
+  }
+}
+   
+
+
+int main ( void ) 
+{
+    int loop;
+    int i;
+    emp_type *p;
+
+  open_cont( emp_cont );
+  init_curs( old_emp );
+  init_curs( all_emp );
+  init_curs(name_emp);
+  init_curs( c1 );
+  init_curs( c2 );
+    init_curs(c3);
+  init_curs( c4 );
+
+  for (i=0, p = rawdata; p->empno != -1; i++, p++) 
+  {
+      insert( all_emp, *p );
+  }
+
+    /* first print all data */
+    printf("##### ORDERBY NAME DATA #######\n");
+    print_all();
+    printf("size = %d\n",cardinality(emp_cont));
+    
+    reset_start(c1);
+    reset_start(c2);
+    reset_start(c3);
+
+    printf("##### Using timestamp #######\n");
+    print_data( (GC) &all_emp, "all_emp"); 
+    
+    printf("##### c1 - Updating 3rd element #######\n");
+    printf("##### c2 - Updating 4rd element #######\n");
+    printf("##### c3 - Pointing to 4th element #######\n");
+    adv(c1); 
+    adv(c1); 
+
+    c2 = c1;
+    adv(c2);
+    pos(c3,c2.obj);
+    upd(c1, dept_name,"Sears");
+    upd(c2, dept_name,"Macys");
+
+    printf("##### Using timestamp #######\n");
+    print_data( (GC) &all_emp, "all_emp"); 
+
+    printf("##### Doing adv(on c1) #######\n");
+    adv(c1);
+    printf("adv name is: %s\n", end_adv(c1) ? "null" : c1.name);
+    
+
+    printf("##### Doing adv(on c3) #######\n");
+    adv(c3);
+    printf("adv name is: %s\n", end_adv(c3) ? "null" : c3.name);
+    printf("##### Doing rev(on c3) #######\n");
+    rev(c3);
+    printf("rev name is: %s\n", end_rev(c3) ? "null" : c3.name);
+
+    printf("##### Trying to change c3's timestamp to 500  #######\n");
+    upd(c3,tfield,500);
+    printf("c3 tfield is: %d\n", end_rev(c3) ? -1 : c3.tfield);
+
+    print_data( (GC) &c4, "recent emp && tfield > 5"); 
+
+    printf("######## updating old employees dept to Computer Science ###\n");
+    foreach( old_emp )
+    {
+        upd(old_emp, dept_name, "Computer Science");
+    }
+    print_data( (GC) &all_emp, "All Employees");
+
+    print_data( (GC) &old_emp, "old emp"); 
+    foreach( old_emp )
+    {
+        delete( old_emp );
+    }
+
+    printf("##### Deleted old emp #######\n");
+    print_data( (GC) &old_emp, "old emp"); 
+    print_data( (GC) &all_emp, "remaining emp"); 
+    printf("size = %d\n",cardinality(emp_cont));
+
+
+  close_cont( emp_cont );
+  exit( 0 );
+}
+

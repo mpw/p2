@@ -1,0 +1,108 @@
+/* $Id: avail02.p2,v 45.0 1997/09/19 05:42:48 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test the layer x/avail.xp */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include <stdio.h>    /* printf() */
+#include <assert.h>   /* assert() */
+#include "P2_paces.h"
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+#define N 10
+#define M 10000
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* Use hash. */
+#if 1
+#if !defined(HASH)
+#define HASH
+#endif /* HASH */
+#endif
+
+/*****************************************************************************/
+/*                  Declare typex and schema.                                */
+/*****************************************************************************/
+
+typex {
+#if defined(HASH)
+  t = top2ds[qualify[cardinality[hash[avail[array[transient]]]]]];
+#else
+  t = top2ds[qualify[cardinality[avail[array[transient]]]]];
+#endif /* HASH */
+}
+
+typedef struct {
+  int i; /* index: 0..N-1 */
+  int s; /* serial number: 0..M-1 */
+} E;
+
+container <E> stored_as t with {
+#if defined(HASH)
+  hash key is i with size N;
+#endif /* HASH */
+  array size is N;
+} k;
+
+
+int i;
+
+cursor <k> where "$.i == i" q; /* qualified. */
+
+E e;
+int s;
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main()
+{
+  init_cont(k);
+  init_curs(q);
+
+  assert(cardinality(k) == 0);
+  for (s = 0; s < M; s++)
+  {
+    assert(cardinality(k) >= 0);
+    assert(cardinality(k) <= N);
+    i = (rand() % N);
+    assert(i >= 0 && i < N);
+    reset_start(q);
+    if (!end_adv(q))
+    {
+      /* delete */
+      assert(q.i == i);
+#if defined(DEBUG)
+      printf("deleting i=%d s=%d\n", q.i, q.s);
+#endif /* DEBUG */
+      delete(q);
+    }
+    else
+    {
+      /* insert */
+#if defined(DEBUG)
+      printf("inserting i=%d s=%d\n", i, s);
+#endif /* DEBUG */
+      e.i = i;
+      e.s = s;
+      insert(q, e);
+    }
+  }
+
+  close_cont(k);
+  return 0;
+}

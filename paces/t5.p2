@@ -1,0 +1,117 @@
+/* $Id: t5.p2,v 45.0 1997/09/19 05:44:22 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define ITERATOR	foreach
+#define	ALL_CURSORS	1
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+   int tfield;
+} emp_type;
+
+emp_type rawdata[] = {
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10070,22,"Biology","Andrews, Kay" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10010,40,"Biology","Akin, Monica" },
+   { 10050,42,"Biology","Akerson, Suzanne" },
+   { 10040,53,"Biology","Akerson, Mary" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10030,23,"Biology","Akerson, Gwyn" },
+   { -1 }
+};
+
+typex {
+  t = conceptual[vtimestamp[cardinality[odlist[P2_DELFLAG_LAYER[
+        malloc_multi[transient]]]]]];
+}
+
+container <emp_type> stored_as t with {
+  odlist key is name;
+  /* malloc_multi size is 2;  */
+  /* predmalloc size is 1024; */
+  /* timestamp on counter1; */
+  vtimestamp field is tfield counter is counter1; 
+} emp_cont;
+
+int counter1 = 1;
+
+#define RECENT_EMP_ORDERBY	orderby ascending empno
+
+#if ALL_CURSORS
+typedef cursor <emp_cont>                    orderby descending empno all_emp_type;
+all_emp_type				                              all_emp;
+
+cursor <emp_cont> where "$.name <= 'Al' "    orderby descending name  ak_emp;
+cursor <emp_cont> where "$.empno > 10020"    orderby descending empno recent_emp;
+#endif
+
+typedef cursor <emp_cont> where "$.age > 40" orderby  ascending age   old_emp_type;
+old_emp_type                                                          old_emp;
+
+typedef generic_cursor <emp_type> GC;
+
+
+
+void print_data( GC gc, char *cursor_name )
+{
+  int tm;
+  printf( "contents of %s:\n", cursor_name );
+  foreach( gc ) {
+    tm = gc.tfield;
+    printf( "       name: %s", gc.name );
+    printf( "  dept_name: %s\n", gc.dept_name );
+    printf( "        age: %d", gc.age );
+    printf( "      empno: %d", gc.empno );
+    printf( "       time: %d\n", tm );
+  }
+}
+
+int main ( void ) 
+{
+    int loop;
+    int i;
+    emp_type *p;
+    int   sz; 
+    int tm;
+
+  open_cont( emp_cont );
+  init_curs( old_emp );
+  init_curs( all_emp );
+  init_curs( recent_emp );
+  init_curs( ak_emp );
+
+  for (i=0, p = rawdata; p->empno != -1; i++, p++) 
+  {
+      insert( all_emp, *p );
+  }
+
+    print_data( (GC) &all_emp, "All Employees");
+    printf("size = %d\n",cardinality(emp_cont));
+
+    
+    print_data( (GC) &ak_emp, "AK emp"); 
+    print_data( (GC) &recent_emp, "recent emp"); 
+    print_data( (GC) &old_emp, "old emp"); 
+
+  ITERATOR( old_emp )
+  {
+    delete( old_emp );
+  }
+
+    print_data( (GC) &old_emp, "old emp"); 
+    print_data( (GC) &all_emp, "remaining emp"); 
+    sz = cardinality(emp_cont);
+    printf("size = %d\n",sz);
+
+
+  close_cont( emp_cont );
+  exit( 0 );
+}

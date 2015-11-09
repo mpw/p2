@@ -1,0 +1,50 @@
+/* $Id: mmap_shared04.p2,v 45.0 1997/09/19 05:43:49 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Single process, multiple mmap_shared segments. */
+
+/* Analogous to paces/mmap_shared05.p2 */
+/* Open 3 mmap shared files with names that differ only in one
+   character of their name.  Currently, the number of mmap file hash
+   buckets (defined by MAX_MMAP_FILE in paces/P2_mmap.c) is 25, so there
+   should be no hash clash with an reasonable str_hash function */
+
+typedef struct {
+  int i;
+} S;
+
+typex {
+  t = top2ds[array[mmap_shared]];
+}
+
+container <S> stored_as t with {
+  mmap_shared file is "/tmp/P2_mmap_shared04-1-data" with size 100;
+  array size is 1;
+} cont1;
+
+container <S> stored_as t with {
+  mmap_shared file is "/tmp/P2_mmap_shared04-2-data" with size 100;
+  array size is 1;
+} cont2;
+
+container <S> stored_as t with {
+  mmap_shared file is "/tmp/P2_mmap_shared04-3-data" with size 100;
+  array size is 1;
+} cont3;
+
+main()
+{
+  /* Initialize process manager. */
+  P2_init_process();
+  /* Open containers. */
+  open_cont(cont1);
+  open_cont(cont2);
+  open_cont(cont3);
+  /* Close containers. */
+  close_cont(cont3);
+  close_cont(cont2);
+  close_cont(cont1);
+  /* Delete process manager. */
+  P2_delete_process();
+  exit(0);
+}

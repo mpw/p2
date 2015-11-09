@@ -1,0 +1,9 @@
+/* $Id: const04.p2,v 45.0 1997/09/19 05:43:01 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+const c1 = 1;
+
+main()
+{
+  return(0);
+}

@@ -1,0 +1,129 @@
+#!/bin/sh
+# $Id: ci-all,v 45.1 1997/09/19 07:53:46 jthomas Exp $
+# Copyright (C) 1995, The University of Texas at Austin.
+#
+# Program to check in (ci) all P2 source files that the user currently
+# has checked out locked (co -l).
+#
+
+#
+# This program should only be run from the root directory of the P2
+# developer's directory hierarchy.
+#
+
+#
+# The list sub_dirs is a list of the sub-directories of the root.
+#
+sub_dirs="common ddl doc gc info paces pb rl tools x xp"
+
+#
+# Embedded tab, do not remove. (JAT)
+#
+tab="	"
+
+#
+# Program defaults.
+#
+expand="yes"
+rcsdiff="no"
+
+#
+# Process command line
+#
+for option do
+  case $option in
+    -h|--help)
+      echo "Copyright (C) 1994, The University of Texas at Austin."
+      echo "Usage: ci-all [options]"
+      echo "Options:"
+      echo "-e, --[no-]expand-tabs  Do (default) [not] expand tabs in source file"
+      echo "-r, --[no-]rcsdiff      Do [not] (default) rcsdiff this file"
+      echo "-h, --help              Print this message"
+      exit 0 ;;
+    -e|--expand-tabs)
+      expand=yes ;;
+    --no-expand-tabs)
+      expand=no ;;
+    -r|--rcsdiff)
+      rcsdiff=yes ;;
+    --no-rcsdiff)
+      rcsdiff=no ;;
+    *)
+      echo "Usage: ci-all [options]"
+      exit 1 ;;
+  esac
+done
+
+#
+# Iterate over all P2 src directories and all files in those directories.
+#
+for dir in . $sub_dirs
+do
+  if [ -d $dir ]; then
+    echo "cd $dir"
+    cd $dir
+    for file in *
+    do
+      rcsfile="RCS/$file,v"
+
+      # If the rcs file exists, the user has write permission for
+      # the file, and rlog indicates that the file is currently
+      # checked-out, then check it in.
+
+      # The write permission test prevents the error of
+      # a file being checked in from the wrong directory.
+      # This error could occur, for example, in the case of a
+      # file in common/RCS which has soft links to it from
+      # pb/RCS and xp/RCS.  Without the write permission test,
+      # if the file has been checked out and modified in pb,
+      # the file will be checked in from common (since common
+      # appears before pb in the list of directories), and the
+      # changes made to the file will be lost.  With the write
+      # permission test, the file will not be checked in from
+      # common, since the user will not have write permission
+      # for the version in common.
+
+      if [ -f $rcsfile ] \
+         && [ -w $file ] \
+         && [ "x`rlog -L -R $rcsfile`" = "x$rcsfile" ]
+      then
+        #
+        # expand tabs
+        #
+        if [ "$expand" = "yes" ]; then
+	grep "$tab" $file >/dev/null
+	if [ $? -eq 0 ]; then
+            case $file in
+              *.c|*.h|*.l|*.y|*.xp)
+                echo -n "expanding $file ... "
+                cp $file $file~
+                expand $file~ > $file
+                echo "done" ;;
+            esac
+          fi
+        fi
+        #
+        # rcsdiff
+        #
+        if [ "$rcsdiff" = "yes" ]; then
+          echo "diff between $file and $rcsfile:"
+	  rcsdiff $file
+        fi
+        #
+        # ci
+        #
+        echo "checking in $file"
+        ci -u -q $file
+      fi
+    done
+    if [ $dir != . ]; then
+      echo "cd .."
+      cd ..
+    fi
+  fi
+done
+
+#
+# Exit.
+#
+exit 0

@@ -1,0 +1,1538 @@
+// $Id: frankw01.p2h,v 45.0 1997/09/19 05:43:20 jthomas Exp $
+
+// Program to implement mathematical sets of integers.
+// Written by Xun Li (Summer intern at comm.mot.com).
+// Correspondence to Frank Weil (frankw@comm.mot.com)
+
+// Requires P2 version 0.9.6 or later.
+
+//
+//  select P2 version or hand-coded version (JAT)
+//
+
+#if 0
+#if !defined(P2)
+#define P2
+#endif // P2
+#endif
+
+//  
+//  include files 
+//  
+
+#include <math.h>
+#include <time.h>
+#include <stdio.h>
+#include <assert.h>
+
+//  
+//  define the number of sets we are going to use 
+//  
+
+#define NUM_SETS 30
+
+//  
+//  define the TRUE and FALSE 
+//  
+
+#define TRUE 1
+#define FALSE 0
+
+#if defined(P2)
+
+// This file defines the structures and functions necessary
+// to implement sets of integers in P2.
+//
+// The code in this file will be automatically generated
+// except where noted.
+//
+// Xun Li - 06/19/1997
+
+// Hide the fact that SET is a struct in the P2 version.
+#define INDIRECT
+#define ADDRESS &
+
+//
+//  use P2-specific "cheats" to improve performance.
+//
+
+#if 0
+#if !defined(CHEAT)
+#define CHEAT
+#endif // CHEAT
+#endif
+
+//
+// structure to hold integers - P2 needs a structure wrapped
+// around whatever data type the set holds (unless the set
+// elements are already structs).
+//
+
+typedef struct {
+  int num;
+} set_element_type;
+
+// Hash function.
+// This is a perfect (and, presumably, computationally efficient) hash
+// function for keys in the range -50...100.  The default P2 integer
+// hash function paces/P2.c:P2_int_hash() is not suitable for these
+// keys, because it hashes -n and n to the same value. (JAT)
+#if 1
+#ifdef __GNUC__
+inline static
+#endif
+int hash_function(int i, int size){
+#if 0
+  assert(i >= -50);
+  assert(i <= 100);
+#endif
+  return i+50;
+}
+#endif
+
+//
+// layer type - selected by users (for now)
+//
+
+#if 0
+#define MALLOC malloc
+#elif 0
+#define MALLOC malloc_multi
+#elif 1
+// delete() calls free() directly.
+// Dangerous if a single container has many cursors.
+// Safe for this program, since every container has at most one cursor. (JAT)
+#define MALLOC malloc_free
+#endif
+
+#if 1
+#define TRANSIENT transient
+#elif 0
+#define TRANSIENT transient_fast
+#endif
+
+// Slow.
+#if 1
+#define BOTTOM_LAYER MALLOC[TRANSIENT]
+// Fast.
+#elif 0
+#define BOTTOM_LAYER avail[MALLOC[TRANSIENT]]
+// Use reference counting to determine when it is safe to call free().
+// Over-kill for this program, since malloc_free is sufficient. (JAT)
+#elif 0
+#define BOTTOM_LAYER free[delflag[malloc[TRANSIENT]]]
+#endif
+
+#if 0
+// Fastest.
+// Fancy hash layer that combines hash with array and allows overwrites.
+// Fastest insert(), delete(), and reset_start() outweigh slow init_cont().
+// (JAT)
+#define OVERWRITE
+#define HASH
+#define P2_TYPEX top2ds_qualify[cardinality[hash_array_overwrite[TRANSIENT]]];
+#define P2_ANNOTATION hash_array_overwrite key is num with size 151 \
+                        option hash_function;
+// Fast.
+// Regular hash layer.
+// Fast init_cont(), insert(), delete(), and reset_start(). (JAT)
+#elif 0
+#define HASH
+#define P2_TYPEX top2ds_qualify[cardinality[hash[BOTTOM_LAYER]]];
+#define P2_ANNOTATION hash key is num with size 151 \
+                        option hash_function;
+// Fast. 
+// These stable linked list implementations appear to be fastest
+// non-hashed implementations, because the stable layers do NOT
+// require the inbetween layer, which slows down the adv() special
+// operation which appears in the expansion of the reset_start()
+// special operation in set_in(). (JAT)
+#elif 1
+#define P2_TYPEX top2ds_qualify[cardinality[slist_stable[BOTTOM_LAYER]]];
+#define P2_ANNOTATION
+#elif 0
+#define P2_TYPEX top2ds_qualify[cardinality[dlist_stable[BOTTOM_LAYER]]];
+#define P2_ANNOTATION
+// Slow.
+// These unstable linked list implementations are slowed by the fact
+// that the unstable layers REQUIRE the inbetween layer, which slows
+// down the adv() special operation which appears in the expansion of
+// the reset_start() special operation in set_in(). (JAT)
+#elif 0
+#define P2_TYPEX top2ds_qualify[inbetween[cardinality[ \
+                   slist[BOTTOM_LAYER]]]];
+#define P2_ANNOTATION 
+#elif 0
+#define P2_TYPEX top2ds_qualify[inbetween[cardinality[ \
+                   dlist[BOTTOM_LAYER]]]];
+#define P2_ANNOTATION 
+#elif 0
+// Slow.
+// This binary tree implementation is slowed by the fact that bintree
+// is not self balancing. (JAT)
+#define P2_TYPEX top2ds_qualify[inbetween[cardinality[bintree[BOTTOM_LAYER]]]];
+#define P2_ANNOTATION bintree key is num;
+#endif
+
+typex {
+  set_type = P2_TYPEX
+}
+
+// containers - one container needs to be statically declared
+// for each set variable declared.
+//
+// (Actually, if there are a maximum of N sets in use at any given
+// time, there needs to be a total of N containers.  For our tests,
+// though, we will assume that that equates to the number of sets
+// declared.)
+//
+
+typedef container <set_element_type> stored_as set_type with {
+  P2_ANNOTATION
+} SET;
+SET get_set[NUM_SETS];
+SET dif_set;
+
+#else // P2
+
+// Hide the fact that SET is a pointer in the hand-coded version.
+#define INDIRECT *
+#define ADDRESS
+
+//  
+//  the structure of set is defined here 
+//  
+
+typedef struct DUMMY{ 
+  int num; 
+  struct DUMMY *next; 
+} SET;
+
+//  
+//  the stopping point of every set is on this null set 
+//  
+
+#define NULL_ELEMENT ((SET *) FALSE)
+
+//  
+//  the array that stores every set 
+//  
+
+SET *get_set[NUM_SETS];
+
+#endif // P2
+
+//  
+//  initiallize all the sets to NULL 
+//  
+
+void init_sets(){
+  int i;
+
+#if defined(P2)
+#if defined(CHEAT) && defined(HASH)
+  // Not necessary to call init_cont(), since set_init() calls it.
+#else
+  for(i = 0; i < 30; i++) {
+    init_cont(get_set[i]);
+  }
+#endif // CHEAT && HASH
+  init_cont(dif_set);
+#else // P2
+  for(i = 0; i < 30; i++)
+    get_set[i] = NULL_ELEMENT;
+#endif // P2
+}
+
+//  
+//  the function for set_size check the size of given set 
+//  
+
+int set_size(SET *set){
+#if defined(P2)
+  return cardinality(*set);
+#else // P2
+  int index = 0;
+  SET *cur_element = set;
+
+  while(cur_element != NULL_ELEMENT){
+    index++;
+    cur_element = cur_element->next;
+  }
+  
+  return index;
+#endif // P2
+}
+
+//  
+//  the function for set_is_empty check if set is empty 
+//  
+
+int set_is_empty(SET *set){
+#if defined(P2)
+  if (cardinality(*set) == 0)
+    return TRUE;
+  else
+    return FALSE;
+#else // P2
+  if(set == NULL_ELEMENT)
+    return TRUE;
+  else
+    return FALSE;
+#endif // P2
+}
+
+//  
+//  the function for set_in check if the given element is in the given set 
+//  
+
+// This function is the bottleneck for non-hashed implementations. (JAT)
+
+int set_in(SET *set, int element1){
+#if defined(P2)
+  cursor <*set> where "$.num == element1" c;
+  int f;
+  init_curs(c);
+  reset_start(c);
+  if (end_adv(c))
+    f = FALSE;
+  else
+    f = TRUE;
+  delete_curs(c);
+  return f;
+#else // P2
+  SET *cur_element = set;
+
+  while(cur_element != NULL_ELEMENT){
+    if(cur_element->num == element1)
+      return TRUE;
+    cur_element = cur_element->next;
+  }
+  
+  return FALSE;
+#endif // P2
+}
+
+//  
+//  the function for set_element output an arbitrary element from the given 
+//  set 
+//  
+
+int set_element(SET *set){
+#if defined(P2)
+  cursor <*set> c;
+  int num;
+  init_curs(c);
+  reset_start(c);
+#if 0
+  assert(!end_adv(c));
+#endif
+  num = c.num;
+  delete_curs(c);
+  return(num);
+#else // P2
+  return set->num;
+#endif // P2
+}
+
+//  
+//  the function for set_remove removes the input element from given set, 
+//  do nothing otherwise 
+//  
+
+void set_remove(SET * INDIRECT set, int element1){
+#if defined(P2)
+  cursor <*set> where "$.num == element1" c;
+  init_curs(c);
+  reset_start(c);
+  if (!end_adv(c)){
+    delete(c);
+  }
+  delete_curs(c);
+#else // P2
+  SET *cur_element = *set;
+  SET *pre_element;
+
+  if(*set == NULL_ELEMENT)
+    return;
+  if (cur_element->num == element1) {
+    *set = cur_element->next;
+    free((void *)cur_element);
+    return;
+  }
+
+  pre_element = cur_element;
+  cur_element = cur_element->next;
+  
+  while(cur_element != NULL_ELEMENT){
+    if(cur_element->num == element1){
+      pre_element->next = cur_element->next;
+      free((void *) cur_element);
+      break;
+    }
+    pre_element = cur_element;
+    cur_element = cur_element->next;
+  }
+#endif // P2
+}
+
+//  
+//  set_init function make the given set NULL 
+//  
+
+void set_init(SET * INDIRECT set){
+#if defined(P2)
+#if defined(CHEAT) && defined(HASH)
+  init_cont(*set);
+#else // CHEAT && HASH
+  // Delete all the elements in the container.
+#if 0
+  // This is the obvious way to do the deletion in P2, but: 
+  //   - Requires the inbetween layer.
+  //   - Different from the hand-coded version.
+  cursor <*set> c;
+  init_curs(c);
+  foreach(c){
+    delete(c);
+  }
+  delete_curs(c);
+#else
+  // This is a better way to do the deletion in P2:
+  //   + Does not require the inbetween layer.
+  //   + Similar to the hand-coded version.
+  cursor <*set> c;
+  cursor <*set> cur_element;
+  init_curs(c);
+  init_curs(cur_element);
+  reset_start(c);
+  while(!end_adv(c)){
+    cur_element.obj = c.obj; // Analogous to *set = cur_element;
+    adv(c);                  // Analogous to *set = set->next;
+    delete(cur_element);     // Analogous to free((void *) cur_element);
+  }
+  delete_curs(c);
+  delete_curs(cur_element);
+#endif
+#endif // CHEAT
+#else // P2
+  SET *cur_element = *set;
+  
+  while(cur_element != NULL_ELEMENT){
+    *set = cur_element->next;
+    free((void *) cur_element);
+    cur_element = *set;
+  }
+#endif // P2
+}
+
+//  
+//  set_add add the input element to the given set if the element is not 
+//  already in the set 
+//  
+
+// This function generates most of the calls to set_in, which is the
+// bottleneck for non-hashed implementations. (JAT)
+
+void set_add(SET * INDIRECT set, int element1){
+  if(!set_in(INDIRECT set, element1))
+  {
+#if defined(P2)
+    cursor <*set> c;
+    set_element_type node;
+    node.num = element1;
+    init_curs(c);
+    insert(c, node);
+    delete_curs(c);
+#else // P2
+    SET *new_element;
+    new_element = (SET *) malloc(sizeof(SET));
+    new_element->num = element1;
+    new_element->next = *set;
+    *set = new_element;
+#endif // P2
+  }
+}
+  
+//  
+//  set_copy copys a set to another set 
+//  
+
+void set_copy(SET *set1, SET * INDIRECT set2){
+#if defined(P2)
+  cursor <*set1> c1;
+  cursor <*set2> c2;
+  set_element_type node;
+#else // P2
+  SET *cur_element = set1;
+#endif // P2
+
+  if(!set_is_empty(INDIRECT set2))
+    set_init(set2);
+#if defined(P2)
+  init_curs(c1);
+  init_curs(c2);
+  foreach(c1){
+    node.num = c1.num;
+    insert(c2, node);
+  }
+  delete_curs(c1);
+  delete_curs(c2);
+#else // P2
+  while(cur_element != NULL_ELEMENT){
+    set_add(set2, cur_element->num);
+    cur_element = cur_element->next;
+  }
+#endif // P2
+}
+
+//  
+//  set_intersection take two input sets, and make the desinating set the 
+//  intersection of first two sets. 
+//  
+
+void set_intersection(SET *set1, SET *set2, SET * INDIRECT set3){
+#if defined(P2)
+  set_element_type node;
+  cursor <*set3> c3;
+#else // P2
+  SET *cur_element = set1;
+#endif // P2
+
+  if(!set_is_empty(INDIRECT set3))
+    set_init(set3);
+#if defined(P2)
+  init_curs(c3);
+#if defined(CHEAT)
+  // Iterate over the container with the smaller cardinality.
+  // A minor, but interesting, optimization. (JAT)
+  if (cardinality(*set2) < cardinality(*set1)) {
+    cursor <*set2> c2;
+    init_curs(c2);
+    foreach(c2){
+      if(set_in(set1, c2.num)){
+        node.num = c2.num;
+        insert(c3, node);
+      }
+    }
+    delete_curs(c2);
+  }
+  else
+#endif // CHEAT
+  {
+    cursor <*set1> c1;
+    init_curs(c1);
+    foreach(c1){
+      if(set_in(set2, c1.num)){
+        node.num = c1.num;
+        insert(c3, node);
+      }
+    }
+    delete_curs(c1);
+  }
+  delete_curs(c3);
+#else // P2
+  while(cur_element != NULL_ELEMENT){
+    if(set_in(set2, cur_element->num))
+      set_add(set3, cur_element->num);
+    cur_element = cur_element->next;
+  }
+#endif // P2
+}
+
+//  
+//  set_union get the union of two given set, and set them as the desinating 
+//  set 
+//  
+
+void set_union(SET *set1, SET *set2, SET * INDIRECT set3){
+#if defined(P2)
+  cursor <*set2> c2;
+#else // P2
+  SET *cur_element = set2;
+#endif // P2
+
+  set_copy(set1, set3);
+
+#if defined(P2)
+  init_curs(c2);
+  foreach(c2){
+#if 0
+    // set_add() performs this test.
+    if (!set_in(set3, c2.num))
+#endif
+      set_add(set3, c2.num);
+  }
+  delete_curs(c2);
+#else // P2
+  while(cur_element != NULL_ELEMENT){
+#if 0
+    // set_add() performs this test.
+    if(!set_in(set3, cur_element->num))
+#endif
+      set_add(set3, cur_element->num);
+    cur_element = cur_element->next;
+  }
+#endif // P2
+}
+
+//   
+//  set_difference take two input sets, and get difference from second set to 
+//  the first set and set it as the desinating set 
+//  
+
+void set_difference(SET *set1, SET *set2, SET * INDIRECT set3){
+#if defined(P2)
+  cursor <*set1> c1;
+#else // P2
+  SET *cur_element = set1;
+#endif // P2
+  
+  if(!set_is_empty(INDIRECT set3))
+    set_init(set3);
+#if defined(P2)
+  init_curs(c1);
+  foreach(c1){
+    if(!set_in(set2, c1.num))
+      set_add(set3, c1.num);
+  }
+  delete_curs(c1);
+#else // P2
+  while(cur_element != NULL_ELEMENT){
+    if(!set_in(set2, cur_element->num))
+      set_add(set3, cur_element->num);
+    cur_element = cur_element->next;
+  }
+#endif // P2
+}
+  
+//  
+//  set_equal check if the two given set are equal to each other 
+//  
+
+int set_equal(SET *set1, SET *set2){
+#if !defined(P2)
+  SET *dif_set = NULL_ELEMENT;
+#endif // P2
+
+  if(set_size(set1) != set_size(set2))
+    return FALSE;
+
+  set_difference(set1, set2, & dif_set);
+  return (set_is_empty(ADDRESS dif_set));
+}
+
+//  
+// set_subset check if the first input set is the subset of second input 
+// set 
+//  
+
+int set_subset(SET *set1, SET *set2){
+#if !defined(P2)
+  SET *dif_set = NULL_ELEMENT;
+#endif // P2
+
+  set_difference(set1, set2, & dif_set);
+  return (set_is_empty(ADDRESS dif_set));
+}
+
+//  
+//  set_proper_subset check if the first input set is the proper subset of 
+//  second input set 
+//  
+
+int set_proper_subset(SET *set1, SET *set2){
+  return (set_subset(set1, set2) && (set_size(set1) != set_size(set2)));
+}
+
+//  
+//  set_iterate is the only function that can't be directly translate into  
+//  p2 so I just make an example of its use by making a looping printing  
+//  function. iterate's p2 counter part is foreach or rofeach 
+//  
+
+void set_iterate(SET *set){
+#if defined(P2)
+  cursor <*set> c;
+  init_curs(c);
+  foreach(c){
+    printf("%5d", c.num);
+  }
+  delete_curs(c);
+#else // P2
+  SET *cur_element = set;
+
+  while(cur_element != NULL_ELEMENT){
+    printf("%5d", cur_element->num);
+    cur_element = cur_element->next;
+  }
+#endif // P2
+  puts("\n");
+}
+
+//  
+//  user specified constants 
+//  
+
+#define LIMIT 50
+#define SLIMIT 25
+
+//  
+//  user specified parameters and includes used for testing 
+//  
+
+#define DIVIDES(i, j) (!((i) % (j)))
+
+//  
+//  prototypes that are user-defined 
+//  
+
+void init_sint_int_who_nat_squ(SET * INDIRECT setsi, SET * INDIRECT seti,
+			       SET * INDIRECT setw, SET * INDIRECT setn,
+			       SET * INDIRECT sets);
+void init_prime_nprime(SET * INDIRECT setp, SET * INDIRECT setn);
+void init_even_odd(SET * INDIRECT seto, SET * INDIRECT sete);
+void init_fibinoci(SET * INDIRECT set);
+void init_single(SET * INDIRECT set0, SET * INDIRECT set1, SET * INDIRECT set2,
+		 SET * INDIRECT set3, SET * INDIRECT set4);
+void print_check(int set_num, int silent);
+void print_fail(int set_num);
+void print_function_check(int pass, char *name);
+void check_size(int silent);
+void check_empty(int silent);
+void check_in(int silent);
+void check_element(int silent);
+void check_remove(int silent);
+void check_add(int silent);
+void check_copy(int silent);
+void check_intersection(int silent);
+void check_union(int silent);
+void check_difference(int silent);
+void check_equal(int silent);
+void check_subset(int silent);
+void check_porper_subset(int silent);
+void check_iterate(int silent);
+void reset_sets();
+
+//  
+//  init_sint_int_who_nat_squ assign the short integer, integer, whole 
+//  number, natural number, whole square number sets 
+//  
+
+void init_sint_int_who_nat_squ(SET * INDIRECT setsi, SET * INDIRECT seti,
+			       SET * INDIRECT setw, SET * INDIRECT setn,
+			       SET * INDIRECT sets) {
+   int i;
+  
+   set_add(seti, 0);
+   set_add(setw, 0);
+   set_add(setsi, 0);
+
+   for(i = 1; i <= LIMIT; i++) {
+      set_add(seti, i);
+      set_add(setw, i);
+      set_add(setn, i);
+
+      set_add(seti, -i);
+      
+      if(i <= sqrt(LIMIT))
+	set_add(sets, i * i);
+   }
+
+   for(i = 1; i <= SLIMIT; i++) {
+      set_add(setsi, i);
+      set_add(setsi, -i);
+   }
+}
+
+//  
+//  this function initializes the prime non-prime sets 
+//  
+
+void init_prime_nprime(SET * INDIRECT setp, SET * INDIRECT setn) {
+   int i, j;
+   int is_prime;
+
+   set_add(setn, 0);
+   set_add(setn, 1);
+   set_add(setp, 2);
+
+   for(i = 3; i < LIMIT; i += 2) {
+     is_prime = TRUE;
+     
+     for(j = 3; j <= sqrt(i); j += 2)
+       if (DIVIDES(i, j)) {
+	 set_add(setn, i);
+	 is_prime = FALSE;
+	 continue;
+       }
+     
+     if(is_prime)
+       set_add(setp, i);
+     set_add(setn, i+1);
+   }
+}
+
+//  
+//  init_even_odd initializes the odd and even sets 
+//  
+
+void init_even_odd(SET * INDIRECT sete, SET * INDIRECT seto) {
+  int i;
+  
+  for (i = -LIMIT; i <= LIMIT; i++)
+     if (DIVIDES(i, 2))
+	set_add(sete, i);
+     else
+	set_add(seto, i);
+}
+
+//  
+//  init_fibinoci initializes the fibinoci number set 
+//  
+
+#if defined(P2)
+void init_fibinoci(SET *set) {
+#else // P2
+void init_fibinoci(SET * INDIRECT set) {
+#endif // P2
+
+   int i, sum, temp;
+
+   i = 1;
+   sum = 1;
+   set_add(set, 1);
+
+   while (sum <= LIMIT) {
+      temp = sum;
+      sum += i;
+      i = temp;
+      set_add(set, sum);
+   }
+}
+
+//  
+//  init_single initializes all the set with single element 
+//  
+
+void init_single(SET * INDIRECT set0, SET * INDIRECT set1,
+		 SET * INDIRECT set2, SET * INDIRECT set3, 
+		 SET * INDIRECT set4){
+  set_add(set0, 0);
+  set_add(set1, 1);
+  set_add(set2, 2);
+  set_add(set3, 3);
+  set_add(set4, 4);
+}
+
+//  
+//  print_check prints the check with set 
+//  
+
+void print_check(int set_num, int silent){
+  if(!silent)
+    printf("CASE #%d pass.\n", set_num);
+}
+
+//  
+//  print_fail prints the fail statement 
+//  
+
+void print_fail(int set_num){
+  printf("CASE #%d fail.\n", set_num);
+}
+
+//  
+//  print_function_check prints the final check for each function 
+//  
+
+void print_function_check(int pass, char *name){
+  if(pass)
+    printf("CASE %s PASS.\n", name);
+  else{
+    printf("CASE %s FAIL.\n", name);
+    // I added this exit in order to make failure more obvious. (JAT)
+    exit(1);
+      }
+}
+
+//  
+//  check_size checks if the set_size is correct 
+//  
+
+void check_size(int silent){
+  int pass = TRUE;
+  puts("\nCheck for set_size:");
+  
+  if(set_size(ADDRESS get_set[20]) == 0)
+    print_check(0, silent);
+  else{
+    pass = FALSE;
+    print_fail(0);
+      }
+  if(set_size(ADDRESS get_set[10]) == 1)
+    print_check(1, silent);
+  else{
+    pass = FALSE;
+    print_fail(1);
+      }
+  if(set_size(ADDRESS get_set[0]) == 51)
+    print_check(2, silent);
+  else{
+    pass = FALSE;
+    print_fail(2);
+      }
+
+  print_function_check(pass, "set_size");
+
+}
+
+//  
+//  check_empty check if the set_empty is correct 
+//  
+
+void check_empty(int silent){
+  int pass = TRUE;
+  int i;
+  puts("\nCheck for set_is_empty:");
+
+  for(i = 0; i < 30; i+=10)
+    if(set_is_empty(ADDRESS get_set[i]) && i == 20)
+      print_check(2, silent);
+    else if(!(set_is_empty(ADDRESS get_set[i])))
+      print_check(i/10, silent);
+    else{
+      pass = FALSE;
+      print_fail(0);
+    }
+
+  print_function_check(pass, "set_is_empty");
+
+}
+
+//  
+//  check_in check if the set_in is doing its job 
+//  
+
+void check_in(int silent){
+  int i;
+  int pass = TRUE;
+  puts("\nCheck for set_in:");
+
+  set_add(& get_set[15], 100);
+  for(i = 0; i <25; i+= 5)
+    if(set_in(ADDRESS get_set[i], 0) && (i != 5 || i != 15)){
+      print_check(i/5, silent);
+    }
+    else if(!(set_in(ADDRESS get_set[i], 0)))
+      print_check(i/5, silent);
+    else{
+      pass = FALSE;
+      print_fail(i/5);
+    }
+      print_check(i/5, silent);
+  
+  print_function_check(pass, "set_in");
+  
+}
+
+//  
+//  check_element checks set_element for correctness 
+//  
+ 
+void check_element(int silent){
+  int pass = TRUE;
+  puts("\nCheck for set_element:");
+  
+  if(set_in(ADDRESS get_set[0], set_element(ADDRESS get_set[0])))
+    print_check(0, silent);
+  else{
+    pass = FALSE;
+    print_fail(0);
+  }
+  if(set_in(ADDRESS get_set[10], set_element(ADDRESS get_set[10])))
+    print_check(1, silent);
+  else{
+    pass = FALSE;
+    print_fail(1);
+  }
+  
+  print_function_check(pass, "set_element");
+  
+}
+
+//  
+//  check_remove checks if set_remove is correct 
+//  
+
+void check_remove(int silent){
+  int i, size;
+  int pass = TRUE;
+  puts("\nCheck for set_remove:");
+
+  set_add(& get_set[15], 99);
+  for(i = 0; i < 25; i += 5){
+    if(set_in(ADDRESS get_set[i], 0))
+      size = set_size(ADDRESS get_set[i]) - 1;
+    else
+      size = set_size(ADDRESS get_set[i]);
+    set_remove(& get_set[i], 0);
+    if(!(set_in(ADDRESS get_set[i], 0)) && size == set_size(ADDRESS get_set[i]))
+      print_check(i/5, silent);
+    else{
+      pass = FALSE;
+      print_fail(i/5);
+    }
+  }
+
+  print_function_check(pass, "set_remove");
+
+}  
+  
+//  
+//  check_add check if it add the element to the set 
+//  
+
+void check_add(int silent){
+  int i, size;
+  int pass = TRUE;
+  puts("\nCheck for set_add:");
+  
+  set_add(& get_set[15], 99);
+  for(i = 0; i < 25; i += 5){
+    if(set_in(ADDRESS get_set[i], 0))
+      size = set_size(ADDRESS get_set[i]);
+    else
+      size = set_size(ADDRESS get_set[i]) + 1;
+    set_add(& get_set[i], 0);
+    if(set_in(ADDRESS get_set[i], 0) && size == set_size(ADDRESS get_set[i]))
+      print_check(i/5, silent);
+    else{
+      pass = FALSE;
+      print_fail(i/5);
+	}
+  }
+
+  print_function_check(pass, "set_add");
+
+}
+
+//  
+//  check copy check if the copy if equal to the original set 
+//  
+
+void check_copy(int silent){
+  int i, j, offset;
+  int index = 0;
+  int pass = TRUE;
+  puts("\nCheck of set_copy:");
+
+  for(i = 0; i < 30; i += 10){
+    offset = (i % 9) + 1;
+    for(j = 0; j < 30; j += 10){
+      set_copy(ADDRESS get_set[i], & get_set[j+offset]);
+      if(set_equal(ADDRESS get_set[i], ADDRESS get_set[j+offset]))
+	print_check(index, silent);
+      else{
+	pass = FALSE;
+	print_fail(index);
+      }
+      index++;
+    }
+  }
+
+  print_function_check(pass, "set_copy");
+
+}
+
+//  
+//  check_intersection check for the bug of set_intersection 
+//  
+
+void check_intersection(int silent){
+  int i = 15;
+  int index = 0;
+  int save[14];
+  int pass = TRUE;
+  puts("\nCheck of set_interseciton:");
+
+  
+  while(i < 30){
+    if(i != 20){
+      save[index] = i;
+      index++;
+    }
+      i++;
+  }
+
+  index = 0;
+
+  for(i = 0; i < NUM_SETS; i += 10){
+    set_intersection(ADDRESS get_set[i], ADDRESS get_set[1], & get_set[save[index]]);
+    if(set_equal(ADDRESS get_set[i], ADDRESS get_set[save[index]])){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+    if(i != 0){
+      set_intersection(ADDRESS get_set[i], ADDRESS get_set[29], & get_set[save[index]]);
+      if(set_is_empty(ADDRESS get_set[save[index]])){
+	print_check(index, silent);
+	index++;
+      }
+      else{
+	pass = FALSE;
+	print_fail(index);
+	index++;
+      }
+    }
+  }
+  set_intersection(ADDRESS get_set[10], ADDRESS get_set[10], & get_set[save[index]]);
+  if(set_equal(ADDRESS get_set[save[index]], ADDRESS get_set[10])){
+    print_check(index, silent);
+    index++;
+  }
+  else{
+    pass = FALSE;
+    print_fail(index);
+    index++;
+  }
+  
+  //  
+  //  check if the order of paremeter can affect the output 
+  //  
+
+  set_intersection(ADDRESS get_set[4], ADDRESS get_set[0], & get_set[save[index]]);
+  set_intersection(ADDRESS get_set[0], ADDRESS get_set[4], & get_set[save[index+1]]);
+  if(set_equal(ADDRESS get_set[save[index]], ADDRESS get_set[save[index+1]]))
+    print_check(index, silent);
+  else{
+    pass = FALSE;
+    print_fail(index);
+  }
+	    
+  print_function_check(pass, "set_intersection");
+  
+}
+
+//  
+//  check_union check for the bug for function set_union 
+//  
+
+void check_union(int silent){
+  int i = 15;
+  int save[14];
+  int index = 0;
+  int pass = TRUE;
+  puts("\nCheck for set_union");
+  
+  while(i < 30){
+    if(i != 20){
+      save[index] = i;
+      index++;
+    }
+    i++;
+  }
+
+  index = 0;
+
+  for(i = 0; i < NUM_SETS; i += 10){
+    set_union(ADDRESS get_set[i], ADDRESS get_set[1], & get_set[save[index]]);
+      if(set_equal(ADDRESS get_set[1], ADDRESS get_set[save[index]])){
+	print_check(index, silent);
+	index++;
+      }
+      else{
+	pass = FALSE;
+	print_fail(index);
+	index++;
+      }
+    if(i != 0){
+      set_union(ADDRESS get_set[i], ADDRESS get_set[29], & get_set[save[index]]);
+      if(set_equal(ADDRESS get_set[i], ADDRESS get_set[save[index]])){
+	print_check(index, silent);
+	index++;
+      }
+      else{
+	pass = FALSE;
+	print_fail(index);
+	index++;
+      }
+    }
+  }
+  if(i == 10){
+    set_union(ADDRESS get_set[10], ADDRESS get_set[10], & get_set[save[index]]);
+    if(set_equal(ADDRESS get_set[i], ADDRESS get_set[10])){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+  }	  
+
+  //  
+  //  check if the order of paremeter can affect the output 
+  //  
+
+  set_union(ADDRESS get_set[4], ADDRESS get_set[0], & get_set[save[index]]);
+  set_union(ADDRESS get_set[0], ADDRESS get_set[4], & get_set[save[index+1]]);
+  if(set_equal(ADDRESS get_set[save[index]], ADDRESS get_set[save[index+1]]))
+    print_check(index+1, silent);
+  else{
+    pass = FALSE;
+    print_fail(index+1);
+  }
+
+  print_function_check(pass, "set_union");
+
+}
+ 
+//  
+//  check_difference will check for function set_difference 
+//  
+
+void check_difference(int silent){
+  int i = 15;
+  int save[14];
+  int index = 0;
+  int pass = TRUE;
+  puts("\nCheck of set_difference:");
+
+  while(i < 30){
+    if(i != 20){
+      save[index] = i;
+      index++;
+    }
+    i++;
+  }
+
+  index = 0;
+
+  for(i = 0; i < 30; i += 10){
+    set_difference(ADDRESS get_set[i], ADDRESS get_set[1], & get_set[save[index]]);
+    if(set_is_empty(ADDRESS get_set[save[index]])){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+    set_difference(ADDRESS get_set[i], ADDRESS get_set[29], & get_set[save[index]]);
+    if(set_equal(ADDRESS get_set[i], ADDRESS get_set[save[index]])){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+    set_difference(ADDRESS get_set[i], ADDRESS get_set[10], & get_set[save[index]]);
+    set_remove(& get_set[i], 0);
+    if(set_equal(ADDRESS get_set[i], ADDRESS get_set[save[index]])){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+  }
+  set_difference(ADDRESS get_set[1], ADDRESS get_set[4], & get_set[save[index]]);
+  if(set_equal(ADDRESS get_set[5], ADDRESS get_set[save[index]]))
+    print_check(index, silent);
+  else{
+    pass = FALSE;
+    print_fail(index);
+  }
+
+  print_function_check(pass, "set_difference");
+
+}
+
+//  
+//  check_equal will check if the set_equal is correct 
+//  
+
+void check_equal(int silent){
+  int i, j;
+  int index = 0;
+  int pass = TRUE;
+  puts("\nCheck for set_equal");
+
+  for(i = 0; i < 30; i += 10){
+    for(j = 0; j < 30; j += 10){
+      if(i == j)
+	if(set_equal(ADDRESS get_set[i], ADDRESS get_set[j])){
+	  print_check(index, silent);
+	  index++;
+	}
+	else{
+	  pass = FALSE;
+	  print_fail(index);
+	  index++;
+	}
+      if(!set_is_empty(ADDRESS get_set[i]))
+	if(set_equal(ADDRESS get_set[i], ADDRESS get_set[j+1])){
+	  pass = FALSE;
+	  print_fail(index);
+	  index++;
+	}
+	else{
+	  print_check(index, silent);
+	  index++;
+	}
+    }
+  }
+
+  print_function_check(pass, "set_equal");
+
+}
+
+//  
+//  check_subset check for the set_subset function 
+//  
+
+void check_subset(int silent){
+  int i;
+  int pass = TRUE;
+  int index = 0;
+  puts("\nCheck for set_subset");
+
+  for(i = 0; i < 30; i += 10){
+    if(set_subset(ADDRESS get_set[i], ADDRESS get_set[1])){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+    if((set_subset(ADDRESS get_set[i], ADDRESS get_set[10]) && i != 0) ||
+       (!set_subset(ADDRESS get_set[i], ADDRESS get_set[10]) && i == 0)){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+    if((!set_subset(ADDRESS get_set[i], ADDRESS get_set[29]) && i != 20) ||
+       (set_subset(ADDRESS get_set[i], ADDRESS get_set[29]) && i == 20)){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+    if(i != 20)
+      if(!set_subset(ADDRESS get_set[i+1], ADDRESS get_set[i+2])){
+	print_check(index, silent);
+	index++;
+      }
+      else{
+	pass = FALSE;
+	print_fail(index);
+	index++;
+      }
+  }
+  
+  print_function_check(pass, "set_subset");
+
+}
+
+//  
+//  check_proper_subset check if set_proper_subset works properly 
+//  
+
+void check_proper_subset(int silent){
+  int i;
+  int index = 0; 
+  int pass = TRUE;
+#if 0
+  // Unused. (JAT)
+  int proper[NUM_SETS];
+#endif
+  puts("\nCheck for set_proper_subset:");
+
+
+  for(i = 0; i < 30; i += 10){
+    if(set_proper_subset(ADDRESS get_set[i], ADDRESS get_set[1])){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+    if((set_proper_subset(ADDRESS get_set[i], ADDRESS get_set[10]) && i == 20) ||
+       (!set_proper_subset(ADDRESS get_set[i], ADDRESS get_set[10]) && i != 20)){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+    if(!set_proper_subset(ADDRESS get_set[i], ADDRESS get_set[29])){
+      print_check(index, silent);
+      index++;
+    }
+    else{
+      pass = FALSE;
+      print_fail(index);
+      index++;
+    }
+    if(i != 20)
+      if(!set_proper_subset(ADDRESS get_set[i+1], ADDRESS get_set[i+2])){
+	print_check(index, silent);
+	index++;
+      }
+      else{
+	pass = FALSE;
+	print_fail(index);
+	index++;
+      }
+  }
+  
+  print_function_check(pass, "set_proper_subset");
+  
+}
+
+//  
+//  check_iterate checks if set_iterate works 
+//  
+
+void check_iterate(int silent){
+  if(!silent){
+    puts("\nCheck for set_interate:");
+    set_iterate(ADDRESS get_set[6]);
+    puts("If you can see all the number from 1 to 50, then set_iterate check");
+  }
+}
+
+//  
+//  reset_sets will initiallize all the elments of set back to its  
+//  original state 
+//  
+
+void reset_sets(){
+  int i;
+
+  //  
+  //  initiallize all the old sets 
+  //  
+
+  for(i = 0; i < NUM_SETS; i++)
+    set_init(& get_set[i]);
+
+  //  
+  //  put elements in the sets 
+  //  
+
+  init_sint_int_who_nat_squ(& get_set[0], & get_set[1], & get_set[7], 
+			    & get_set[6], & get_set[8]);
+  init_prime_nprime(& get_set[2], & get_set[3]);
+  init_even_odd(& get_set[4], & get_set[5]);
+  init_fibinoci(& get_set[9]);
+  init_single(& get_set[10], & get_set[11], & get_set[12], & get_set[13],
+	      & get_set[14]);
+}
+
+//  
+//  Build a test function array for later use 
+//  
+
+void (*test[])() = {
+   check_size,
+   check_empty,
+   check_in,
+   check_element,
+   check_remove,
+   check_add, 
+   check_copy,
+   check_intersection,
+   check_union,
+   check_difference,
+   check_equal,
+   check_subset,
+   check_proper_subset,
+   check_iterate
+};
+
+//  
+//  Operation - supplied by the user as a test program 
+//  
+
+int main(int argc, char *argv[]) {
+  clock_t exc_time = clock();
+  int pause = FALSE;
+  int input = TRUE;
+  int index;
+  int silent = TRUE;
+
+  //  
+  // allocate the ADDRESS get_set array elements this can be automatically 
+  // generated 
+  //  
+       
+  for(index = 1; index < argc; index++){
+    if(argv[index][0] == 'a')
+      pause = TRUE;
+    else if(argv[index][0] == 's')
+      silent = FALSE;
+  }
+
+#if !defined(P2)
+  for (index = 0; index < NUM_SETS; index++) {
+    ADDRESS get_set[index] = (SET *) malloc(sizeof(SET));
+  }
+#endif // P2
+
+  //  
+  //  initalize the sets that will be used these next two calls can be  
+  //  automatically generated 
+  //    
+
+  init_sets();
+
+  index = 0;
+
+  //  
+  //  this loop will check the given set, see if their are correct 
+  //  
+
+  while(index < 14){
+    reset_sets();
+    if(pause){
+      printf("Enter your command(0 for exit)\n");
+      scanf("%d", &input);}
+    if(!input)
+      break;
+    (*test[index])(silent);
+    index++;
+  }
+  
+#if 1
+  exc_time = clock();
+  fprintf(stderr, "\nExecution time: %d microseconds.\n", exc_time);
+#endif
+
+  // I added this exit in order to make success more obvious. (JAT)
+  exit(0);
+}

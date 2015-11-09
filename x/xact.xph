@@ -1,0 +1,14 @@
+// $Id: xact.xph,v 45.0 1997/09/19 05:46:57 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Default (null) implementations of schema (aka transaction) operations.
+// Included by various layers (e.g. malloc, mmap, transient).
+
+checkpoint_schema(schema) { /* Do nothing. */ }
+close_schema(schema)      { /* Do nothing. */ }
+init_schema(schema)       { /* Do nothing. */ }
+open_schema(schema)       { /* Do nothing. */ }
+
+abort_xact(schema)        { /* Do nothing. */ }
+begin_xact(schema)        { /* Do nothing. */ }
+commit_xact(schema)       { /* Do nothing. */ }

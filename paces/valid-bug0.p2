@@ -1,0 +1,1588 @@
+/* $Id: valid-bug0.p2,v 45.0 1997/09/19 05:44:41 jthomas Exp $ */
+
+/************************************
+           manners.p2
+************************************/
+
+/************************************
+  options selected: active_rule malloc pred_indx string_optimization 
+************************************/
+
+#define DEBUG                 0
+#define STRING_OPTIMIZATION   1
+#define SHADOW_OPTIMIZATION   0
+#define NEGATION_OPTIMIZATION 0
+
+#include <stdlib.h>
+#include "leaps.h"
+#include "fastmalloc.h"
+
+
+/**************** generated #defines *******************/
+
+#define bind( curstype, kdcurs, active_rule, skiprule, alist) \
+   curstype *c; \
+   if (active_rule) { \
+      if (!fresh) { P2_PUTSPACE(alist,top.curs); } \
+      fresh = TRUE; top.current_rule = skiprule; \
+      skiprule(); return; \
+      } \
+   if (fresh) { \
+      c = (curstype*) P2_GETSPACE(alist,curstype); \
+      top.curs = (void*) c;\
+      initk(*c); \
+      pos(kdcurs,top.cursor_position); \
+   } else {  \
+      c = (curstype *) top.curs; \
+      goto cnt; \
+   } \
+   foreachk(*c) {
+
+#define next_rule( nextrule, alist ) \
+      return; \
+cnt: ; \
+   } \
+   P2_PUTSPACE(alist, c); \
+   fresh = TRUE; top.current_rule = nextrule; \
+   nextrule(); return;
+
+
+
+/*****************  valid defines ****************/
+
+#define ta " $a._ts <= dom_timestamp "
+#define tb " $b._ts <= dom_timestamp "
+#define tc " $c._ts <= dom_timestamp "
+#define td " $d._ts <= dom_timestamp "
+#define te " $e._ts <= dom_timestamp "
+#define tf " $f._ts <= dom_timestamp "
+
+
+#define va " (!is_deleted($a)) "
+#define vb " (!is_deleted($b)) "
+#define vc " (!is_deleted($c)) "
+#define vd " (!is_deleted($d)) "
+#define ve " (!is_deleted($e)) "
+#define vf " (!is_deleted($f)) "
+
+
+#define and " && "
+
+#define t2_a and tb
+#define t2_b and ta
+#define t3_a and tb and tc
+#define t3_b and ta and tc
+#define t3_c and ta and tb
+#define t4_a and tb and tc and td
+#define t4_b and ta and tc and td
+#define t4_c and ta and tb and td
+#define t4_d and ta and tb and tc
+#define t5_a and tb and tc and td and te
+#define t5_b and ta and tc and td and te
+#define t5_c and ta and tb and td and te
+#define t5_d and ta and tb and tc and te
+#define t5_e and ta and tb and tc and td
+#define t6_a and tb and tc and td and te and tf
+#define t6_b and ta and tc and td and te and tf
+#define t6_c and ta and tb and td and te and tf
+#define t6_d and ta and tb and tc and te and tf
+#define t6_e and ta and tb and tc and td and tf
+#define t6_f and ta and tb and tc and td and te
+
+
+#define v2_a vb
+#define v2_b va
+#define v3_a vb and vc
+#define v3_b va and vc
+#define v3_c va and vb
+#define v4_a vb and vc and vd
+#define v4_b va and vc and vd
+#define v4_c va and vb and vd
+#define v4_d va and vb and vc
+#define v5_a vb and vc and vd and ve
+#define v5_b va and vc and vd and ve
+#define v5_c va and vb and vd and ve
+#define v5_d va and vb and vc and ve
+#define v5_e va and vb and vc and vd
+#define v6_a vb and vc and vd and ve and vf
+#define v6_b va and vc and vd and ve and vf
+#define v6_c va and vb and vd and ve and vf
+#define v6_d va and vb and vc and ve and vf
+#define v6_e va and vb and vc and vd and vf
+#define v6_f va and vb and vc and vd and ve
+
+
+
+/************* generated forward references ***************/
+
+VOID_FUNC    i1_a, i1_b, i1_c,
+             i2_a, i2_b, i2_c, i2_d, i2_e, i2_f, i2_g,
+             i3_a, i3_b, i3_c, i3_d,
+             i4_a, i4_b,
+             i5_a, i5_b, i5_c,
+             i6_a,
+             i7_a, i7_b, i7_c, i7_d,
+             i8_a;
+
+
+
+/************ generated record types ***************/
+
+
+typedef struct {
+   int name;
+   int sex;
+   int     hobby;
+   int     _ts;
+} guest;
+
+typedef struct {
+   int     seat;
+   int     _ts;
+} last_seat;
+
+typedef struct {
+   int     seat1;
+   int name1;
+   int name2;
+   int     seat2;
+   int     id;
+   int     pid;
+   int path_done;
+   int     _ts;
+} seating;
+
+typedef struct {
+   int value;
+   int     _ts;
+} context;
+
+typedef struct {
+   int     id;
+   int name;
+   int     seat;
+   int     _ts;
+} path;
+
+typedef struct {
+   int     id;
+   int name;
+   int     hobby;
+   int     _ts;
+} chosen;
+
+typedef struct {
+   int     c;
+   int     _ts;
+} count;
+
+
+
+/****************** symbol table ***********/
+
+
+typedef char string[20];
+
+typedef struct {
+   string  name;
+} SYMBOL;
+
+string  *word;
+
+container < SYMBOL > stored_as symbol_x with {
+   bintree key is name;
+} symbol_table;
+
+cursor <symbol_table> where "$.name == *word" sym;
+
+int _nil;
+int _start;
+int _n;
+int _yes;
+int _assign_seats;
+int _n2;
+int _g2;
+int _no;
+int _make_path;
+int _n1;
+int _check_done;
+int _print_results;
+
+
+int add_symbol( char *n )
+{
+SYMBOL s;
+
+   strcpy(s.name,n);
+   insert(sym,s);
+   return (int) sym.name;
+}
+
+int add_unique_symbol( char *n )
+{
+   word = (string *) n;
+   foreach(sym) { return (int) sym.name; };
+   return add_symbol( n );
+}
+
+void init_symbol_table ( void )
+{
+   open_cont( symbol_table );
+   init_curs( sym );
+   _nil = add_symbol("nil");
+   _start = add_symbol("start");
+   _n = add_symbol("n");
+   _yes = add_symbol("yes");
+   _assign_seats = add_symbol("assign_seats");
+   _n2 = add_symbol("n2");
+   _g2 = add_symbol("g2");
+   _no = add_symbol("no");
+   _make_path = add_symbol("make_path");
+   _n1 = add_symbol("n1");
+   _check_done = add_symbol("check_done");
+   _print_results = add_symbol("print_results");
+}
+
+
+
+/************ generated container declarations ***************/
+
+typex { leaps_x = top2ds_qualify[
+                  lpredindx[llist[
+                  delflag[malloc[transient_fast]]]]]; }
+
+container < guest > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_guest;
+
+container < last_seat > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_last_seat;
+
+container < seating > stored_as leaps_x with {
+   lpredindx key is _ts predicate " $.path_done == _yes " with activate1 with deactivate1;
+   lpredindx key is _ts predicate " $.path_done == _no " with activate2 with deactivate2;
+   llist key is _ts;
+}  cont_seating;
+
+container < context > stored_as leaps_x with {
+   lpredindx key is _ts predicate " $.value == _start " with activate3 with deactivate3;
+   lpredindx key is _ts predicate " $.value == _assign_seats " with activate4 with deactivate4;
+   lpredindx key is _ts predicate " $.value == _make_path " with activate5 with deactivate5;
+   lpredindx key is _ts predicate " $.value == _check_done " with activate6 with deactivate6;
+   lpredindx key is _ts predicate " $.value == _print_results " with activate7 with deactivate7;
+   llist key is _ts;
+}  cont_context;
+
+container < path > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_path;
+
+container < path > stored_as leaps_x with {
+   llist key is _ts;
+}  shadow_path;
+
+container < chosen > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_chosen;
+
+container < chosen > stored_as leaps_x with {
+   llist key is _ts;
+}  shadow_chosen;
+
+container < count > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_count;
+
+/************** generated container numbers *******************/
+
+#define guest_num  1
+#define last_seat_num  2
+#define seating_num  3
+#define context_num  4
+#define path_num  5
+#define shadow_path_num  6
+#define chosen_num  7
+#define shadow_chosen_num  8
+#define count_num  9
+
+/***************** external files *********************/
+
+/************ active rule variables, procs **************/
+
+int active_rule1 = 1;
+int active_rule2 = 2;
+int active_rule3 = 2;
+int active_rule4 = 2;
+int active_rule5 = 1;
+int active_rule6 = 1;
+int active_rule7 = 1;
+int active_rule8 = 1;
+
+/********* container seating: predicate:  $.path_done == _yes  **************/
+
+void activate1( void )
+{
+   active_rule2++;
+}
+
+void deactivate1( void )
+{
+   active_rule2--;
+}
+
+
+/********* container seating: predicate:  $.path_done == _no  **************/
+
+void activate2( void )
+{
+   active_rule3++;
+   active_rule4++;
+}
+
+void deactivate2( void )
+{
+   active_rule3--;
+   active_rule4--;
+}
+
+
+/********* container context: predicate:  $.value == _start  **************/
+
+void activate3( void )
+{
+   active_rule1++;
+}
+
+void deactivate3( void )
+{
+   active_rule1--;
+}
+
+
+/********* container context: predicate:  $.value == _assign_seats  **************/
+
+void activate4( void )
+{
+   active_rule2++;
+}
+
+void deactivate4( void )
+{
+   active_rule2--;
+}
+
+
+/********* container context: predicate:  $.value == _make_path  **************/
+
+void activate5( void )
+{
+   active_rule3++;
+   active_rule4++;
+}
+
+void deactivate5( void )
+{
+   active_rule3--;
+   active_rule4--;
+}
+
+
+/********* container context: predicate:  $.value == _check_done  **************/
+
+void activate6( void )
+{
+   active_rule5++;
+   active_rule6++;
+}
+
+void deactivate6( void )
+{
+   active_rule5--;
+   active_rule6--;
+}
+
+
+/********* container context: predicate:  $.value == _print_results  **************/
+
+void activate7( void )
+{
+   active_rule7++;
+   active_rule8++;
+}
+
+void deactivate7( void )
+{
+   active_rule7--;
+   active_rule8--;
+}
+
+
+
+/************ utility cursor decls ***************/
+
+typedef cursor <cont_guest> guest_cursor;
+typedef cursor <cont_last_seat> last_seat_cursor;
+typedef cursor <cont_seating> seating_cursor;
+typedef cursor <cont_context> context_cursor;
+typedef cursor <cont_path> path_cursor;
+typedef cursor <shadow_path> shadow_path_cursor;
+typedef cursor <cont_chosen> chosen_cursor;
+typedef cursor <shadow_chosen> shadow_chosen_cursor;
+typedef cursor <cont_count> count_cursor;
+
+
+guest_cursor   a_guest;
+
+last_seat_cursor   a_last_seat;
+
+seating_cursor   a_seating;
+
+context_cursor   a_context;
+
+path_cursor   a_path;
+
+shadow_path_cursor   a_shadow_path;
+
+chosen_cursor   a_chosen;
+
+shadow_chosen_cursor   a_shadow_chosen;
+
+count_cursor   a_count;
+
+
+
+
+/************ insertion and deletion operations ********/
+
+void insert_guest (guest *r)
+{
+   insert(a_guest,*r);
+   push_wl( a_guest.obj, a_guest._ts, guest_num );
+}
+
+void delete_guest (guest_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_last_seat (last_seat *r)
+{
+   insert(a_last_seat,*r);
+   push_wl( a_last_seat.obj, a_last_seat._ts, last_seat_num );
+}
+
+void delete_last_seat (last_seat_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_seating (seating *r)
+{
+   insert(a_seating,*r);
+   push_wl( a_seating.obj, a_seating._ts, seating_num );
+}
+
+void delete_seating (seating_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_context (context *r)
+{
+   insert(a_context,*r);
+   push_wl( a_context.obj, a_context._ts, context_num );
+}
+
+void delete_context (context_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_path (path *r)
+{
+   insert(a_path,*r);
+   push_wl( a_path.obj, a_path._ts, path_num );
+}
+
+void delete_path (path_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_shadow_path (path *r)
+{
+   insert(a_shadow_path,*r);
+   push_wl( a_shadow_path.obj, a_shadow_path._ts, shadow_path_num );
+}
+
+void delete_shadow_path (shadow_path_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_chosen (chosen *r)
+{
+   insert(a_chosen,*r);
+   push_wl( a_chosen.obj, a_chosen._ts, chosen_num );
+}
+
+void delete_chosen (chosen_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_shadow_chosen (chosen *r)
+{
+   insert(a_shadow_chosen,*r);
+   push_wl( a_shadow_chosen.obj, a_shadow_chosen._ts, shadow_chosen_num );
+}
+
+void delete_shadow_chosen (shadow_chosen_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_count (count *r)
+{
+   insert(a_count,*r);
+   push_wl( a_count.obj, a_count._ts, count_num );
+}
+
+void delete_count (count_cursor *c)
+{
+   delete(*c);
+}
+
+
+/**************************** rule #1: assign_first_seat :
+   (context ^value  start  )
+   (guest ^name  <n>  )
+   (count ^c  <c>  )
+    -->  *******************************/
+
+int c_1;
+int n_1;
+
+#define query_1 where " $a.value == _start "
+
+#define negated_1 ""
+
+typedef compcurs < a cont_context, b cont_guest, c cont_count >
+   given < a >
+   query_1 t3_a
+   valid v3_a 
+   curs1_a;
+
+typedef compcurs < a cont_context, b cont_guest, c cont_count >
+   given < b >
+   query_1 t3_b
+   valid v3_b 
+   curs1_b;
+
+typedef compcurs < a cont_context, b cont_guest, c cont_count >
+   given < c >
+   query_1 t3_c
+   valid v3_c 
+   curs1_c;
+
+/**************************** rule #2: find_seating :
+   (context ^value  assign_seats  )
+   (seating ^seat1  <seat1> ^seat2  <seat2> ^name2  <n2> ^id  <id> ^pid  <pid> ^path_done  yes  )
+   (guest ^name  <n2> ^sex  <s1> ^hobby  <h1>  )
+   (guest ^name  <g2> ^sex <> <s1> ^hobby  <h1>  )
+   (count ^c  <c>  )
+   - (chosen ^id  <id> ^name  <g2> ^hobby  <h1>  )
+   - (path ^id  <id> ^name  <g2>  )
+    -->  *******************************/
+
+int c_2;
+int g2_2;
+int h1_2;
+int s1_2;
+int pid_2;
+int id_2;
+int n2_2;
+int seat2_2;
+int seat1_2;
+
+cursor <cont_chosen> where " $.id == id_2 && $.name == g2_2 && $.hobby == h1_2 "
+   C2_6;
+cursor <shadow_chosen> where " $.id == id_2 && $.name == g2_2 && $.hobby == h1_2  && $._ts > dom_timestamp"
+   S2_6;
+cursor <cont_path> where " $.id == id_2 && $.name == g2_2 "
+   C2_7;
+cursor <shadow_path> where " $.id == id_2 && $.name == g2_2  && $._ts > dom_timestamp"
+   S2_7;
+
+BOOLEAN N2_6(  seating_cursor *b, guest_cursor *c, guest_cursor *d )
+{
+   g2_2 = d->name;
+   h1_2 = c->hobby;
+   id_2 = b->id;
+   foreach(C2_6) { return FALSE; }
+   foreach(S2_6) { return FALSE; }
+   return TRUE;
+}
+
+
+BOOLEAN N2_7(  seating_cursor *b, guest_cursor *d )
+{
+   g2_2 = d->name;
+   id_2 = b->id;
+   foreach(C2_7) { return FALSE; }
+   foreach(S2_7) { return FALSE; }
+   return TRUE;
+}
+
+#define query_2 where " $a.value == _assign_seats && $b.path_done == _yes \
+        && $c.name == $b.name2 \
+        && $d.sex != $c.sex && $d.hobby == $c.hobby \
+        && (N2_6(&$b,&$c,&$d)) && (N2_7(&$b,&$d)) "
+
+#define negated_2 " (N2_6(&$b,&$c,&$d))  &&  (N2_7(&$b,&$d)) "
+
+typedef compcurs < a cont_context, b cont_seating, c cont_guest, d cont_guest, e cont_count >
+   given < a >
+   query_2 t5_a
+   valid v5_a  and negated_2
+   curs2_a;
+
+typedef compcurs < a cont_context, b cont_seating, c cont_guest, d cont_guest, e cont_count >
+   given < b >
+   query_2 t5_b
+   valid v5_b  and negated_2
+   curs2_b;
+
+typedef compcurs < a cont_context, b cont_seating, c cont_guest, d cont_guest, e cont_count >
+   given < c >
+   query_2 t5_c
+   valid v5_c  and negated_2
+   curs2_c;
+
+typedef compcurs < a cont_context, b cont_seating, c cont_guest, d cont_guest, e cont_count >
+   given < d >
+   query_2 t5_d
+   valid v5_d  and negated_2
+   curs2_d;
+
+typedef compcurs < a cont_context, b cont_seating, c cont_guest, d cont_guest, e cont_count >
+   given < e >
+   query_2 t5_e
+   valid v5_e  and negated_2
+   curs2_e;
+
+#define query_2_f where " $a.value == _assign_seats && $b.path_done == _yes \
+        && $c.name == $b.name2 \
+        && $d.sex != $c.sex && $d.hobby == $c.hobby \
+        && $f.id == $b.id && $f.name == $d.name && $f.hobby == $c.hobby && (N2_6(&$b,&$c,&$d)) && (N2_7(&$b,&$d)) "
+
+typedef compcurs < a cont_context, b cont_seating, c cont_guest, d cont_guest, e cont_count, f shadow_chosen >
+   given < f >
+   query_2_f t6_f
+   valid v6_f and negated_2
+   curs2_f;
+
+#define query_2_g where " $a.value == _assign_seats && $b.path_done == _yes \
+        && $c.name == $b.name2 \
+        && $d.sex != $c.sex && $d.hobby == $c.hobby \
+        && $f.id == $b.id && $f.name == $d.name && (N2_6(&$b,&$c,&$d)) && (N2_7(&$b,&$d)) "
+
+typedef compcurs < a cont_context, b cont_seating, c cont_guest, d cont_guest, e cont_count, f shadow_path >
+   given < f >
+   query_2_g t6_f
+   valid v6_f and negated_2
+   curs2_g;
+
+/**************************** rule #3: make_path :
+   (context ^value  make_path  )
+   (seating ^id  <id> ^pid  <pid> ^path_done  no  )
+   (path ^id  <pid> ^name  <n1> ^seat  <s>  )
+   - (path ^id  <id> ^name  <n1>  )
+    -->  *******************************/
+
+int s_3;
+int n1_3;
+int pid_3;
+int id_3;
+
+cursor <cont_path> where " $.id == id_3 && $.name == n1_3 "
+   C3_4;
+cursor <shadow_path> where " $.id == id_3 && $.name == n1_3  && $._ts > dom_timestamp"
+   S3_4;
+
+BOOLEAN N3_4(  seating_cursor *b, path_cursor *c )
+{
+   n1_3 = c->name;
+   id_3 = b->id;
+   foreach(C3_4) { return FALSE; }
+   foreach(S3_4) { return FALSE; }
+   return TRUE;
+}
+
+#define query_3 where " $a.value == _make_path && $b.path_done == _no \
+        && $c.id == $b.pid && (N3_4(&$b,&$c)) "
+
+#define negated_3 " (N3_4(&$b,&$c)) "
+
+typedef compcurs < a cont_context, b cont_seating, c cont_path >
+   given < a >
+   query_3 t3_a
+   valid v3_a  and negated_3
+   curs3_a;
+
+typedef compcurs < a cont_context, b cont_seating, c cont_path >
+   given < b >
+   query_3 t3_b
+   valid v3_b  and negated_3
+   curs3_b;
+
+typedef compcurs < a cont_context, b cont_seating, c cont_path >
+   given < c >
+   query_3 t3_c
+   valid v3_c  and negated_3
+   curs3_c;
+
+#define query_3_d where " $a.value == _make_path && $b.path_done == _no \
+        && $c.id == $b.pid \
+        && $d.id == $b.id && $d.name == $c.name && (N3_4(&$b,&$c)) "
+
+typedef compcurs < a cont_context, b cont_seating, c cont_path, d shadow_path >
+   given < d >
+   query_3_d t4_d
+   valid v4_d and negated_3
+   curs3_d;
+
+/**************************** rule #4: path_done :
+   (context ^value  make_path  )
+   (seating ^path_done  no  )
+    -->  *******************************/
+
+
+#define query_4 where " $a.value == _make_path && $b.path_done == _no "
+
+#define negated_4 ""
+
+typedef compcurs < a cont_context, b cont_seating >
+   given < a >
+   query_4 t2_a
+   valid v2_a 
+   curs4_a;
+
+typedef compcurs < a cont_context, b cont_seating >
+   given < b >
+   query_4 t2_b
+   valid v2_b 
+   curs4_b;
+
+/**************************** rule #5: are_we_done :
+   (context ^value  check_done  )
+   (last_seat ^seat  <l_seat>  )
+   (seating ^seat2  <l_seat>  )
+    -->  *******************************/
+
+int l_seat_5;
+
+#define query_5 where " $a.value == _check_done && $c.seat2 == $b.seat "
+
+#define negated_5 ""
+
+typedef compcurs < a cont_context, b cont_last_seat, c cont_seating >
+   given < a >
+   query_5 t3_a
+   valid v3_a 
+   curs5_a;
+
+typedef compcurs < a cont_context, b cont_last_seat, c cont_seating >
+   given < b >
+   query_5 t3_b
+   valid v3_b 
+   curs5_b;
+
+typedef compcurs < a cont_context, b cont_last_seat, c cont_seating >
+   given < c >
+   query_5 t3_c
+   valid v3_c 
+   curs5_c;
+
+/**************************** rule #6: continue :
+   (context ^value  check_done  )
+    -->  *******************************/
+
+
+#define query_6 where " $a.value == _check_done "
+
+#define negated_6 ""
+
+typedef compcurs < a cont_context >
+   given < a >
+   query_6
+   curs6_a;
+
+/**************************** rule #7: print_results :
+   (context ^value  print_results  )
+   (seating ^id  <id> ^seat2  <s2>  )
+   (last_seat ^seat  <s2>  )
+   (path ^id  <id> ^name  <n> ^seat  <s>  )
+    -->  *******************************/
+
+int s_7;
+int n_7;
+int s2_7;
+int id_7;
+
+#define query_7 where " $a.value == _print_results && $c.seat == $b.seat2 \
+        && $d.id == $b.id "
+
+#define negated_7 ""
+
+typedef compcurs < a cont_context, b cont_seating, c cont_last_seat, d cont_path >
+   given < a >
+   query_7 t4_a
+   valid v4_a 
+   curs7_a;
+
+typedef compcurs < a cont_context, b cont_seating, c cont_last_seat, d cont_path >
+   given < b >
+   query_7 t4_b
+   valid v4_b 
+   curs7_b;
+
+typedef compcurs < a cont_context, b cont_seating, c cont_last_seat, d cont_path >
+   given < c >
+   query_7 t4_c
+   valid v4_c 
+   curs7_c;
+
+typedef compcurs < a cont_context, b cont_seating, c cont_last_seat, d cont_path >
+   given < d >
+   query_7 t4_d
+   valid v4_d 
+   curs7_d;
+
+/**************************** rule #8: all_done :
+   (context ^value  print_results  )
+    -->  *******************************/
+
+
+#define query_8 where " $a.value == _print_results "
+
+#define negated_8 ""
+
+typedef compcurs < a cont_context >
+   given < a >
+   query_8
+   curs8_a;
+
+
+/********* avail list declarations ****************/
+
+curs1_a **curs1_a_list = 0;
+curs1_b **curs1_b_list = 0;
+curs1_c **curs1_c_list = 0;
+curs2_a **curs2_a_list = 0;
+curs2_b **curs2_b_list = 0;
+curs2_c **curs2_c_list = 0;
+curs2_d **curs2_d_list = 0;
+curs2_e **curs2_e_list = 0;
+curs2_f **curs2_f_list = 0;
+curs2_g **curs2_g_list = 0;
+curs3_a **curs3_a_list = 0;
+curs3_b **curs3_b_list = 0;
+curs3_c **curs3_c_list = 0;
+curs3_d **curs3_d_list = 0;
+curs4_a **curs4_a_list = 0;
+curs4_b **curs4_b_list = 0;
+curs5_a **curs5_a_list = 0;
+curs5_b **curs5_b_list = 0;
+curs5_c **curs5_c_list = 0;
+curs6_a **curs6_a_list = 0;
+curs7_a **curs7_a_list = 0;
+curs7_b **curs7_b_list = 0;
+curs7_c **curs7_c_list = 0;
+curs7_d **curs7_d_list = 0;
+curs8_a **curs8_a_list = 0;
+
+
+
+
+/************* generated valid functions **********************/
+
+BOOLEAN valid_guest( void *o ) {
+   pos(a_guest, o);
+   return( !is_deleted(a_guest) );
+}
+
+BOOLEAN valid_last_seat( void *o ) {
+   pos(a_last_seat, o);
+   return( !is_deleted(a_last_seat) );
+}
+
+BOOLEAN valid_seating( void *o ) {
+   pos(a_seating, o);
+   return( !is_deleted(a_seating) );
+}
+
+BOOLEAN valid_context( void *o ) {
+   pos(a_context, o);
+   return( !is_deleted(a_context) );
+}
+
+BOOLEAN valid_path( void *o ) {
+   pos(a_path, o);
+   return( !is_deleted(a_path) );
+}
+
+BOOLEAN valid_shadow_path( void *o ) {
+   pos(a_shadow_path, o);
+   return( !is_deleted(a_shadow_path) );
+}
+
+BOOLEAN valid_chosen( void *o ) {
+   pos(a_chosen, o);
+   return( !is_deleted(a_chosen) );
+}
+
+BOOLEAN valid_shadow_chosen( void *o ) {
+   pos(a_shadow_chosen, o);
+   return( !is_deleted(a_shadow_chosen) );
+}
+
+BOOLEAN valid_count( void *o ) {
+   pos(a_count, o);
+   return( !is_deleted(a_count) );
+}
+
+
+
+BOOL_FUNC_PTR valid_vect[ ] = { 0, valid_guest, valid_last_seat, valid_seating, valid_context, valid_path, valid_shadow_path, valid_chosen, valid_shadow_chosen, valid_count, 0 };
+
+
+/*************** fire rule procs *****************/
+
+/**************************** rule assign_first_seat :
+   (context ^value  start  )
+   (guest ^name  <n>  )
+   (count ^c  <c>  )
+    -->  *******************************/
+
+void fire_rule1( context_cursor *a, guest_cursor *b, count_cursor *c )
+{
+   /** (make seating ^seat1  1 ^name1  <n> ^name2  <n> ^seat2  1 ^id  <c> ^pid  0 ^path_done  yes ) **/
+   { seating r;
+     r.seat1 =  1;
+     r.name1 =  b->name;
+     r.name2 =  b->name;
+     r.seat2 =  1;
+     r.id =  c->c;
+     r.pid =  0;
+     r.path_done = _yes;
+     r._ts =  global_counter++;
+     insert_seating(&r);
+   }
+
+   /** (make path ^id  <c> ^name  <n> ^seat  1 ) **/
+   { path r;
+     r.id =  c->c;
+     r.name =  b->name;
+     r.seat =  1;
+     r._ts =  global_counter++;
+     insert_path(&r);
+   }
+
+   /** (modify 3 -- count -- ^c  COMPUTE( <c> + 1)) **/
+   {  count r;
+      global_counter++;
+      getrec(*c,r);
+      r.c =  c->c + 1;
+      r._ts =  global_counter++;
+      insert_count(&r);
+      c->_ts = global_counter;
+      delete_count(c);
+   }
+
+   /** (write  seat 1 <n> <n> 1 <c> 0 1 (CRLF)) **/
+   printf(" seat 1 %s %s 1 %d 0 1\n", b->name, b->name, c->c);
+
+   /** (modify 1 -- context -- ^value  assign_seats) **/
+   {  context r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _assign_seats;
+      r._ts =  global_counter++;
+      insert_context(&r);
+      a->_ts = global_counter;
+      delete_context(a);
+   }
+
+}
+
+/**************************** rule find_seating :
+   (context ^value  assign_seats  )
+   (seating ^seat1  <seat1> ^seat2  <seat2> ^name2  <n2> ^id  <id> ^pid  <pid> ^path_done  yes  )
+   (guest ^name  <n2> ^sex  <s1> ^hobby  <h1>  )
+   (guest ^name  <g2> ^sex <> <s1> ^hobby  <h1>  )
+   (count ^c  <c>  )
+   - (chosen ^id  <id> ^name  <g2> ^hobby  <h1>  )
+   - (path ^id  <id> ^name  <g2>  )
+    -->  *******************************/
+
+void fire_rule2( context_cursor *a, seating_cursor *b, guest_cursor *c, guest_cursor *d, count_cursor *e )
+{
+   /** (make seating ^seat1  <seat2> ^name1  <n2> ^name2  <g2> ^seat2  COMPUTE( <seat2> + 1) ^id  <c> ^pid  <id> ^path_done  no ) **/
+   { seating r;
+     r.seat1 =  b->seat2;
+     r.name1 =  b->name2;
+     r.name2 =  d->name;
+     r.seat2 =  b->seat2 + 1;
+     r.id =  e->c;
+     r.pid =  b->id;
+     r.path_done = _no;
+     r._ts =  global_counter++;
+     insert_seating(&r);
+   }
+
+   /** (make path ^id  <c> ^name  <g2> ^seat  COMPUTE( <seat2> + 1) ) **/
+   { path r;
+     r.id =  e->c;
+     r.name =  d->name;
+     r.seat =  b->seat2 + 1;
+     r._ts =  global_counter++;
+     insert_path(&r);
+   }
+
+   /** (make chosen ^id  <id> ^name  <g2> ^hobby  <h1> ) **/
+   { chosen r;
+     r.id =  b->id;
+     r.name =  d->name;
+     r.hobby =  c->hobby;
+     r._ts =  global_counter++;
+     insert_chosen(&r);
+   }
+
+   /** (modify 5 -- count -- ^c  COMPUTE( <c> + 1)) **/
+   {  count r;
+      global_counter++;
+      getrec(*e,r);
+      r.c =  e->c + 1;
+      r._ts =  global_counter++;
+      insert_count(&r);
+      e->_ts = global_counter;
+      delete_count(e);
+   }
+
+   /** (write  seat <seat2> <n2> <g2> (CRLF)) **/
+   printf(" seat %d %s %s\n", b->seat2, b->name2, d->name);
+
+   /** (modify 1 -- context -- ^value  make_path) **/
+   {  context r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _make_path;
+      r._ts =  global_counter++;
+      insert_context(&r);
+      a->_ts = global_counter;
+      delete_context(a);
+   }
+
+}
+
+/**************************** rule make_path :
+   (context ^value  make_path  )
+   (seating ^id  <id> ^pid  <pid> ^path_done  no  )
+   (path ^id  <pid> ^name  <n1> ^seat  <s>  )
+   - (path ^id  <id> ^name  <n1>  )
+    -->  *******************************/
+
+void fire_rule3( context_cursor *a, seating_cursor *b, path_cursor *c )
+{
+   /** (make path ^id  <id> ^name  <n1> ^seat  <s> ) **/
+   { path r;
+     r.id =  b->id;
+     r.name =  c->name;
+     r.seat =  c->seat;
+     r._ts =  global_counter++;
+     insert_path(&r);
+   }
+
+}
+
+/**************************** rule path_done :
+   (context ^value  make_path  )
+   (seating ^path_done  no  )
+    -->  *******************************/
+
+void fire_rule4( context_cursor *a, seating_cursor *b )
+{
+   /** (modify 2 -- seating -- ^path_done  yes) **/
+   {  seating r;
+      global_counter++;
+      getrec(*b,r);
+      r.path_done = _yes;
+      r._ts =  global_counter++;
+      insert_seating(&r);
+      b->_ts = global_counter;
+      delete_seating(b);
+   }
+
+   /** (modify 1 -- context -- ^value  check_done) **/
+   {  context r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _check_done;
+      r._ts =  global_counter++;
+      insert_context(&r);
+      a->_ts = global_counter;
+      delete_context(a);
+   }
+
+}
+
+/**************************** rule are_we_done :
+   (context ^value  check_done  )
+   (last_seat ^seat  <l_seat>  )
+   (seating ^seat2  <l_seat>  )
+    -->  *******************************/
+
+void fire_rule5( context_cursor *a, last_seat_cursor *b, seating_cursor *c )
+{
+   /** (write  (CRLF) Yes we are done (CRLF)) **/
+   printf("\n Yes we are done\n");
+
+   /** (modify 1 -- context -- ^value  print_results) **/
+   {  context r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _print_results;
+      r._ts =  global_counter++;
+      insert_context(&r);
+      a->_ts = global_counter;
+      delete_context(a);
+   }
+
+}
+
+/**************************** rule continue :
+   (context ^value  check_done  )
+    -->  *******************************/
+
+void fire_rule6( context_cursor *a )
+{
+   /** (modify 1 -- context -- ^value  assign_seats) **/
+   {  context r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _assign_seats;
+      r._ts =  global_counter++;
+      insert_context(&r);
+      a->_ts = global_counter;
+      delete_context(a);
+   }
+
+}
+
+/**************************** rule print_results :
+   (context ^value  print_results  )
+   (seating ^id  <id> ^seat2  <s2>  )
+   (last_seat ^seat  <s2>  )
+   (path ^id  <id> ^name  <n> ^seat  <s>  )
+    -->  *******************************/
+
+void fire_rule7( context_cursor *a, seating_cursor *b, last_seat_cursor *c, path_cursor *d )
+{
+   /** (remove 4 -- path -- ) **/
+   {  path r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_path(&r);
+   }
+   d->_ts = global_counter;
+   delete_path(d);
+
+   /** (write  <n> <s> (CRLF)) **/
+   printf(" %s %d\n", d->name, d->seat);
+
+}
+
+/**************************** rule all_done :
+   (context ^value  print_results  )
+    -->  *******************************/
+
+void fire_rule8( context_cursor *a )
+{
+   /** (halt) **/
+   printf("OPS5c terminated via halt statement.\n");
+   printf("OPS5c terminated via halt statement.\n");
+   exit(0);
+}
+
+
+VOID_FUNC_PTR first_rule[] =
+   { 0, i2_c, i7_c, i2_b, i2_a, i3_c, i2_g,pop,  i2_f, i2_e, 0};
+
+int rfc = 1;
+
+void i1_a(void)
+{
+   bind(curs1_a, c->a, active_rule1, i5_a, curs1_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 1 (assign_first_seat)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule1( &c->a, &c->b, &c->c );
+   next_rule( i5_a, curs1_a_list );
+}
+
+void i1_b(void)
+{
+   bind(curs1_b, c->b, active_rule1, pop, curs1_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 1 (assign_first_seat)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule1( &c->a, &c->b, &c->c );
+   next_rule( pop, curs1_b_list );
+}
+
+void i1_c(void)
+{
+   bind(curs1_c, c->c, active_rule1, pop, curs1_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 1 (assign_first_seat)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule1( &c->a, &c->b, &c->c );
+   next_rule( pop, curs1_c_list );
+}
+
+void i2_a(void)
+{
+   bind(curs2_a, c->a, active_rule2, i3_a, curs2_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 2 (find_seating)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule2( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i3_a, curs2_a_list );
+}
+
+void i2_b(void)
+{
+   bind(curs2_b, c->b, active_rule2, i3_b, curs2_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 2 (find_seating)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule2( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i3_b, curs2_b_list );
+}
+
+void i2_c(void)
+{
+   bind(curs2_c, c->c, active_rule2, i1_b, curs2_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 2 (find_seating)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule2( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i2_d, curs2_c_list );
+}
+
+void i2_d(void)
+{
+   bind(curs2_d, c->d, active_rule2, i1_b, curs2_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 2 (find_seating)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule2( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i1_b, curs2_d_list );
+}
+
+void i2_e(void)
+{
+   bind(curs2_e, c->e, active_rule2, i1_c, curs2_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 2 (find_seating)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule2( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i1_c, curs2_e_list );
+}
+
+void i2_f(void)
+{
+   bind(curs2_f, c->f, active_rule2, i1_c, curs2_f_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 2 (find_seating)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts,c->f._ts);
+   fire_rule2( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( pop, curs2_f_list );
+}
+
+void i2_g(void)
+{
+   bind(curs2_g, c->f, active_rule2, i3_d, curs2_g_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 2 (find_seating)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts,c->f._ts);
+   fire_rule2( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i3_d, curs2_g_list );
+}
+
+void i3_a(void)
+{
+   bind(curs3_a, c->a, active_rule3, i7_a, curs3_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 3 (make_path)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule3( &c->a, &c->b, &c->c );
+   next_rule( i7_a, curs3_a_list );
+}
+
+void i3_b(void)
+{
+   bind(curs3_b, c->b, active_rule3, i7_b, curs3_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 3 (make_path)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule3( &c->a, &c->b, &c->c );
+   next_rule( i7_b, curs3_b_list );
+}
+
+void i3_c(void)
+{
+   bind(curs3_c, c->c, active_rule3, i7_d, curs3_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 3 (make_path)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule3( &c->a, &c->b, &c->c );
+   next_rule( i7_d, curs3_c_list );
+}
+
+void i3_d(void)
+{
+   bind(curs3_d, c->d, active_rule3, pop, curs3_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 3 (make_path)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule3( &c->a, &c->b, &c->c );
+   next_rule( pop, curs3_d_list );
+}
+
+void i4_a(void)
+{
+   bind(curs4_a, c->a, active_rule4, i6_a, curs4_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 4 (path_done)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule4( &c->a, &c->b );
+   next_rule( i6_a, curs4_a_list );
+}
+
+void i4_b(void)
+{
+   bind(curs4_b, c->b, active_rule4, pop, curs4_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 4 (path_done)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule4( &c->a, &c->b );
+   next_rule( pop, curs4_b_list );
+}
+
+void i5_a(void)
+{
+   bind(curs5_a, c->a, active_rule5, i4_a, curs5_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 5 (are_we_done)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule5( &c->a, &c->b, &c->c );
+   next_rule( i4_a, curs5_a_list );
+}
+
+void i5_b(void)
+{
+   bind(curs5_b, c->b, active_rule5, pop, curs5_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 5 (are_we_done)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule5( &c->a, &c->b, &c->c );
+   next_rule( pop, curs5_b_list );
+}
+
+void i5_c(void)
+{
+   bind(curs5_c, c->c, active_rule5, i4_b, curs5_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 5 (are_we_done)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule5( &c->a, &c->b, &c->c );
+   next_rule( i4_b, curs5_c_list );
+}
+
+void i6_a(void)
+{
+   bind(curs6_a, c->a, active_rule6, i8_a, curs6_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 6 (continue)  %d\n",rfc++,c->a._ts);
+   fire_rule6( &c->a );
+   next_rule( i8_a, curs6_a_list );
+}
+
+void i7_a(void)
+{
+   bind(curs7_a, c->a, active_rule7, i1_a, curs7_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 7 (print_results)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule7( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i1_a, curs7_a_list );
+}
+
+void i7_b(void)
+{
+   bind(curs7_b, c->b, active_rule7, i5_c, curs7_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 7 (print_results)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule7( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i5_c, curs7_b_list );
+}
+
+void i7_c(void)
+{
+   bind(curs7_c, c->c, active_rule7, i5_b, curs7_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 7 (print_results)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule7( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i5_b, curs7_c_list );
+}
+
+void i7_d(void)
+{
+   bind(curs7_d, c->d, active_rule7, pop, curs7_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 7 (print_results)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule7( &c->a, &c->b, &c->c, &c->d );
+   next_rule( pop, curs7_d_list );
+}
+
+void i8_a(void)
+{
+   bind(curs8_a, c->a, active_rule8, pop, curs8_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 8 (all_done)  %d\n",rfc++,c->a._ts);
+   fire_rule8( &c->a );
+   next_rule( pop, curs8_a_list );
+}
+
+
+void insert_data_tuple (void)
+{
+char      cont_name[TOKEN_LEN];
+char      skip[TOKEN_LEN];
+FIELDNAME fieldname[TOKEN_LEN];
+char      brace[TOKEN_LEN];
+string words[8];
+
+   sscanf (inp_line, "(make %s", cont_name);
+   if (strcmp(cont_name,"guest") == 0) {
+      guest r;
+      sscanf(inp_line, "%s %s %s %s %s %s %s %d %s", skip, cont_name, fieldname[0], words[0], fieldname[1], words[1], fieldname[2], &r.hobby, brace);
+      if (strcmp(fieldname[0], "^name") !=0) input_format_error();
+      if (strcmp(fieldname[1], "^sex") !=0) input_format_error();
+      if (strcmp(fieldname[2], "^hobby") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r.name = add_unique_symbol(words[0]);
+      r.sex = add_unique_symbol(words[1]);
+      r._ts = global_counter++;
+      insert_guest(&r);
+      push_wl( a_guest.obj, a_guest._ts, guest_num );
+      return;
+   }
+   if (strcmp(cont_name,"last_seat") == 0) {
+      last_seat r;
+      sscanf(inp_line, "%s %s %s %d %s", skip, cont_name, fieldname[0], &r.seat, brace);
+      if (strcmp(fieldname[0], "^seat") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r._ts = global_counter++;
+      insert_last_seat(&r);
+      push_wl( a_last_seat.obj, a_last_seat._ts, last_seat_num );
+      return;
+   }
+   if (strcmp(cont_name,"seating") == 0) {
+      seating r;
+      sscanf(inp_line, "%s %s %s %d %s %s %s %s %s %d %s %d %s %d %s %s %s", skip, cont_name, fieldname[0], &r.seat1, fieldname[1], words[0], fieldname[2], words[1], fieldname[3], &r.seat2, fieldname[4], &r.id, fieldname[5], &r.pid, fieldname[6], words[2], brace);
+      if (strcmp(fieldname[0], "^seat1") !=0) input_format_error();
+      if (strcmp(fieldname[1], "^name1") !=0) input_format_error();
+      if (strcmp(fieldname[2], "^name2") !=0) input_format_error();
+      if (strcmp(fieldname[3], "^seat2") !=0) input_format_error();
+      if (strcmp(fieldname[4], "^id") !=0) input_format_error();
+      if (strcmp(fieldname[5], "^pid") !=0) input_format_error();
+      if (strcmp(fieldname[6], "^path_done") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r.name1 = add_unique_symbol(words[0]);
+      r.name2 = add_unique_symbol(words[1]);
+      r.path_done = add_unique_symbol(words[2]);
+      r._ts = global_counter++;
+      insert_seating(&r);
+      push_wl( a_seating.obj, a_seating._ts, seating_num );
+      return;
+   }
+   if (strcmp(cont_name,"context") == 0) {
+      context r;
+      sscanf(inp_line, "%s %s %s %s %s", skip, cont_name, fieldname[0], words[0], brace);
+      if (strcmp(fieldname[0], "^value") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r.value = add_unique_symbol(words[0]);
+      r._ts = global_counter++;
+      insert_context(&r);
+      push_wl( a_context.obj, a_context._ts, context_num );
+      return;
+   }
+   if (strcmp(cont_name,"path") == 0) {
+      path r;
+      sscanf(inp_line, "%s %s %s %d %s %s %s %d %s", skip, cont_name, fieldname[0], &r.id, fieldname[1], words[0], fieldname[2], &r.seat, brace);
+      if (strcmp(fieldname[0], "^id") !=0) input_format_error();
+      if (strcmp(fieldname[1], "^name") !=0) input_format_error();
+      if (strcmp(fieldname[2], "^seat") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r.name = add_unique_symbol(words[0]);
+      r._ts = global_counter++;
+      insert_path(&r);
+      push_wl( a_path.obj, a_path._ts, path_num );
+      return;
+   }
+   if (strcmp(cont_name,"chosen") == 0) {
+      chosen r;
+      sscanf(inp_line, "%s %s %s %d %s %s %s %d %s", skip, cont_name, fieldname[0], &r.id, fieldname[1], words[0], fieldname[2], &r.hobby, brace);
+      if (strcmp(fieldname[0], "^id") !=0) input_format_error();
+      if (strcmp(fieldname[1], "^name") !=0) input_format_error();
+      if (strcmp(fieldname[2], "^hobby") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r.name = add_unique_symbol(words[0]);
+      r._ts = global_counter++;
+      insert_chosen(&r);
+      push_wl( a_chosen.obj, a_chosen._ts, chosen_num );
+      return;
+   }
+   if (strcmp(cont_name,"count") == 0) {
+      count r;
+      sscanf(inp_line, "%s %s %s %d %s", skip, cont_name, fieldname[0], &r.c, brace);
+      if (strcmp(fieldname[0], "^c") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r._ts = global_counter++;
+      insert_count(&r);
+      push_wl( a_count.obj, a_count._ts, count_num );
+      return;
+   }
+   printf("*** unrecognizable make - no action taken***\n");
+}
+
+
+void init_all(void)
+{
+   init_symbol_table();
+   P2_init_fastmalloc();
+   open_cont( stack );
+
+   open_cont( cont_guest );
+   init_curs( a_guest );
+
+   open_cont( cont_last_seat );
+   init_curs( a_last_seat );
+
+   open_cont( cont_seating );
+   init_curs( a_seating );
+
+   open_cont( cont_context );
+   init_curs( a_context );
+
+   open_cont( cont_path );
+   init_curs( a_path );
+
+   open_cont( shadow_path );
+   init_curs( a_shadow_path );
+
+   open_cont( cont_chosen );
+   init_curs( a_chosen );
+
+   open_cont( shadow_chosen );
+   init_curs( a_shadow_chosen );
+
+   open_cont( cont_count );
+   init_curs( a_count );
+}
+
+#include "leaps.c"

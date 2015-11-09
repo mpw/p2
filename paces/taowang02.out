@@ -1,0 +1,8 @@
+Insertion (100) : 
+Deletion (100) : 
+Scan (100) : 
+Scan orderby SSN(100) : 
+Ret (SSN = var) (100) : 
+Ret (SSN = 500) (100) : 
+Ret (SSN > 500) (100) : 
+Ret (SSN > var) (100) : 

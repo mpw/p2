@@ -1,0 +1,117 @@
+// $Id: hash.xph,v 45.0 1997/09/19 05:46:24 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// hash storage layer implementation included by both hash.xp and
+// hash_slow.xp
+
+!#include "qopt.h"
+
+#if 0
+/* Force: USE this layer. */
+#define COST1 10
+#define COST2 10
+#elif 0
+/* Force: do NOT use this layer. */
+#define COST1 MAX_QOPT_COST
+#define COST2 MAX_QOPT_COST
+#else
+/* Normal. */
+#define COST1 LINEAR_TIME_QOPT_COST*HASH_BUCKET_QOPT_FACTOR
+#define COST2 CONSTANT_TIME_QOPT_COST*HASH_COMPUTATION_QOPT_FACTOR
+#endif
+
+optimize(cursor)
+{
+  BOUNDS b;
+
+  optimize(cursor);
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi))
+  {
+    case 0:
+    case 1:
+      // Layer won't help in processing.
+      // Use this layer if there is nothing better.
+
+      if (cost > COST1)
+      {
+        cost = COST1;
+        layer = %ln;
+        retrieval_direction = 0;
+      }
+      break;
+
+    case 2:
+      // Point qualification.
+      // Bingo--this is probably the best layer to use.
+
+      if (cost > COST2)
+      {
+        cost = COST2;
+        layer = %ln;
+        retrieval_direction = 0;
+      }
+      break;
+
+    default:
+      error("use_layer failed");
+  }
+}
+
+ddlhint(argc, argv)
+{
+  limit 3 arguments;
+  get_ddlhint_argument(%a.ofield, argv[1]);
+  get_ddlhint_argument(%a.size, argv[2]);
+  get_ddlhint_argument(%a.hash_function, argv[3]);
+}
+
+query(cursor)
+{
+#if 1
+  char *p = bind_predicate(te, cursor, obj_type, predicate);
+  %{
+     %v.p
+  %}
+  xfree(p);
+#else
+  %{
+     query(cursor)
+  %}
+#endif
+}
+
+init_cont(container)
+%{
+   init_cont(container);
+   memset((void *) container.bucket, 0, (%a.size * sizeof(char *)));
+%}
+
+insert(cursor, record)
+{
+  char hash_value[30];
+  sprintf(hash_value, "P2_temp%d", other_id_counter++);
+  %{
+    insert(cursor, record);
+    {
+      int %v.hash_value = %a.hash_function((record).%a.ofield, %a.size);
+      if (container.bucket[%v.hash_value] == 0)
+      {
+        // EMPTY bucket.
+        container.bucket[%v.hash_value] = cursor.obj;
+        cursor.next = 0;
+      }
+      else
+      {
+        // NON-empty bucket.
+        // Add record to beginning of bucket.
+        cursor.next = container.bucket[%v.hash_value];
+        container.bucket[%v.hash_value] = cursor.obj;
+      }
+    }
+  %}
+}
+
+swap(cursor0, cursor1)
+%{
+    P2_runtime_error("cannot swap records in hash");
+%}

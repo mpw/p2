@@ -1,0 +1,4 @@
+init_generic.o: init_generic.xp /usr/include/assert.h \
+  /usr/include/sys/cdefs.h /usr/include/sys/_symbol_aliasing.h \
+  /usr/include/sys/_posix_availability.h ../common/qopt.h op-vec.h \
+  ../common/print-log.h

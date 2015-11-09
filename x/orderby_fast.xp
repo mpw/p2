@@ -1,0 +1,24 @@
+// $Id: orderby_fast.xp,v 45.1 1997/09/28 11:39:17 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds orderby_fast[ ds, top ] stable curs_state no annotation retrieval_always
+
+// (When an orderby direction is specified, and ordering is not
+// provided by other components in the type expression) this layer
+// ALWAY sorts the orderby container for reset_start() or reset_end()
+// special operation, even if the container has not changed since the
+// last time is was sorted.
+
+// These semantics keep FAST and efficient the container-modifying
+// special operations insert(), delete() swap(), and upd(), but make
+// needlessly SLOW repeated calls to reset_start() and reset_end()
+// operations.
+
+// That is, if reset_start() and/or reset_end() is called N times,
+// without intervening container-modifying special operations, then
+// the orderby container will be sorted N times, even though it need
+// only be sorted the first time.
+
+!#define P2_LAYER_CSTATE orderby_fast_cstate
+
+#include "orderby.xph"

@@ -1,0 +1,31 @@
+/* $Id: container01.p2,v 45.0 1997/09/19 05:43:05 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Minimal container declaration. */
+/* Analogous to container00, but container element is SUE "struct e" */
+/* Analogous to container0[23], but NULL container base type. */
+/* Analogous to cursor01.p2, but container not cursor declaration. */
+
+#include "P2_paces.h"
+
+/* Type expression. */
+typex {
+  t = top2ds[malloc[transient]];
+}
+
+/* Element. */
+struct e {
+  int i;
+};
+
+/* Container. */
+container <struct e> stored_as t with {
+} cont;
+
+int
+main()
+{
+  open_cont(cont);
+  close_cont(cont);
+  return 0;
+}

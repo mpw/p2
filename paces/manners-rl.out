@@ -1,0 +1,86 @@
+P2/RL - Reengineered OPS5c - LEAPS-based OPS5 Compiler
+(C) 1994 Don Batory University of Texas at Austin
+
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level> 
+Top Level>  seat 1 16 16 1 1 0 1
+ seat 1 16 10
+ seat 2 10 15
+ seat 3 15 9
+ seat 4 9 14
+ seat 5 14 6
+ seat 6 6 12
+ seat 7 12 5
+ seat 8 5 13
+ seat 9 13 8
+ seat 10 8 11
+ seat 11 11 4
+ seat 12 4 7
+ seat 13 7 3
+ seat 14 3 2
+ seat 15 2 1
+
+ Yes we are done
+ 2 15
+ 7 13
+ 11 11
+ 13 9
+ 12 7
+ 14 5
+ 15 3
+ 16 1
+ 10 2
+ 9 4
+ 6 6
+ 5 8
+ 8 10
+ 4 12
+ 3 14
+ 1 16
+OPS5c terminated via halt statement.
+OPS5c terminated via halt statement.

@@ -1,0 +1,101 @@
+/* $Id: waltz-bug3.p2,v 45.0 1997/09/19 05:44:48 jthomas Exp $ */
+
+int    dom_timestamp;       /* dominant timestamp */
+
+/*****************  valid defines ****************/
+
+#define ta " $a._ts <= dom_timestamp "
+#define tb " $b._ts <= dom_timestamp "
+#define tc " $c._ts <= dom_timestamp "
+#define td " $d._ts <= dom_timestamp "
+#define te " $e._ts <= dom_timestamp "
+#define tf " $f._ts <= dom_timestamp "
+
+#define va " (!is_deleted($a)) "
+#define vb " (!is_deleted($b)) "
+#define vc " (!is_deleted($c)) "
+#define vd " (!is_deleted($d)) "
+#define ve " (!is_deleted($e)) "
+#define vf " (!is_deleted($f)) "
+
+#define and " && "
+
+#define t2_a and tb
+#define t2_b and ta
+#define t3_a and tb and tc
+#define t3_b and ta and tc
+#define t3_c and ta and tb
+#define t4_a and tb and tc and td
+
+#define v2_a vb
+#define v2_b va
+#define v3_a vb and vc
+#define v3_b va and vc
+#define v3_c va and vb
+#define v4_a vb and vc and vd
+
+/************ generated record types ***************/
+
+typedef struct {
+   char    value[30];
+   int     _ts;
+} stage;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   char    joined[7];
+   char    label[7];
+   char    plotted[5];
+   int     _ts;
+} edge;
+
+/************ generated container declarations ***************/
+
+typex { leaps_x = top2ds_qualify[
+                  llist[
+                  delflag[malloc[transient]]]]; }
+
+container < stage > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_stage;
+
+container < edge > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_edge;
+
+
+#if 1
+
+#define query_4 where " $b.joined == $a.value && \
+                        $b.joined == 'false' && \
+                        $c.p1 == $b.p1 && $c.p2 != $b.p2 && \
+                           $c.joined == 'false' && \
+                        $d.p1 == $b.p1 && $d.p2 != $b.p2 && \
+                           $d.p2 != $c.p2 && $d.joined == 'false' "
+
+#else
+
+#define query_4 where " $a.value == 'detect_junctions' && $b.joined == 'false' \
+        && $c.p1 == $b.p1 && $c.p2 != $b.p2 && $c.joined == 'false' \
+        && $d.p1 == $b.p1 && $d.p2 != $b.p2 && $d.p2 != $c.p2
+        && $d.joined == 'false' "
+
+#endif
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < a >
+   query_4 t4_a
+   valid v4_a
+   curs4_a;
+
+curs4_a k;
+
+int main()
+{
+  if (0) {
+    foreachk(k) {
+    }
+  }
+  return 0;
+}

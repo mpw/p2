@@ -1,0 +1,90 @@
+/* $Id: varchar04.p2,v 45.0 1997/09/19 05:44:46 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test variable length elements. */
+
+#include "P2_paces.h"
+#include <stdio.h>    /* printf() */
+
+#define N 10
+
+typex {
+#if 1
+  /* Works: without a compile time warning, now that I have added an
+     integer (IN) special operation argument class (ACLASS), in order
+     to make the actual and formal parameters to varinsert match. */
+  t = conceptual[P2_LAYER1[malloc[transient]]]; 
+#elif 0
+  /* Works: now that I have added the special operation varinsert() to
+     the orderby layers (x/orderby.xp1). */
+  t = top2ds[P2_ORDERBY_LAYER[P2_LAYER1[malloc[transient]],
+			      dlist[malloc[transient]]]];
+#elif 0
+  /* Works: and the semantics of the stack layer are such that this is
+     guaranteed to maintain the correct ordering. */
+  t = top2ds[stack[malloc[transient]]];
+#else
+  /* Works: but does not maintain any special ordering, and thus the
+     paces test may fail for some definitions of the layer P2_LAYER1. */
+  t = top2ds[P2_LAYER1[malloc[transient]]];
+#endif 
+}
+
+/* Element. */
+typedef struct {
+  int i;
+  varchar v[0];
+  varchar w[0];
+  varchar x[0];
+  varchar y[0];
+  varchar z[0];
+} E;
+
+container <E> stored_as t with {
+#if 1
+  P2_LAYER1_ANNOTE(i);
+#endif
+} cont;
+
+cursor <cont>
+#if 1
+  orderby descending i
+#endif
+curs;
+
+int
+main()
+{
+  E e;
+  int i;
+  int j;
+
+  open_cont(cont);
+  init_curs(curs);
+
+  printf("Insert:\n");
+  for (i = 0; i < N; i++)
+  {
+    /* Initialize element's integer field i. */
+    e.i = i;
+    /* Insert element. */
+    /* Allocate i+1 characters: space for i 'x' plus 1 '\0'. */
+    varinsert(curs, e, i+1);
+    /* Initialize element's varchar field x. */
+    for (j = 0; j < i; j++)
+    {
+      curs.x[j] = 'x';
+    }    
+    curs.x[j] = '\0';
+    /* Print element. */
+    printf("%d. %s\n", curs.i, curs.x);
+  }
+  printf("Print:\n");
+  foreach(curs)
+  {
+    printf("%d. %s\n", curs.i, curs.x);
+  }
+
+  close_cont(cont);
+  exit(0);
+}

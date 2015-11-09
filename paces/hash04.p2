@@ -1,0 +1,73 @@
+/* $Id: hash04.p2,v 45.0 1997/09/19 05:43:28 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Check for hash collisions between memory mapped file names. */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>         /* assert() */
+#include <stdio.h>          /* printf() */
+
+#include "P2.h"             /* P2_str_hash() */
+#include "../common/mmap.h" /* MAX_MMAP_FILE */
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* Maximum number of file names (including terminating 0) */
+#define N 10
+
+main()
+{
+  int i, j;
+  int result = 0;
+  unsigned hash[N];
+  char *s[N] =
+  {
+    "/tmp/P2_lock-manager-data",
+    "/tmp/P2_log-anchor-data",
+    "/tmp/P2_log-data",
+    "/tmp/P2_trace-manager-data",
+    "/tmp/P2_sample-data",
+    "/tmp/P2_xact-manager-data",
+    0
+  };
+
+#ifdef DEBUG
+  printf("MAX_MMAP_FILE = %d\n", MAX_MMAP_FILE);
+#endif /* DEBUG */
+
+  /* Hash. */
+  for (i = 0; s[i] != 0; i++)
+  {
+    hash[i] = P2_str_hash(s[i], MAX_MMAP_FILE);
+#ifdef DEBUG
+    printf("%d. P2_str_hash(\"%s\", %d) = %d\n",
+	   i, s[i], MAX_MMAP_FILE, hash[i]);
+#endif /* DEBUG */
+  }
+
+  /* Check for hash collisions. */
+  for (i = 0; s[i+1] != 0; i++)
+    for (j = i+1; s[j] != 0; j++)
+    {
+      assert(i != j);
+      assert(hash[i] == P2_str_hash(s[i], MAX_MMAP_FILE));
+      assert(hash[j] == P2_str_hash(s[j], MAX_MMAP_FILE));
+      if (hash[i] == hash[j])
+      {
+	printf("Both \"%s\" and \"%s\" hash to %d\n",
+	       s[i], s[j], hash[i]);
+	result = 1;
+      }
+    }
+
+  /* Return result. */
+  exit(result);
+}

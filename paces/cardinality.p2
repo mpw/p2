@@ -1,0 +1,78 @@
+/* $Id: cardinality.p2,v 45.0 1997/09/19 05:42:52 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test the layer x/cardinality.xp */
+/* Analogous to paces/serial_number.p2 */
+
+#include <assert.h>     /* assert() */
+#include <stdio.h>      /* printf() */
+
+#include "P2_paces.h"
+
+#define N 10
+
+typex {
+  t = top2ds[cardinality[P2_DELFLAG_LAYER[array[transient]]]];
+}
+
+typedef struct {
+  int i;
+} E;
+
+container <E> stored_as t with {
+  array size is N*N;
+} cont;
+
+cursor <cont> curs;
+
+int main (void) 
+{
+  E e;                        /* Element. */
+  int i, j;                   /* Loop indices. */
+  int old_cardinality = 0;    /* Cardinality for previous iteration. */
+  int new_cardinality;        /* Cardinality (for current iteration). */
+  int new_serial_number = 0;  /* Serial number (for next allocation). */
+
+  open_cont(cont);
+  init_curs(curs);
+  
+  for (i = 0; i < N; i++)
+  {
+    /*** Insert N-i elements. ****/
+
+    for (j = 0; j < N-i; j++)
+    {
+#if 0
+      /* Cursor need not be valid for insert. */
+      /* Make sure cursor is valid. */
+      reset_start(curs);
+#endif
+      /* Initialize element. */
+      new_serial_number++;
+      e.i = new_serial_number;
+      /* Insert. */
+      assert(!overflow(cont));
+      insert(curs, e);
+    }
+
+    /*** Delete i elements. ****/
+
+    for (j = 0; j < i; j++)
+    {
+      /* Cursor must be vaild for delete--we are deleting cursor.obj */
+      /* Make sure cursor is valid. */
+      reset_start(curs);
+      /* Delete. */
+      delete(curs);
+    }
+    /* Print cardinality. */
+    new_cardinality = cardinality(cont);
+    printf("%d. %d + (%d - %d) = %d\n",
+	   i, old_cardinality, N-i, i, new_cardinality);
+    assert(old_cardinality + ((N-i)-i) == new_cardinality);
+    old_cardinality = new_cardinality;
+  }
+
+  close_cont(cont);
+  exit(0);
+}

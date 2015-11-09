@@ -1,0 +1,13 @@
+// $Id: slist_stable.xp,v 45.1 1997/09/29 03:51:06 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds slist_stable [ ds ] stable no annotation retrieval_sometimes
+
+// STABLE singly-linked list layer.
+
+// In most cases, this layer should have WORSE performance than the
+// default, stable slist layer.  Thus, it's not clear to me why we
+// need this layer.  (JAT)
+
+#define P2_STABLE
+#include "slist.xph"

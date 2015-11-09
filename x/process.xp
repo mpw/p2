@@ -1,0 +1,79 @@
+// $Id: process.xp,v 45.0 1997/09/19 05:46:45 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Process manager.
+
+layer ds process [ ds ] stable no annotation retrieval_always
+
+#if 0
+s_verbatim(schema)
+{
+  char *include = "#include \"P2_process.h\" /* Included by process.xp */\n";
+%{
+  %v.include
+
+  // Figure out a way to get rid of this semicolon.
+  ;
+
+  s_verbatim(schema);
+%}
+}
+#endif
+
+xform(element, container, cursor)
+{
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  optimize(cursor);
+}
+
+init_schema(schema)
+%{
+   P2_init_process();
+   init_schema(schema);
+%}
+
+close_schema(schema)
+%{
+   close_schema(schema);
+   P2_delete_process();
+%}
+
+abort_xact(schema)
+%{
+  // Call down.
+  abort_xact(schema);
+%}
+
+begin_xact(schema)
+%{
+  // Call down.
+  begin_xact(schema);
+%}
+
+commit_xact(schema)
+%{
+  // Call down.
+  commit_xact(schema);
+%}
+
+checkpoint_schema(schema)
+%{
+  // Call down.
+  checkpoint_schema(schema);
+%}
+
+def_cursor_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}
+
+def_container_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}

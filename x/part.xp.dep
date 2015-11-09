@@ -1,0 +1,1 @@
+part.o: part.xp part.h ../common/qopt.h

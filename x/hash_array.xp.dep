@@ -1,0 +1,2 @@
+hash_array.o: hash_array.xp hash_array.h hash_array.xph ../config.h \
+  adhoc.xph

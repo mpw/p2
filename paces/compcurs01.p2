@@ -1,0 +1,50 @@
+/* $Id: compcurs01.p2,v 45.0 1997/09/19 05:42:53 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+#include "P2_paces.h"
+
+typedef struct {
+  int  empno;
+  int  age;
+  int  deptno;
+  int  jobcode;
+  char *dept_name;
+  char *name;
+} EMPLOYEE;
+
+typedef struct {
+  int  deptno;
+  char *name;
+} DEPARTMENT;
+
+typedef struct {
+  int  jobno;
+  char *name;
+} JOB;
+
+typex {
+  t = P2_COMPCURS_TYPEX;
+}
+
+container <EMPLOYEE> stored_as t with {
+  P2_COMPCURS_ANNOTE(empno, 10);
+} employee;
+
+container <DEPARTMENT> stored_as t with {
+  P2_COMPCURS_ANNOTE(deptno, 10);
+} department;
+
+container <JOB> stored_as t with {
+  P2_COMPCURS_ANNOTE(jobno, 10);
+} job;
+
+compcurs < e employee, d department, j job >
+  given < e, d >
+  where "$e.deptno == $d.deptno && $e.jobcode == $j.jobno && $d.deptno == 3"
+  orderby $e.empno
+x;
+
+int main()
+{
+  return(0);
+}

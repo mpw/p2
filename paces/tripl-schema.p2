@@ -1,0 +1,347 @@
+/* $Id: tripl-schema.p2,v 45.0 1997/09/19 05:44:38 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/************************************
+             tripl.p2
+************************************/
+
+/************************************
+  options selected: watch 
+************************************/
+
+#include <stdlib.h>
+#include "leaps.h"
+#include "P2_paces.h"
+
+/**************** generated #defines *******************/
+
+#define DEBUG 0
+
+#define bind( curstype, kdcurs, active_rule, skiprule, alist) \
+   curstype *c; \
+   if (fresh) { \
+      c = (curstype*) malloc(sizeof(curstype)); \
+      top.curs = (void*) c;\
+      initk(*c); \
+      pos(kdcurs,top.cursor_position); \
+   } else {  \
+      c = (curstype *) top.curs; \
+      goto cnt; \
+   } \
+   foreachk(*c) {
+
+#define next_rule( nextrule, alist ) \
+      return; \
+cnt: ; \
+   } \
+   free(c); \
+   fresh = TRUE; top.current_rule = nextrule; \
+   nextrule(); return;
+
+
+
+/*****************  valid defines ****************/
+
+#define ta " $a._ts <= dom_timestamp "
+#define tb " $b._ts <= dom_timestamp "
+#define tc " $c._ts <= dom_timestamp "
+#define td " $d._ts <= dom_timestamp "
+
+#define va " (!deleted($a)) "
+#define vb " (!deleted($b)) "
+#define vc " (!deleted($c)) "
+#define vd " (!deleted($d)) "
+
+#define and " && "
+
+#define t2_a and tb
+#define t2_b and ta
+#define t3_a and tb and tc
+#define t3_b and ta and tc
+#define t3_c and ta and tb
+#define t4_a and tb and tc and td
+#define t4_b and ta and tc and td
+#define t4_c and ta and tb and td
+#define t4_d and ta and tb and tc
+
+#define v2_a vb
+#define v2_b va
+#define v3_a vb and vc
+#define v3_b va and vc
+#define v3_c va and vb
+#define v4_a vb and vc and vd
+#define v4_b va and vc and vd
+#define v4_c va and vb and vd
+#define v4_d va and vb and vc
+
+
+/************* generated forward references ***************/
+
+VOID_FUNC    i1_a,
+             i2_a, i2_b, i2_c;
+
+
+
+/************ generated record types ***************/
+
+typedef struct {
+   int     bar;
+   int     _ts;
+} foo;
+
+typedef struct {
+   int     val;
+   int     _ts;
+} rel1;
+
+typedef struct {
+   int     val;
+   int     _ts;
+} rel2;
+
+
+/************ generated container declarations ***************/
+
+typex { leaps_x = top2ds_qualify[
+                  llist[
+                  P2_DELFLAG_LAYER[malloc[transient]]]]; }
+
+schema {
+  container < foo > cont_foo;
+  container < rel1 > cont_rel1;
+  container < rel2 > cont_rel2;
+}
+stored_as leaps_x with {
+  llist timestamp of cont_foo is _ts;
+  llist timestamp of cont_rel1 is _ts;
+  llist timestamp of cont_rel2 is _ts;
+} s;
+
+/************** generated container numbers *******************/
+
+#define cont_foo_num  1
+#define cont_rel1_num  2
+#define cont_rel2_num  3
+
+
+/************ utility cursor decls ***************/
+
+typedef cursor <s.cont_foo> foo_cursor;
+typedef cursor <s.cont_rel1> rel1_cursor;
+typedef cursor <s.cont_rel2> rel2_cursor;
+
+foo_cursor   a_foo;
+
+rel1_cursor   a_rel1;
+
+rel2_cursor   a_rel2;
+
+
+
+/**************************** rule #1: generate-data :
+   (foo ^bar  <x> ^bar < 35  )
+    -->  *******************************/
+
+int x_1;
+
+#define query_1 where " $a.bar < 35 "
+
+typedef compcurs < a s.cont_foo >
+   given < a >
+   query_1
+   curs1_a;
+
+/**************************** rule #2: print-sequences :
+   (rel1 ^val  <r>  )
+   (rel2 ^val  <s> ^val > <r>  )
+   (rel1 ^val  <t> ^val > <r> ^val > <s>  )
+    -->  *******************************/
+
+int t_2;
+int s_2;
+int r_2;
+
+#define query_2 where " $b.val > $a.val && $c.val > $a.val && $c.val > $b.val "
+
+typedef compcurs < a s.cont_rel1, b s.cont_rel2, c s.cont_rel1 >
+   given < a >
+   query_2 t3_a
+   valid v3_a
+   curs2_a;
+
+typedef compcurs < a s.cont_rel1, b s.cont_rel2, c s.cont_rel1 >
+   given < b >
+   query_2 t3_b
+   valid v3_b
+   curs2_b;
+
+typedef compcurs < a s.cont_rel1, b s.cont_rel2, c s.cont_rel1 >
+   given < c >
+   query_2 t3_c
+   valid v3_c
+   curs2_c;
+
+
+
+/************* generated valid functions **********************/
+
+BOOLEAN valid_foo( void *o ) {
+   pos(a_foo, o);
+   return( !deleted(a_foo) );
+}
+
+BOOLEAN valid_rel1( void *o ) {
+   pos(a_rel1, o);
+   return( !deleted(a_rel1) );
+}
+
+BOOLEAN valid_rel2( void *o ) {
+   pos(a_rel2, o);
+   return( !deleted(a_rel2) );
+}
+
+BOOL_FUNC_PTR valid_vect[ ] = { 0, valid_foo, valid_rel1, valid_rel2, 0 };
+
+
+/*************** fire rule procs *****************/
+
+/**************************** rule generate-data :
+   (foo ^bar  <x> ^bar < 35  )
+    -->  *******************************/
+
+void fire_rule1( foo_cursor *a )
+{
+   /** (make rel1 ^val  <x> ) **/
+   { rel1 r;
+     r.val =  a->bar;
+     r._ts =  global_counter++;
+     insert(a_rel1,r);
+     push_wl( a_rel1.obj, a_rel1._ts, cont_rel1_num );
+   }
+
+   /** (make rel2 ^val  <x> ) **/
+   { rel2 r;
+     r.val =  a->bar;
+     r._ts =  global_counter++;
+     insert(a_rel2,r);
+     push_wl( a_rel2.obj, a_rel2._ts, cont_rel2_num );
+   }
+
+   /** (modify 1 -- foo -- ^bar  COMPUTE(  <x> + 1 )) **/
+   {  foo r;
+      global_counter++;
+      getrec(*a,r);
+      r.bar =  a->bar + 1;
+      r._ts =  global_counter++;
+      insert(a_foo,r);
+      push_wl( a_foo.obj, a_foo._ts, cont_foo_num );
+      delete(*a);
+   }
+
+}
+
+/**************************** rule print-sequences :
+   (rel1 ^val  <r>  )
+   (rel2 ^val  <s> ^val > <r>  )
+   (rel1 ^val  <t> ^val > <r> ^val > <s>  )
+    -->  *******************************/
+
+void fire_rule2( rel1_cursor *a, rel2_cursor *b, rel1_cursor *c )
+{
+   /** (write  strictly increasing sequence <r> <s> <t> (CRLF) ) **/
+   printf(" strictly increasing sequence %d %d %d\n", a->val, b->val, c->val);
+
+}
+
+
+VOID_FUNC_PTR first_rule[] =
+   { 0, i1_a, i2_a, i2_b, 0};
+
+int rfc = 1;
+
+void i1_a(void)
+{
+   bind(curs1_a, c->a, active_rule1, i2_c, curs1_a_list );
+   fprintf(stderr,"%d. Firing rule 1 (generate-data)  %d\n",rfc++,c->a._ts);
+   fire_rule1( &c->a );
+   next_rule( pop, curs1_a_list );
+}
+
+void i2_a(void)
+{
+   bind(curs2_a, c->a, active_rule2, pop, curs2_a_list );
+   fprintf(stderr,"%d. Firing rule 2 (print-sequences)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule2( &c->a, &c->b, &c->c );
+   next_rule( i2_c, curs2_a_list );
+}
+
+void i2_b(void)
+{
+   bind(curs2_b, c->b, active_rule2, pop, curs2_b_list );
+   fprintf(stderr,"%d. Firing rule 2 (print-sequences)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule2( &c->a, &c->b, &c->c );
+   next_rule( pop, curs2_b_list );
+}
+
+void i2_c(void)
+{
+   bind(curs2_c, c->c, active_rule2, pop, curs2_c_list );
+   fprintf(stderr,"%d. Firing rule 2 (print-sequences)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule2( &c->a, &c->b, &c->c );
+   next_rule( pop, curs2_c_list );
+}
+
+
+void insert_data_tuple ( void )
+{
+char cont_name[TOKEN_LEN];
+char skip[TOKEN_LEN];
+char fieldname[TOKEN_LEN];
+   sscanf (inp_line, "(make %s", cont_name);
+   if (strcmp(cont_name,"foo") == 0) {
+      foo r;
+      sscanf(inp_line, "%s %s %s %d ", skip, cont_name, fieldname, &r.bar);
+      r._ts = global_counter++;
+      insert(a_foo,r);
+      push_wl( a_foo.obj, a_foo._ts, cont_foo_num );
+      return;
+   }
+   if (strcmp(cont_name,"rel1") == 0) {
+      rel1 r;
+      sscanf(inp_line, "%s %s %s %d ", skip, cont_name, fieldname, &r.val);
+      r._ts = global_counter++;
+      insert(a_rel1,r);
+      push_wl( a_rel1.obj, a_rel1._ts, cont_rel1_num );
+      return;
+   }
+   if (strcmp(cont_name,"rel2") == 0) {
+      rel2 r;
+      sscanf(inp_line, "%s %s %s %d ", skip, cont_name, fieldname, &r.val);
+      r._ts = global_counter++;
+      insert(a_rel2,r);
+      push_wl( a_rel2.obj, a_rel2._ts, cont_rel2_num );
+      return;
+   }
+   printf("*** unrecognizable make - no action taken***\n");
+}
+
+
+void initialize ( void )
+{
+   open_cont( stack );
+
+   open_cont( s.cont_foo );
+   init_curs( a_foo );
+
+   open_cont( s.cont_rel1 );
+   init_curs( a_rel1 );
+
+   open_cont( s.cont_rel2 );
+   init_curs( a_rel2 );
+}
+
+void finalize ( void )
+{
+}
+
+#include "leaps.c"

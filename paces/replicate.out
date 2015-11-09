@@ -1,0 +1,120 @@
+contents of All Employees:
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 2
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 7
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 5
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 6
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 8
+       name: Alexander, Joe  dept_name: Biology
+        age: 21      empno: 10020       time: 3
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 4
+       name: Akers, Mark  dept_name: Biology
+        age: 60      empno: 10000       time: 1
+size = 8
+contents of AK emp:
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 4
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 5
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 6
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 8
+       name: Akers, Mark  dept_name: Biology
+        age: 60      empno: 10000       time: 1
+contents of recent emp:
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 2
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 7
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 5
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 6
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 8
+contents of old emp:
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 5
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 6
+       name: Akers, Mark  dept_name: Biology
+        age: 60      empno: 10000       time: 1
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 7
+contents of old emp:
+contents of remaining emp:
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 2
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 8
+       name: Alexander, Joe  dept_name: Biology
+        age: 21      empno: 10020       time: 3
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 4
+size = 4
+contents of All Employees:
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 10
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 15
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 13
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 14
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 16
+       name: Alexander, Joe  dept_name: Biology
+        age: 21      empno: 10020       time: 11
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 12
+       name: Akers, Mark  dept_name: Biology
+        age: 60      empno: 10000       time: 9
+size = 8
+contents of AK emp:
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 12
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 13
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 14
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 16
+       name: Akers, Mark  dept_name: Biology
+        age: 60      empno: 10000       time: 9
+contents of recent emp:
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 10
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 15
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 13
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 14
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 16
+contents of old emp:
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 13
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 14
+       name: Akers, Mark  dept_name: Biology
+        age: 60      empno: 10000       time: 9
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 15
+contents of old emp:
+contents of remaining emp:
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 10
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 16
+       name: Alexander, Joe  dept_name: Biology
+        age: 21      empno: 10020       time: 11
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 12
+size = 4

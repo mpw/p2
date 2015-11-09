@@ -1,0 +1,343 @@
+// $Id: top2link.xp,v 45.0 1997/09/19 05:46:54 jthomas Exp $
+// Copyright (C) 1996, The University of Texas at Austin.
+
+layer toplnk top2link[ lnk ] stable no annotation  retrieval_never
+
+#define BOTH_BOUND  (bound0 &&  bound1)
+#define PARENT_ONLY (bound0 && !bound1)
+#define CHILD_ONLY  (!bound0 &&  bound1)
+#define NONE_BOUND  (!bound0 && !bound1)
+
+
+
+// loptimize - does 3 things
+//
+// (1) determines the layer that will process the
+//     link.  Layerid is stored in linklayer and
+//     linkcost is the estimate of processing the link.
+// (2) determines the cardinality of the link.
+//     pcard, ccard are set. 
+// (3) determines the presidual and cresidual
+//     to be propagated.
+
+
+loptimize(cursor0, cursor1, lstate)
+{
+
+   // Step 1:  select fastest join layer and collect information
+
+   loptimize(cursor0, cursor1, lstate);
+
+   // Step 2:  propagate residuals 
+
+   post_and(predicate0, presidual);
+   post_and(predicate1, cresidual);
+}
+
+
+// link cursor operations
+//
+// reset link cursor operations
+
+
+resetc(cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+{
+   if (bound1) {
+      error("resetc on bound cursor %s", cursor1);
+   }
+   else
+   %{
+      resetc(cursor0, cursor1, lstate);
+   %}
+}
+
+
+resetp(cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+{
+   if (bound0) {
+      error("resetp on bound cursor %s", cursor0);
+   }
+   else
+   %{
+      resetp(cursor0, cursor1, lstate);
+   %}
+}
+
+
+// advance link cursor to next link-qualified pair
+
+advc( cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+{
+   if (bound1) {
+      error("advc on bound cursor %s", cursor0);
+   }
+   else
+   %{
+      advc(cursor0, cursor1, lstate);
+   %}
+}
+
+
+advp( cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+{
+   if (bound0) {
+      error("advp on bound cursor %s", cursor0);
+   }
+   else
+   %{
+      advp(cursor0, cursor1, lstate);
+   %}
+}
+
+
+// foreach parent operation
+
+
+foreachp(cursor0, cursor1, lstate, expr)  //parent cursor0, child cursor1
+{
+  char *label = new_label_name(loop_id_counter, cursor_id0);
+  if (bound0) {
+    %{
+      if (related(cursor0, cursor1, lstate))
+      {
+        expr
+      }
+    %}
+    if (enable_continue_labels)
+    %{
+      %v.label:;
+    %}
+  }
+  else switch (pcard) {
+  case ONE:
+  {
+     %{
+        resetp(cursor0, cursor1, lstate);
+        {
+          expr
+        }
+     %}
+     if (enable_continue_labels)
+     %{
+        %v.label:;
+     %}
+     break;
+   }
+   case AT_MOST_ONE:
+   {
+     %{
+        resetp(cursor0, cursor1, lstate);
+        if (!(endp(cursor0, cursor1, lstate))) {
+        {
+          expr
+        }
+     %}
+     if (enable_continue_labels)
+     %{
+        %v.label:;
+     %}
+     break;
+    }
+    case MANY:
+     { 
+       %{
+         resetp(cursor0, cursor1, lstate);
+         while (!(endp(cursor0, cursor1, lstate))) {
+           {
+             expr
+           }
+       %}
+       if (enable_continue_labels)
+       %{
+           %v.label:;
+       %}
+       %{
+           advp(cursor0, cursor1, lstate);
+         }
+       %}
+     }
+   }
+  xfree(label);
+}
+
+
+// foreach child operation
+
+
+foreachc(cursor0, cursor1, lstate, expr)  //parent cursor0, child cursor1
+{
+  char *label = new_label_name(loop_id_counter, cursor_id1);
+  if (bound1) {
+    %{
+      if (related(cursor0, cursor1, lstate))
+      {
+        expr
+      }
+    %}
+    if (enable_continue_labels)
+    %{
+      %v.label:;
+    %}
+  }
+  else switch (ccard) {
+  case ONE:
+  {
+     %{
+        resetc(cursor0, cursor1, lstate);
+        {
+           expr
+        }
+     %}
+     if (enable_continue_labels)
+     %{
+        %v.label:;
+     %}
+     break;
+   }
+   case AT_MOST_ONE:
+   {
+     %{
+        resetc(cursor0, cursor1, lstate);
+        if (!(endc(cursor0, cursor1, lstate))) {
+        {
+           expr
+        }
+     %}
+     if (enable_continue_labels)
+     %{
+        %v.label:;
+     %}
+     break;
+   }
+   case MANY:
+     {
+       %{
+         resetc(cursor0, cursor1, lstate);
+         while (!(endc(cursor0, cursor1, lstate))) {
+           {
+             expr
+           }
+       %}
+       if (enable_continue_labels)
+       %{
+           %v.label:;
+       %}
+       %{
+           advc(cursor0, cursor1, lstate);
+         }
+       %}
+     }
+  }
+  xfree(label);
+}
+
+
+// foreach link operation
+
+foreachl(cursor0, cursor1, lstate, expr)  //parent cursor0, child cursor1
+{
+  char *labelp = new_label_name(loop_id_counter, cursor_id0);
+  char *labelc = new_label_name(loop_id_counter, cursor_id1);
+
+   if (PARENT_ONLY) {
+     // Only parent is bound.
+     %{
+        foreachc#(cursor0, cursor1, lstate, expr);
+     %}
+     if (enable_continue_labels)
+     %{
+        %v.labelp:;
+     %}
+   }
+
+   if (CHILD_ONLY) {
+     // Child is bound.
+     %{
+        foreachp#(cursor0, cursor1, lstate, expr);
+     %}
+     if (enable_continue_labels)
+     %{
+        %v.labelc:;
+     %}
+   }
+
+   if (BOTH_BOUND) {
+     %{
+        if (related(cursor0, cursor1, lstate))
+        {
+           expr
+        }
+     %}
+     if (enable_continue_labels)
+     %{
+        %v.labelp:;
+        %v.labelc:;
+     %}
+   }
+
+   if (NONE_BOUND)  
+   {
+      if (special_foreachl)
+      %{
+         // let layer decide which to bind first
+         // this only occurs when there is a separate "link" container
+         // which could be scanned...
+
+         foreachl(cursor0, cursor1, lstate, expr);
+      %}
+      else {
+         // note: we could scan parent or child file; we choose the
+         //       parent arbitrarily.  For each parent, the following
+         //       generates the code for accessing its children
+   
+         switch(ccard) {
+         case AT_MOST_ONE: // At most one child - don't perform cadvance.
+         {
+            %{
+               foreach(cursor0)        // parent at outerloop
+                  resetc#(cursor0, cursor1, lstate);  // child at innerloop
+                  if (!(endc#(cursor0, cursor1, lstate)))
+                  {
+                     expr
+                  }
+                  %v.labelc:;
+               end_foreach
+            %}
+            break;
+         }
+         case ONE: // Exactly one child - don't perform end test or advance.
+         {
+             %{
+               foreach(cursor0)      // parent at outerloop
+                  resetc#(cursor0, cursor1, lstate);   // child at innerloop
+                  {
+                     expr
+                  }
+                  %v.labelc:;
+                  end_foreach
+             %}
+            break;
+         }
+         case MANY: // Most general case - 0+ child records.
+         {
+            %{
+               foreach(cursor0)       // parent at outerloop
+                  resetc#(cursor0, cursor1, lstate);   // child at innerloop
+                  while (!(endc#(cursor0, cursor1, lstate)))
+                  {
+                     {
+                       expr
+                     }
+                     %v.labelc:;
+                     advc#(cursor0, cursor1, lstate);
+                  }
+               end_foreach
+            %}
+            break;
+          }
+       }
+       }
+    }
+  xfree(labelp);
+  xfree(labelc);
+}

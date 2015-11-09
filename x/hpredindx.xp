@@ -1,0 +1,518 @@
+// $Id: hpredindx.xp,v 45.0 1997/09/19 05:46:28 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds hpredindx [ ds ] stable annotation retrieval_sometimes curs_state
+
+!#include "qopt.h"
+!#include "hpredindx.h"
+
+#define RESET_OPTIMIZE (strcmp(%a.hint,"")!=0)
+
+// Predicate indexing is about 10% better than normal list. 
+// My random guess (BJG)
+// How is this reflected in cost? (JAT)
+
+#define BUCKET_SEARCH_COST 100
+#define COST0 BUCKET_SEARCH_COST*(1.0/2)
+
+
+!#define get_ddlhint_argument_string(a,b) sprint_ptree(a,b); remove_char(a,'"');
+
+#define NIL   ((struct obj_type *) -1)
+#define TRUE  1
+#define FALSE 0
+
+/********************
+
+hpredindx.xp is a modification of lpredindx.xp.  Instead of having
+a single llist of qualified objects, there is an array of buckets
+into which qualified objects are hashed.
+
+hpredindx is a time-stamp ordered list of qualified elements
+that is used by the leaps compiler.  The annotation for hpredindx
+is:
+
+    hpredindx timestamp is <t> key is <k> with size <s> predicate <p> with <e> with <n>;
+
+    <t> is the timestamp field
+
+    <k> is the hash key
+    <s> is # of buckets
+
+    <p> is a predicate that consists of one or more conjuctions.
+        example: " $.plotted == 'nil' && $.label != 'nil' "
+
+    <e> this is a procedure that is called when no records of
+        a container satisfy the predicate.  <e> (e for empty) is
+        triggered on the deletion of that last record of the
+        predicate index list.
+
+    <n> this is a procedure that is called when the first record
+        is inserted onto an empty predicate index list. <n> (n for
+        nonempty) is called when the predicate index transitions
+        to being non-empty.
+
+        either <e> or <n> (or both) can be "null", in which case, 
+        no function is called. 
+
+See notes on lpredindx.
+**********************/
+
+cursor_func test_opt(cursor)
+{
+  char *xpred;
+  char *pred;
+  int  num_of_xclauses;
+  int  no_xclauses;
+  char *and;
+  char tmp[MAX_PRED_LEN];
+  char xfld[MAX_IDENT_LEN], xrln[10], xval[MAX_PRED_LEN];
+  char fld[MAX_IDENT_LEN], rln[10], val[MAX_PRED_LEN];
+  int  found;
+
+  // Step 1: count number of clauses in predicate index
+
+  num_of_xclauses = 0;
+  xpred = %a.xpred;
+  while (*xpred) {
+    next_clause(&xpred, 0, xfld, xrln, xval);
+    num_of_xclauses++;
+  }
+  no_xclauses = num_of_xclauses;
+
+  // Step 2: foreach clause c in the cursor predicate, 
+  //         see if c is in xpred.  if so, don't copy it
+  //         in reduced predicate and decrement number of 
+  //         clauses.  If it is not in xpred, add it to the
+  //         reduced predicate 
+
+  strcpy(%c.reduced_predicate,"");
+  and = "";
+  pred = predicate;
+  while (*pred) {
+    next_clause(&pred, 0, fld, rln, val);
+    xpred = %a.xpred;
+    found = FALSE;
+
+    while (*xpred) {
+      next_clause(&xpred, 0, xfld, xrln, xval);
+      if ((strcmp(xfld,fld) == 0) &&
+          (strcmp(xrln,rln) == 0) &&
+          (strcmp(xval,val) == 0))  {
+        found = TRUE;
+        break;
+      }
+    }
+
+    if (found) {
+      num_of_xclauses--;
+    }
+    else {
+      sprintf(tmp, "%s %s %s %s ", and, fld, rln, val);
+      and = "&&";
+      strcat(%c.reduced_predicate, tmp);
+    }
+  }
+
+  // Step 3: %c.reduced_predicate is predicate minus any term
+  //         in %a.xpred.  For this layer to be of any help
+  //         in processing a query, ALL clauses of xpred must
+  //         be present in predicate.  The check for this
+  //         condition is num_of_xclauses == 0;
+
+  if (num_of_xclauses == 0)
+     %c.layer_can_be_used = -no_xclauses;
+  else
+     %c.layer_can_be_used = MAX_QOPT_COST - COST0;
+}
+
+
+cursor_func link(cursor)
+{
+char hash_func[100];
+
+   strcpy(hash_func, "P2_");
+   strcat(hash_func, %a.hash_typeptr->typename);
+   strcat(hash_func, "_hash");
+
+   %{ { int i;
+        i = %v.hash_func(cursor.%a.hash_field, %a.size);
+        cursor.next = container.first[i];
+        cursor.prev = NIL;
+        if (cursor.next != NIL) {
+          cursor.next->prev = cursor.obj;
+        }
+        container.first[i] = cursor.obj;
+      }
+   %}
+}
+   
+cursor_func unlink(cursor)
+{
+char hash_func[100];
+
+   strcpy(hash_func, "P2_");
+   strcat(hash_func, %a.hash_typeptr->typename);
+   strcat(hash_func, "_hash");
+
+   %{
+     // Note record prev and next ptrs still intact for advancing.
+     if (cursor.prev != NIL) {
+       cursor.prev->next = cursor.next;
+     }
+     else {
+       int i;
+       i = %v.hash_func(cursor.%a.hash_field, %a.size);
+       container.first[i] = cursor.next;
+     }
+     if (cursor.next != NIL) {
+       cursor.next->prev = cursor.prev;
+     }
+   %}
+}
+
+
+// xform
+
+xform(element, container, cursor)
+{
+  // Step 1:  add basic fields
+
+  add element   : struct element *next; 
+  add element   : struct element *prev; 
+  add container : struct element *first[%a.size]; 
+  add container : int             counter;
+
+  // Step 2:  remember additional info about annotations
+
+  %a.ts_typeptr     = find_data_type(element, %a.ts_field);
+  %a.ts_bi          = %a.ts_typeptr->bounds_impact;
+  %a.hash_typeptr   = find_data_type(element, %a.hash_field);
+  %a.hash_bi        = %a.hash_typeptr->bounds_impact;
+
+  if (RESET_OPTIMIZE) {
+     // Step 3:  the following additions are optional for the
+     //          reset optimization
+
+     add cursor   : int            timestamp;
+     add cursor   : struct element *reset_position;
+  }
+
+  xform(element, container, cursor);
+}
+
+
+// see above note on annotations
+
+ddlhint(argc, argv)
+{
+  limit 7 arguments;
+
+  get_ddlhint_argument(%a.ts_field, argv[1]);
+  get_ddlhint_argument(%a.hash_field, argv[2]);
+  get_ddlhint_argument(%a.size, argv[3]);
+  get_ddlhint_argument_string(%a.xpred, argv[4]);
+  get_ddlhint_argument(%a.e_proc, argv[5]);
+  get_ddlhint_argument(%a.n_proc, argv[6]);
+  get_ddlhint_argument(%a.hint,   argv[7]);
+}
+
+      
+optimize(cursor)
+{
+BOUNDS b;
+
+  // use this layer only if there is no other choice
+
+  optimize(cursor);
+  
+  // use this layer only if the cursor predicate involves 
+  // a point retrieval on the hashed key
+
+  if (use_layer(te, &b, cursor, predicate, %a.hash_field, %a.hash_bi) != 2)
+     return;
+  strcpy(%c.hash_pred, b.upper);
+
+  call test_opt(cursor);
+  if (cost>(COST0 + %c.layer_can_be_used)) {
+    cost  = COST0 + %c.layer_can_be_used;
+    layer = %ln;
+    retrieval_direction = 0;
+
+    // now determine which case applies - see comments above
+
+    define_bounds(te, &(%c.b), cursor, %c.reduced_predicate, %a.ts_field, %a.ts_bi);
+
+    if (%c.b.bottom) { // -inf bottom
+      if (%c.b.top) { // + inf top
+        %c.which_case = 1;
+      }
+      else {
+        %c.which_case = 2;
+        simplify_predicate(%c.reduced_predicate,
+                           &(%c.b),%a.ts_field,FALSE,%c.reduced);
+      }
+    }
+    else { // lower-bound specified
+      if (%c.b.top) { // + inf
+        %c.which_case = 3;
+        simplify_predicate(%c.reduced_predicate,
+                           &(%c.b),%a.ts_field,TRUE,%c.reduced);
+      }
+      else {
+        %c.which_case = 1;
+        warning(3, "llist cannot handle both upper and lower bounds on timestamps");
+      }
+    }
+  }
+}
+
+
+// retrieval operation - query, adv, rev
+
+query(cursor)
+{
+  char *p = 0;
+  char lim[MAX_IDENT_LEN];
+  char func[MAX_IDENT_LEN];
+
+  switch(%c.which_case) {
+  case 1:
+    p = bind_predicate(te, cursor, obj_type, %c.reduced_predicate);
+    %{
+      %v.p
+    %}
+    break;
+
+   case 2:
+    p = bind_predicate(te, cursor, obj_type, %c.reduced);
+    strcpy(lim, %c.b.upper);
+    if (%c.b.inc_lower) {
+      strcpy(func,"int_LE");
+    }
+    else {
+      strcpy(func,"int_LT");
+    }
+    %{
+      (%v.func(cursor.%a.ts_field, %v.lim) && %v.p)
+    %}
+    break;
+
+   case 3:
+    p = bind_predicate(te, cursor, obj_type, %c.reduced);
+    %{
+      %v.p
+    %}
+    break;
+   }
+
+   xfree(p);
+}
+
+
+adv(cursor)
+%{
+   cursor.obj = cursor.next;
+%}
+
+
+rev(cursor)
+{
+  warning(3, "lpredindx does not support rev");
+}
+
+
+// retrieval operations - end_adv, end_rev
+
+end_adv(cursor)
+{
+  char lim[MAX_IDENT_LEN];
+  char func[MAX_IDENT_LEN];
+
+  // See if the cursor's predicate specifies a lower bound
+
+  if (%c.b.bottom) {
+    // The cursor's predicate does not specify a lower bound.
+    // We have advanced to the end of the list iff cursor.obj
+    %{
+      (cursor.obj == NIL)
+    %}
+  }
+  else {
+    // The cursor's predicate specifies a lower bound.
+    // We have advanced to the end of the list iff cursor.obj == 0
+    // or we have advanced to a record whose ofield is 
+    // less than the lower bound.
+
+    strcpy(lim, %c.b.lower);
+    if (%c.b.inc_lower) {
+      strcpy(func,"int_LT");
+    }
+    else {
+      strcpy(func,"int_LE");
+    }
+    %{
+      (cursor.obj == NIL || %v.func(cursor.%a.ts_field, %v.lim))
+    %}
+  }
+}
+
+
+end_rev(cursor)
+{
+  warning(3, "lpredindx does not support end_rev");
+}
+
+
+// retrieval operations - reset_start
+
+reset_start(cursor)
+{
+  char lim[MAX_IDENT_LEN];
+  char func[MAX_IDENT_LEN];
+  char hash_func[100];
+  char hash_value[MAX_PRED_LEN];
+
+  strcpy(hash_func, "P2_");
+  strcat(hash_func, %a.hash_typeptr->typename);
+  strcat(hash_func, "_hash");
+
+  strcpy(hash_value, %c.hash_pred);
+  replace_cursor_refs(te, cursor, hash_value);
+
+  switch(%c.which_case) {
+  case 1:
+  case 3:
+    %{ { int i;
+         i = %v.hash_func(%v.hash_value, %a.size);
+         cursor.obj = container.first[i];
+       }
+    %}
+    break;
+  case 2:
+    if (RESET_OPTIMIZE) {
+       if (%c.b.inc_upper) {
+         strcpy(func, "int_GT");
+       }
+       else {
+         strcpy(func, "int_GE");
+       }
+       strcpy(lim, %c.b.upper);
+       %{
+          if (cursor.timestamp == %v.lim) {
+            cursor.obj = cursor.reset_position;
+          }
+          else {
+             int i;
+             i = %v.hash_func(%v.hash_value, %a.size);
+             cursor.obj = container.first[i];
+             cursor.timestamp = %v.lim;
+          }
+          while (cursor.obj && %v.func(cursor.%a.ts_field, %v.lim)) {
+            cursor.obj = cursor.next;
+          }
+          cursor.reset_position = cursor.obj;
+       %}
+   }
+   else {
+       %{ {  int i;
+             i = %v.hash_func(%v.hash_value, %a.size);
+             cursor.obj = container.first[i];
+          }
+       %}
+    }
+    break;
+  }
+}
+
+
+// retrieval operations - reset_end
+
+reset_end(cursor)
+{
+  warning(3, "reset_end not implemented on lpredindx");
+}
+
+// non-retrieval operations - init_cont
+
+init_cont(container)
+%{
+  init_cont (container);
+  { int i;
+    for (i=0; i<%a.size; i++)
+        container.first[i] = NIL;
+  }
+  container.counter = 0;
+%}
+
+init_curs(cursor)
+{ 
+  %{
+     init_curs(cursor);
+  %}
+  if (RESET_OPTIMIZE)
+  %{
+    cursor.timestamp = -1;
+    cursor.obj = NIL;
+  %}
+}
+
+// non-retrieval operations - insert
+
+insert(cursor, record)
+{
+  char *p = bind_predicate(te, cursor, obj_type, %a.xpred);
+
+  if (strcmp(%a.n_proc,"null") != 0)
+  %{
+    insert(cursor, record);
+    if (%v.p) {
+      if (container.counter == 0) {
+        %a.n_proc();
+      }
+      call link (cursor);
+      container.counter = container.counter + 1;
+    }
+    else {
+      cursor.prev = 0;
+    }
+  %}
+  else
+  %{
+    insert(cursor, record);
+    if (%v.p)  {
+      call link (cursor);
+    }
+    else {
+      cursor.prev = 0;
+    }
+  %}
+
+  xfree(p);
+}
+
+
+// non-retrieval operations - delete
+
+delete(cursor)
+{
+  if (strcmp(%a.e_proc,"null") != 0)
+  %{
+     if (cursor.prev) {
+       call unlink(cursor);
+       container.counter = container.counter - 1;
+       if (container.counter == 0) {
+         %a.e_proc();
+       }
+     }
+     delete(cursor);
+  %}
+  else 
+  %{
+     if (cursor.prev) {
+       call unlink(cursor);
+     }
+     delete(cursor);
+  %}
+}
+

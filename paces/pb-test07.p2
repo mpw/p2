@@ -1,0 +1,37 @@
+/* $Id: pb-test07.p2,v 45.0 1997/09/19 05:44:00 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include "P2_paces.h"
+
+/* This file tests pb's handling of typedef's. */
+
+typedef struct {
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+typex {
+  paces_typex = P2_PACES_TYPEX;
+}
+
+container <EMP_TYPE> stored_as paces_typex with {
+  P2_PACES_ANNOTE(empno, 1);
+} emp_cont;
+
+cursor <emp_cont>
+  where "$.empno > 10020"
+recent_emp;
+
+typedef cursor <emp_cont>
+  where "$.age > 40"
+OLD_EMP_TYPE;
+OLD_EMP_TYPE  old_emp;
+
+int main (void)
+{
+  init_curs( recent_emp );
+  init_curs( old_emp );
+  return(0);
+}

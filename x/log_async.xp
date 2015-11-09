@@ -1,0 +1,22 @@
+// $Id: log_async.xp,v 1.2 1997/09/29 03:50:46 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// NON-durable transaction log manager (do NOT flush log at commit).
+
+#if 1
+// Use annotation to store insert_op, etc.
+#define ANNOTATION
+#else
+// Use the bang (!) operator to define insert_op, etc.
+#undef ANNOTATION
+#endif
+
+#if defined(ANNOTATION)
+layer ds log_async [ ds ] stable optional annotation retrieval_always
+!#define P2_LAYER_ANNOTE log_async_annote
+#else
+layer ds log_async [ ds ] stable no annotation retrieval_always
+#endif // ANNOTATION
+
+#define P2_LOG_ASYNC 1
+#include "log.xph"

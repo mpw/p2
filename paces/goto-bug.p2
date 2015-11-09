@@ -1,0 +1,39 @@
+/* $Id: goto-bug.p2,v 45.0 1997/09/19 05:43:26 jthomas Exp $ */
+
+/* The following is a correct C program (although
+  don't run it).  pb, however, thinks there's a parse
+  error when it comes to ':' at the label expression:
+  (DSB) */
+
+/* This is not a correct ANSI C program, because ANSI C
+   requires the label: ("cnt:") to be followed by a
+   statement, even if that statement is a null statement
+   (ie just a semi-colon ";")
+
+   Never-the-less, I have expanded the P2 grammar to
+   accept this incorrect ANSI C program. (JAT) */
+
+#include <stdio.h>  /* printf() */
+#include <stdlib.h> /* exit() */
+
+typedef void  (*VOID_FUNC)();
+
+void xxx( void ) {
+  printf("xxx\n");
+}
+
+void yyy ( void ) {
+   goto cnt;
+   for (;;) {
+       printf("yyy\n");
+       exit(1);
+   cnt:
+       exit(0);
+   }
+}
+
+VOID_FUNC arr[] = { 0, xxx, yyy, 0 };
+
+main() {
+   yyy();
+}

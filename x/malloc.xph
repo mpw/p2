@@ -1,0 +1,273 @@
+// $Id: malloc.xph,v 45.2 1997/09/19 22:15:08 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Malloc implementation.
+// Included by both malloc.xp and malloc_multi.xp
+
+!#include <assert.h> // assert() */
+
+!#include "qopt.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef P2_MALLOC_MULTI
+
+!#include "malloc_multi.h"
+
+// malloc_multi works like malloc, but it allocates %a.size 
+// objects at once and keeps track of where the next available
+// location is.
+
+// malloc_multi defines 2 errors: (1) memory cannot be initialized and
+// (2) no more space can be allocated, both because malloc() failed.
+
+xform(element, container, cursor)
+{ 
+  add container: char *currptr;
+  add container: int currsize;
+  xform(element, container,  cursor);
+}
+
+// Annotation is: 
+//   malloc_multi size is %a.size
+// Note that size is the number of ELEMENTS (ala x/array.xp),
+// NOT BYTES (ala x/mmap_persistent.xp). (JAT)
+
+ddlhint(argc, argv)
+{
+  limit 1 argument;
+
+  // The test for optional arguments! */
+  assert(argc > 0);
+  if (argc == 1)
+    strcpy(%a.size,"100");
+  else
+  { 
+    get_ddlhint_argument(%a.size, argv[1]);
+  }
+}
+
+init_cont(container) 
+%{
+  // allocate 1st %a.size units */
+  container.currptr = (char *) malloc ((sizeof(struct obj_type)) * %a.size);
+  if (container.currptr == 0)
+    P2_runtime_error("The memory could not be initialized");
+  container.currsize = 0;
+%} 
+
+insert(cursor, record)
+%{
+  if (container.currsize == %a.size)
+  {
+    // need to allocate another block */
+    container.currptr = (char *) malloc ((sizeof(struct obj_type)) * %a.size);
+    if (container.currptr == 0)
+      P2_runtime_error("No more memory could be allocated");
+    container.currsize = 0;
+  }
+  cursor.obj = (struct obj_type *) container.currptr;
+  container.currptr += sizeof(struct obj_type);
+  container.currsize++;
+
+  // Formerly: cursor.obj = (struct obj_type *) alloc(cursor);
+  // Alloc will fail if there is no more memory.
+
+  *(struct orig_type *) cursor.obj = record;
+%}
+
+// In order to simplify the mathematics to support varinsert(), we
+// should probably change the meaning of the size annotation to be the
+// number of bytes, rather than elements. (JAT)
+
+varinsert(cursor, record, expr)
+%{
+   P2_runtime_error("malloc_multi does not support varinsert");
+%}
+
+#else
+
+// Malloc adds no fields to containers, objects, or cursors.
+
+xform(element, container, cursor)
+{
+  // Call down.
+  xform(element, container, cursor);
+}
+
+query(cursor)
+{
+  char *p = bind_predicate(te, cursor, obj_type, predicate);
+  %{
+     %v.p
+  %}
+  xfree(p);
+  // Do not call down.
+}
+
+insert(cursor, record)
+%{
+  // alloc will fail if there is no more memory
+  cursor.obj = (struct obj_type *) alloc(cursor);
+  * (struct orig_type *) cursor.obj = record;
+  // Do not call down.
+%}
+
+// Note: expr is the size of the VARIABLE size portion of the element.
+// Thus, the TOTAL size of the element is expr PLUS the FIXED size of
+// the transformed element.
+
+varinsert(cursor, record, expr)
+{
+  char total_size[20];
+  sprintf(total_size, "P2_temp%d", other_id_counter++);
+%{
+  {
+    // cast expr to int, since, by default, expr has type void *
+    int %v.total_size = (sizeof(struct obj_type) + ((int) expr));
+    // alloc will fail if there is no more memory
+    cursor.obj = (struct obj_type *) varalloc(cursor, expr);
+#ifndef NDEBUG
+    // Make sure size is non-negative.
+    if (%v.total_size < 0)
+      P2_runtime_error("varinsert: total_size is < 0");
+#if 0
+    // Make sure total_size is a multiple of 4 (word-aligned).
+    if ((%v.total_size % 4) != 0)
+      P2_runtime_error("varinsert: total_size is not a multiple of 4");
+#endif
+#endif // NDEBUG
+#if 0
+    // Error: copies sizeof(struct orig_type) bytes.
+    * (struct orig_type *) cursor.obj = record;
+#else
+    // No error: copies expr bytes.
+    memcpy(cursor.obj, &record, %v.total_size);
+#endif
+    // Do not call down.
+  }
+%}
+}
+
+#endif // P2_MALLOC_MULTI
+
+overflow(container)
+%{
+  // False
+  0
+  // Do not call down.
+%}
+
+optimize(cursor)
+{
+  cost = MAX_QOPT_COST;
+  layer = %ln;
+  retrieval_direction = 0;
+  // Do not call down.
+}
+
+init_curs(cursor)
+{
+  // Do nothing.
+  // Do not call down.
+}
+
+pos(cursor, expr)
+%{
+  cursor.obj = expr;
+  // Do not call down.
+%}
+
+delete(cursor)
+%{
+#if defined(P2_MALLOC_FREE)
+#ifndef NDEBUG
+#if 0
+  // Fill the element with garbage.
+  memset(cursor.obj, -1, sizeof(struct obj_type));
+#endif
+#endif // NDEBUG
+  // Free the element.
+  free(cursor.obj);
+  // Do not call down.
+#else // P2_MALLOC_FREE
+  // Do nothing--don't even return the space allocated (DSB)
+  // Do not call down.
+#endif // P2_MALLOC_FREE
+%}
+
+getrec(cursor, record)
+%{
+  record = *(struct orig_type *) cursor.obj;
+  // Do not call down.
+%}
+
+upd(cursor, field, expr)
+{
+  char func[MAX_IDENT_LEN+10];
+  ENTRY *e = symtab_lookup(symtab[SUE], orig_type);
+  strcpy(func, find_data_type(e->ident, field)->typename);
+  strcat(func,"_CPY");
+%{
+  %v.func(cursor.field, expr);
+%}
+  // Do not call down.
+}
+
+swap(cursor0, cursor1)
+%{
+#if 0
+   {
+     struct obj_type r = *(cursor0.obj);
+     *(cursor0.obj) = *(cursor1.obj);
+     *(cursor1.obj) = r;
+   }
+#else
+   {
+     struct orig_type r;
+     memcpy(&r, cursor0.obj, sizeof(struct orig_type));
+     memcpy(cursor0.obj, cursor1.obj, sizeof(struct orig_type));
+     memcpy(cursor1.obj, &r, sizeof(struct orig_type));
+   }
+#endif
+%}
+
+end_adv(cursor)
+%{
+   P2_runtime_error("cannot process end_adv in malloc")
+%}
+
+end_rev(cursor)
+%{
+   P2_runtime_error("can not process end_rev in malloc")
+%}
+
+adv(cursor)
+%{
+   P2_runtime_error("can not process adv in malloc");
+%}
+
+rev(cursor)
+%{
+   P2_runtime_error("can not process rev in malloc");
+%}
+
+reset_start(cursor)
+%{
+   P2_runtime_error("can not process reset in malloc");
+%}      
+
+reset_end(cursor)
+%{
+   P2_runtime_error("can not process reset in malloc");
+%}
+
+// Transaction operations. 
+
+#include "xact.xph"
+
+// Default adhoc operations. 
+
+#include "adhoc.xph"

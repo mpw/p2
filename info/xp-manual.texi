@@ -1,0 +1,2482 @@
+@c $Id: xp-manual.texi,v 45.0 1997/09/19 05:42:12 jthomas Exp $
+@c Copyright (C) 1997, The University of Texas at Austin.
+
+@node xp Manual, xp Operations, Introduction, Top
+@chapter xp Manual
+@cindex xp manual
+
+
+The xp program is a preprocessor for specifying P2 components
+(also called layers).
+It translates an .xp file into a .c file which can then 
+linked into pb.
+
+The xp language is fairly ugly;
+one of the goals in its evolution is to make it more elegant.
+
+@menu
+* xp BNF::                      The BNF for the xp language.
+* xp Syntax::                   Meanings of characters in xp.
+* Generated versus Executed Code::  
+* Code Generation::             
+* Programming Hints::           
+* Field References::            How the  expression  "cursor.field" is interpreted
+* xp Structures::               Structures for annotations, cursor
+                                 states, container states and variables
+* Type Extension Details::      How to add fields to elements, cursors, 
+                                 and containers. Also member cursors.
+* Example - dlist.xp::          An example xp file to demonstrate the
+                                 concepts so far.
+* Adding Annotations ::         How to pass arguments to the layers.
+* Parsing Annotations Details::  How to get the arguments in ddlhint
+
+* Query Optimization::          Query optimization constants and some 
+                                 sample run-time values for layers.
+
+* Generic Layers::              How to write a "generic" xp layer
+
+
+* Multiple Containers and Cursors::  
+* Link Layers::                 How to write a linking layer
+* Adding New Operations to xp::  
+* Add Layer::                   How to add a layer to the P2 system
+
+@end menu
+
+@node xp BNF, xp Syntax, xp Manual, xp Manual
+@section xp BNF
+@cindex xp BNF
+
+This is an abbreviated  BNF for an uncommented xp file:
+
+@example
+layer           : layer_head operations* 
+layer_head      : @samp{layer} realm identifier '[' realm* ']' layer_options*
+realm           : @samp{ds} | @samp{mem} | @samp{top} | @samp{lnk} | @samp{toplnk}
+@end example
+
+The @samp{layer_options} represent all the options specified in
+@ref{P2 Layers, , ,p2 ,Introductory P2 System Manual}. The @samp{operations} are all
+operations defined in both @ref{xp Operations} and @ref{P2 Operations, ,
+, p2, Introductory P2 System Manual}.
+
+Note: future versions of xp (and P2) will only export realms
+@samp{ds}, @samp{mem}, and @samp{lnk}.
+The realms @samp{toplnk} and @samp{lnk} will be unified, and so will
+@samp{top} and @samp{ds}.
+
+@node xp Syntax, Generated versus Executed Code, xp BNF, xp Manual
+@section xp Syntax
+@cindex xp syntax
+
+
+@menu
+* xp Special Characters::       
+* Cursor & Container Expressions ::  
+@end menu
+
+@node xp Special Characters, Cursor & Container Expressions , xp Syntax, xp Syntax
+@subsection xp Special Characters
+
+An xp file looks like a C file,
+but there are several special characters. Here 
+are their interpretations:
+
+@vtable @samp
+
+@item %@{
+The beginning of generated code.
+@xref{Generated versus Executed Code}.
+
+@item %@}
+The end of generated code.
+@xref{Generated versus Executed Code}.
+
+@item %a
+@samp{%a}.field is the value of field in the annotation structure.
+@xref{Annotation Structure}.
+
+@item %c 
+@samp{%c}.field is the value of field in the cursor state structure. @xref{Cursor State Structure}.
+
+@item %k
+@samp{%k}.field is the value of field in the container state structure.
+@xref{Container State Structure}.
+
+@item %v 
+@samp{%v}.field is the value of field in the variable structure. @xref{Variable Structure}.
+
+@item !
+@samp{!} copies the rest of the line verbatim to the xp generated code output.
+
+@item %ln
+The run-time value of the current layer.
+
+@item %
+The literal @samp{%}.
+
+@item #
+When used literally at the end of an operation name, the operation will
+be called in the current layer rather than the lower layer. For 
+instance, @code{adv#(cursor);}.
+
+@item //
+C++ style comment.
+All characters between the @samp{//} and the end of
+the line are ignored, including the @samp{//}.
+@end vtable
+
+
+
+@node Cursor & Container Expressions ,  , xp Special Characters, xp Syntax
+@subsection Cursor & Container Expressions 
+@cindex cursor expression
+@cindex container expression
+
+The table below lists keywords for cursors and containers. All these
+keywords can be followed by a single digit 0-9. If the keyword is not
+followed by a digit, it is equivalent to the digit 0 (i.e. @samp{cursor}
+@equiv{} @samp{cursor0}).
+ Therefore @samp{predicate}
+is the value of the predicate field of cursor (also called @samp{cursor0}) and
+@samp{layer5} is the retrieval layer for @samp{cursor5}. 
+
+
+@vtable @samp
+
+@item cont_expr_const
+Boolean variable to reveal if the container expression is a constant.
+
+@item container
+Expression for container.
+
+@item container_id
+P2 internally generated integer identifier of container type.
+
+@item container_type
+Name of the container structure.
+
+@item cost
+Integer cost estimate of processing query using layer.
+
+@item cursor
+Expression for cursor.
+
+@item cursor_id
+P2 internally generated integer identifier for cursor.
+
+@item cursor_type
+Name of the cursor structure.
+
+@item layer
+Integer identifier of layer that is to be the retrieval layer.
+
+@item obj_type
+Name of the transformed structure for container or cursor. The structure
+is transformed by the addition of fields that are added through the
+xform operation (@pxref{xform}).
+
+@item orderby_direction
+Requested orderby retrieval direction:
+-1 descending, 0 unsorted, +1 ascending.
+
+@item orderby_field
+Name of requested orderby element sort key/attribute.
+
+@item orig_type
+Name of the untransformed structure for the container or cursor.
+
+@item predicate
+Predicate of cursor.
+
+@item retrieval_direction
+Generated retrieval direction:
+-1 descending, 0 unsorted, +1 ascending.
+
+@end vtable
+
+@node Generated versus Executed Code, Code Generation, xp Syntax, xp Manual
+@section Generated versus Executed Code
+
+@cindex xp-generated code
+@cindex xp-executed code
+A central idea behind xp is the distinction between code that is to be
+executed by the xp compiler (@dfn{xp-executed code}) versus code that is to be 
+generated by xp (@dfn{xp-generated code}) and executed at pb run-time. 
+The distinction is made through the use of
+%@{ and %@} braces: code within %@{ and %@} is xp-generated code. 
+Consider the code below:
+
+@example
+@group
+    if (test) 
+     %@{ a = b;    %@}
+    else
+     %@{ a = b+1;  %@}
+@end group
+@end example
+
+When the xp compiler parses this code, if @code{test} is true, then a 
+@samp{printf("a=b;");}@footnote{Actually, it's another procedure
+altogether, but you get the idea.} is generated, otherwise @samp{printf("a=b+1;");} is
+generated. 
+When this layer is compiled and integrated into the @file{pb}
+program, the @samp{printf} procedures will be executed and those strings
+will be added to the pb-generated C output. 
+
+Nesting of @samp{%@{} and @samp{%@}} is not permitted. 
+
+@node Code Generation, Programming Hints, Generated versus Executed Code, xp Manual
+@section Code Generation
+
+
+In order to generate the object code for an operation, P2 walks through
+the tree of layers in the type expression, composing the object code
+for the operation from bits and pieces of object code added by the
+various layers that provide the operation.
+
+In the case of normal operations such as @code{xform} (which adds fields
+to structures) or @code{delete} (which removes a record from a
+container), every layer generates  code to provide the
+operation. 
+In the case of retrieval operations such as @code{reset_start} (which
+finds the first qualified tuple) or @code{adv} (which finds the next
+qualified tuple), however, only one layer needs to generate the code to
+process the query. 
+The layer that retrieves the
+object is called the @dfn{retrieval layer}.
+
+Thus, in the case of normal operations, a layer specifies the same
+object code regardless of what other layers appear above or below it in
+the type expression---that is, local information is sufficient. In the
+case of retrieval operations, however, a layer generates different code
+depending on whether or not it is the retrieval layer. Whether or not an
+operation is the retrieval layer depends in turn on what other layers
+appear above or below it in the type expression---that is, global
+information is necessary.
+
+Every single-container query has a unique retrieval layer.  During
+the processing of the @code{optimize()} operation, every layer is asked
+to return an estimate of the cost for that layer to process the
+query.  (Processing a query involves traversing the data structures
+of that layer to extract all elements that satisfy the query).
+During the process of @code{optimize}, each layer is returned an estimate
+of the cheapest cost of processing the query by layers beneath it.
+(Actually, what is returned from lower layers is a cost estimate,
+the identity of the layer that produced this estimate, and an indicator
+about the sort order in which elements will be returned).  If
+the current layer can perform the retrieval more efficiently, 
+it will return its cost estimate, use its id as the "retrieval"
+layer id, and will set the sort-order indicator. The layer that
+returns the cheapest estimate for processing the query will therefore
+be known upon the completion of an @code{optimize()} operation.
+
+It should be known that there is a definite protocol for selecting
+cost estimates by layers.  Part of the design of P2 is a tabulation
+of the different classes of queries that will be encountered,
+plus a predefined linear ranking of all layers from most efficient
+to least efficient for each query class.  Thus, the processing
+of @code{optimize()} merely has each layer determine the classes of the
+query (note: a query can belong to multiple classes) and to
+return its predetermined ranking.  Readers should consult 
+@file{common/qopt.h} and @ref{Query Optimization} for the specifics actually used.
+
+
+@node Programming Hints, Field References, Code Generation, xp Manual
+@section Programming Hints
+@cindex programming hints
+
+The xp program is a preprocessor that does not have access to the pb symbol
+    table.  Consequently, xp has rather strange limitations.
+
+First, anywhere within a @file{foo.xp} file:
+
+@itemize @bullet
+
+@item 
+@cindex field names
+Field names cannot end in a digit because xp appends the number of the
+layer to  the field during code generation.  Thus:
+@example
+@group
+    cursor.field10   // incorrect as field ends in digits
+    cursor.field_ten  // OK
+@end group
+@end example
+
+@item 
+@cindex multiple indirect references
+There is a limit of translating references. The expression 
+@code{container->field_a->field_b->field_c}
+is valid only if  the field names all refer to elements that point to
+the original container. 
+
+@end itemize
+
+Second, anywhere within the xp-generated code area (between @samp{%@{} and @samp{%@}}):
+
+@itemize @bullet
+
+@item 
+@cindex nested assignments
+xp cannot handle nested assignments: @code{x = y = z;} 
+
+@item
+@cindex xp parsing
+The xp program relies on "@{", "@}", and ";" to separate
+statements. The program  cannot
+properly parse expressions of the form @code{if (test) statement;}. It needs
+to be written as @code{if (test) @{ statement; @}}.
+
+@item 
+@cindex assignments in conditionals
+Assignment in conditions @code{if ((t=get_data()) != 0) } are not
+properly translated. 
+
+@item
+@cindex dollarword and ";"
+If xp crashes on a dollarword expression, try adding a ";"
+after the dollarword.  @xref{Dollarwords}.
+
+@end itemize
+
+Additionally, there are other things to be aware of:
+
+@itemize @bullet
+
+@item
+@cindex operations and ";"
+For all operations that generate an expression, do not use ";" within
+the xp-generated code. For instance,
+the procedure @code{end_adv()} in @file{dlist.xp} is
+defined as @samp{%@{ (cursor.obj == NULL) %@}}. Note the absence of the semicolon. 
+
+@end itemize
+
+
+
+@node Field References, xp Structures, Programming Hints, xp Manual
+@section Field References
+
+@cindex fields
+@cindex references
+Fields can be added to the cursor. The format is @code{cursor.field} or
+@code{cursor.field[index]}. Fields and indices can either be the actual
+name (or number) or a variable such as @samp{%v.id}, @samp{%c.id}, etc. 
+
+@node xp Structures, Type Extension Details, Field References, xp Manual
+@section xp Structures
+@cindex xp structures
+
+Annotation, cursor state and container state structures are 
+found in the @file{foo.h} file, where @file{foo.xp} is the name of the
+layer. 
+
+@menu
+* Variable Structure::          For storing variables
+* Annotation Structure::        For storing annotation values
+* Cursor State Structure::      For storing extra values for each cursor
+* Container State Structure::   For storing extra values for each container
+@end menu
+
+@node Variable Structure, Annotation Structure, xp Structures, xp Structures
+@subsection Variable Structure
+@cindex variable structures
+
+@vindex %v
+In each operations, we can define a variable structure which stores a
+value that is evaluated in xp generated code. The form is
+@code{%v.@var{field}}, where @var{field} is the name of the
+variable. For instance:
+
+@example
+query( cursor )
+@{
+    char *p = bind_predicate( cursor, obj_type, predicate );
+    %@{
+        %v.p
+    %@}
+    free( p );
+@}
+@end example
+
+The @code{bind_predicate} returns a string which we  want to include
+in the final C code. The @samp{%@{ %v.p %@}} prints the value of string @samp{p} in the generated code;
+free(p) frees the allocated string.
+
+@node Annotation Structure, Cursor State Structure, Variable Structure, xp Structures
+@subsection Annotation Structure
+@cindex annotation structures
+@vindex %a
+
+This is the structure for annotations:
+
+@example
+struct <layer>_annote @{
+    struct <layer>_annote *next;
+    /* user fields */
+    @dots{}
+@} ;
+@end example
+
+@xref{Simple Annotations} for an example using the annotation structure. 
+
+In the user fields are data to store the annotations and data that needs
+to be kept around for layer processing (which are neither cursor nor
+container specific). In order to use this structure, the layer must have
+the @code{annotation} option in its  heading.
+
+
+@node Cursor State Structure, Container State Structure, Annotation Structure, xp Structures
+@subsection Cursor State Structure
+@cindex cursor states structures 
+@vindex %c
+
+A cursor state is a structure that is replicated per cursor.
+It is used for cursor-specific xp compiler variables.
+
+Fields that are added to the cursor via the @samp{xform} operation are
+permanent; they become part of the cursor in the C file generated by pb. 
+Fields added to cursor state structures are temporary. They do not exist
+in the pb-generated C file. 
+
+@example
+struct <layer>_cstate @{        /* cursor state */
+    int id;                     /* identifier of cursor type */
+    int layerno;                /* layer number */
+    struct <layer>_cstate *next;/* next record of this type */
+    /* user fields*/
+    @dots{}
+@};
+@end example
+
+In order to use this structure, the layer must have
+the @code{curs_state} option in its  heading. Usually, the cursor state
+user fields are initialized in @code{xform}, or @code{optimize} and used
+in the other operations. For instance, in @file{hash.h}, the cursor
+state was declared as:
+
+@example
+@group
+struct hash_cstate @{
+  int                    id;
+  int                    layerno;
+  struct hash_cstate     *next;
+
+  char                   num_bits[20];     /* ceiling of log base 2 of size */
+@};
+@end group
+@end example
+
+The new field is @code{num_bits}, which is a string. In the file
+@file{hash.xp}, the field is initialized in @code{optimize} and used in
+@code{insert} (among other procedures) to use in the hashing function:
+
+@example
+    i = %v.hash_func( (record).%a.ofield, %c.num_bits )  % %a.size ;
+@end example
+
+This is an interesting example. The name of the function is stored in
+the variable @code{hash_func}. The name of the field to hash on was
+passed in as an annotation and stored in the annotation structure field
+@code{ofield} (for ordering field). The number of bits was stored in a
+cursor state structure. The @samp{%} stands for the modulo C operation,
+and the @code{size} is the size of the hash table, also passed in as an
+annotation. 
+
+
+@node Container State Structure,  , Cursor State Structure, xp Structures
+@subsection Container State Structure
+@cindex container state structures
+@vindex %k
+
+A container state is the structure which is replicated per container. 
+It is used for container-specific xp compiler variables.
+
+Like cursor state structures, fields added to container state structures
+are not present in the pb-generated C file. 
+
+@example
+struct <layer>_kstate @{
+    int id;                      /* identifier of container type */
+    int layerno;                 /* layer number */
+    struct <layer>_kstate *next; /* next record of this type */
+    /* user fields */
+    @dots{}
+@};
+@end example
+
+In order to use this structure, the layer must have
+the @code{cont_state} option in its  heading. Files having container
+state structures include @file{part.xp} and @file{mlist.xp}.
+
+@node Type Extension Details, Example - dlist.xp, xp Structures, xp Manual
+@section Type Extension Details
+@cindex xform
+@cindex extending types
+
+The procedure @code{xform} augments the elements, cursors, and
+containers with additional fields. 
+
+The syntax for adding fields:
+
+@example
+@group
+add : @samp{add} struct @samp{:} var-declaration @samp{;}
+    | @samp{add} struct @samp{:} @samp{mcurs} variable @samp{;}
+    | @samp{add} struct @samp{:} @samp{mcurs} old-var new-var @samp{;}
+    ;
+
+struct : @samp{element}digit
+       | @samp{container}digit
+       | @samp{cursor}digit
+       | identifier
+       ;
+@end group
+@end example
+
+The latter two cases of "add" are used for member cursor
+manipulations. 
+The second case copies
+the name of the variable. The third case copies the variable and gives it a
+new name.
+
+A member cursor is a special cursor that is used to
+traverse the list of fields of a previously defined record
+type.  A member cursor can thus reference a particular field
+of a given record type.  Given this ability, one may want
+to copy the referenced field into another record, extract the
+type of the referenced field, etc.  See the examples below and
+@ref{Member Cursor Details} for more details. 
+
+
+Some examples of augmentation are:
+@example
+@group
+
+// add an integer field "timestamp" to the cursor.
+   add cursor    : int timestamp;
+
+// add an array "elements" of elements to the container. 
+// The size of the array is determined by an annotation variable
+   add container : struct element elements[%a.size];
+
+// add to the structure "s" a copy of the member cursor "m"
+   add s         : mcurs m;
+
+// add to the structure "x" a copy of the member cursor "m"
+// which has been renamed "val"
+   add x         : mcurs  m       val;
+@end group
+@end example
+
+The augmentation method involves adding  the layer number to
+the end of the field. This is why fields cannot end in digits. 
+
+@node Example - dlist.xp, Adding Annotations , Type Extension Details, xp Manual
+@section Example - dlist.xp
+
+@cindex @file{dlist.xp} example
+
+In this section, the file @file{dlist.xp} will be 
+analyzed a piece at a time. The complete file is in @ref{dlist.xp program}.
+
+@menu
+* dlist - Parameters::          dlist's layer parameters
+* dlist - File Inclusion::      Inserting another file
+* dlist - xform::               Transforming containers and 
+                                    elements
+* dlist - optimize::            Run-time characteristics
+* dlist - retrieval operations::  adv, rev, etc.
+* dlist - initializing container::  Setting container values
+* dlist - insert::              Adding elements
+* dlist - delete::              Removing elements 
+* dlist - default operations::  Operations that aren't there.
+@end menu
+
+
+@node dlist - Parameters, dlist - File Inclusion, Example - dlist.xp, Example - dlist.xp
+@subsection dlist - Parameters
+
+@cindex layer declaration example
+
+This line describes dlist as a layer with the following characteristics:
+
+@example
+layer ds dlist [ ds ] stable no annotation retrieval_sometimes
+@end example
+
+
+@itemize @bullet
+@item
+The interface exported by dlist is the @code{ds} realm, which is the realm of
+data structures. 
+
+@item
+The parameter to dlist is one argument: @code{ds}. Therefore this
+parameter can be instantiated with a layer whose interface  exports the
+ds realm. 
+@end itemize
+
+The remaining items on the line are layer options which are defined in
+@ref{Layer Format, , ,p2,Introductory P2 System Manual}.
+
+@itemize @bullet
+
+@item 
+dlist is @code{stable}. That means after a delete operation is performed, the
+cursor points to the deleted object. If instead the cursor pointed to
+the next undeleted object, then the layer would be @code{unstable}.
+
+@item 
+dlist has no annotations.
+
+@item 
+dlist is a @code{retrieval_sometimes} layer. The retrieval operations
+will only be executed if this layer is chosen as the retrieval layer. If
+the retrieval operations are executed regardless of which layer is the
+retrieval layer, then the layer would be marked as
+@code{retrieval_always}. If the layer has no retrieval operations, then
+the layer would be marked as @code{retrieval_never}. If the layer has no
+retrieval-based parameter, then @code{retrieval_never} is default.
+
+@end itemize
+
+@node dlist - File Inclusion, dlist - xform, dlist - Parameters, Example - dlist.xp
+@subsection dlist - File Inclusion
+
+@cindex file inclusion example
+
+The line beginning with @samp{!} tells xp to
+copy the line @samp{#include "qopt.h"} directly to
+the generated @file{dlist.c} file. This particular line retrieves the
+optimization constants used for the @code{optimize}
+procedure. @xref{Query Optimization}.
+
+@example
+!#include "qopt.h"
+@end example
+
+
+@node dlist - xform, dlist - optimize, dlist - File Inclusion, Example - dlist.xp
+@subsection dlist - xform
+
+@cindex xform example
+
+This procedure augments the element and container structures. To the
+base element type, two pointers to elements are added: @code{next} and
+@code{prev}. To the container, two pointers are added: @code{first} and
+@code{last}. 
+The call to @code{xform} in the last line actually tells xp to call the
+@code{xform} procedure in the next lower layer. Some P2 operations  call the
+next layer first, some of them call it last. 
+
+@example
+@group
+xform( element, container, cursor )
+@{
+    add element : struct element *next; 
+    add element : struct element *prev; 
+    add container : struct element *first; 
+    add container : struct element *last;
+    xform( element, container, cursor );
+@}
+@end group
+@end example
+
+
+Here's a concrete example. Suppose that the element type @code{Person} is the following
+structure untranslated by layers: 
+
+@example
+@group
+typedef struct e @{ 
+    char name[30];
+    int  age;
+@} Person;
+@end group
+@end example
+
+The @code{Person} type is  the base element type. After the @file{dlist} transformation,
+the new type would be:
+
+@example
+@group
+typedef struct e_transformed @{ 
+    char name[30];
+    int  age;
+    struct e_transformed *next@var{ln};
+    struct e_transformed *prev@var{ln};
+@} Person_transformed;
+@end group
+@end example
+
+Where @var{ln} is the layer number of the @file{dlist} layer. 
+
+@node dlist - optimize, dlist - retrieval operations, dlist - xform, Example - dlist.xp
+@subsection dlist - optimize
+
+@cindex optimize example
+
+For a given cursor, this procedure determines if this layer can provide
+retrieval operations for the lowest cost. 
+Using the example below, 
+this procedure first calls @code{optimize} for the lower layers. If the
+lowest cost
+of the lower layers is greater than the constant @code{COST}, then (1)
+the lowest cost value @code{cost} is updated, (2) the lowest cost layer
+@code{layer} is updated, and (3) because dlist does not order its
+elements, the retrieval_direction is marked as 0.
+For a more detailed analysis of what @code{optimize} can do, see
+@xref{Query Optimization}.
+
+@example
+@group
+#define COST    LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+
+optimize( cursor )
+@{
+    optimize( cursor );
+    if (cost>COST) @{
+        cost = COST;
+        layer = %ln;
+        retrieval_direction = 0;
+    @}
+@}
+@end group
+@end example
+
+
+@node dlist - retrieval operations, dlist - initializing container, dlist - optimize, Example - dlist.xp
+@subsection dlist - retrieval operations
+
+@cindex retrieval operations example
+
+The @samp{query} operation returns the predicate to be used by the cursor. The first
+line generates a string based on the cursor, the type of the base
+element, and the current predicate. The value of @code{predicate} may
+have been changed in previous layers.
+
+The next line has a @code{%@{} which begins the portion of the code
+to be generated by @file{dlist.c} (within the pb file). There is just
+one line, @code{%v.p}, before the closing symbol @code{%@}}. The last
+line just frees the memory allocated to the pointer p. 
+
+@example
+@group
+query( cursor )
+@{
+    char *p = bind_predicate( cursor, obj_type, predicate );
+    %@{
+        %v.p
+    %@}
+    xfree( p );
+@}
+@end group
+@end example
+
+The expression @code{%v.p} stands for the value of the variable
+@code{p}. 
+In this case, if the predicate is @samp{"$.age>30"} and the cursor's name
+was @samp{"foo"} and the orig_type is verified to have a structure
+element called @samp{age} of type integer, then the
+@code{bind_predicate} routine would generate @samp{"foo.age > 30"}.
+Note that since @code{query} returns an expression, there is no @samp{;}
+after the code @code{%v.p}.
+
+
+These two operations move the object pointer of the cursor to the next
+and previous element in the list. The expression @code{cursor.next} is
+xp shorthand for @code{cursor.obj.next}.
+
+@example
+@group
+adv(cursor)
+%@{
+    cursor.obj = cursor.next;
+%@}
+
+rev(cursor)
+%@{
+    cursor.obj = cursor.prev;
+%@}
+@end group
+@end example
+
+These two operations return the boundary cases for the list. Both
+operations return true if the cursor is pointing to NULL. 
+Since these two operations return expressions, they do not end with a
+semicolon (@samp{;}).
+
+@example
+@group
+end_adv( cursor )
+%@{
+    ( cursor.obj == 0 )
+%@}
+
+end_rev( cursor )
+%@{
+    ( cursor.obj == 0 )
+%@}
+@end group
+@end example
+
+The @code{reset_start} function resets the cursor to point to the start of the
+list; the @code{reset_end} function resets the cursor to point to the end of the
+list. 
+
+@example
+@group
+reset_start( cursor )
+%@{
+    cursor.obj = container.first;
+%@}
+
+reset_end( cursor )
+%@{
+    cursor.obj = container.last;
+%@}
+@end group
+@end example
+
+
+@node dlist - initializing container, dlist - insert, dlist - retrieval operations, Example - dlist.xp
+@subsection dlist - initializing container
+
+@cindex initializing container example
+
+Because the container  was augmented by @code{xform} to include the
+fields @samp{first} and @samp{last}, these two
+fields must be initialized in the procedure @code{init_cont}. 
+
+@example
+@group
+init_cont( container )
+%@{
+    init_cont ( container );
+
+    container.first = 0;
+    container.last = 0;
+%@}
+@end group
+@end example
+
+@node dlist - insert, dlist - delete, dlist - initializing container, Example - dlist.xp
+@subsection dlist - insert
+
+@cindex insert example
+
+In the @samp{insert} subroutine below, elements will be added to the front of
+the list. Also note that the first line is @code{insert(container,
+record)} which actually tells xp to call the @code{insert} operation of the
+next lower layer. 
+
+@example
+@group
+insert( cursor, record )
+%@{
+    insert( cursor, record );
+    if (!container.first) @{
+        // EMPTY list.
+        container.first = cursor.obj;
+        container.last = cursor.obj;
+        cursor.next = 0;
+        cursor.prev = 0;
+    @} else @{
+        // NON-empty list.
+        // Add record to beginning of list. 
+        cursor.next= container.first;
+        cursor.prev= 0;
+        cursor.next->prev = cursor.obj;
+        container.first= cursor.obj;
+    @}
+%@}
+@end group
+@end example
+
+Note that calling the @code{insert()} operation of the lower layer
+first is important, as this operation will allocate space
+for the element and copy the record into the allocated space.
+Only after this is done is it meaningful to initialize the
+element and container augmented fields @samp{first}, @samp{last}, @samp{next},
+and @samp{prev}.
+
+@node dlist - delete, dlist - default operations, dlist - insert, Example - dlist.xp
+@subsection dlist - delete
+
+@cindex delete example
+
+The lower layer deletions are done after this layer's deletions. In
+addition, the value of @samp{cursor.obj}
+is unchanged; this
+constancy is what makes this layer "stable".
+
+@example
+@group
+delete( cursor )
+%@{
+
+    if ( cursor.next ) @{ 
+        cursor.next->prev = cursor.prev;
+    @} else @{ 
+        container.last = cursor.prev;
+    @}
+    if ( cursor.prev ) @{ 
+        cursor.prev->next = cursor.next;
+    @} else @{ 
+        container.first = cursor.next;
+    @}
+
+    delete(cursor);
+%@}
+@end group
+@end example
+
+
+@node dlist - default operations,  , dlist - delete, Example - dlist.xp
+@subsection dlist - default operations
+
+@cindex default operations
+
+If the only thing an operation does is to
+just call down to the next layer, then the operation does not have to be made
+explicit. This is the concept of @dfn{default operations}. This is different
+from an operation that does nothing like the example below:
+
+@example
+@group
+init_cont ( container )
+@{
+@}
+@end group
+@end example
+
+If an operation does nothing, not even call the next lower layer, then that
+operation has to be made explicit. An exception to the rule is
+@code{l_verbatim}, which xp knows  does not ever call down to the next
+layer. In this case, the default is to, in fact, do nothing.
+
+@cindex transitional layer
+There is another exception to this rule. If the layer is a
+@dfn{transitional layer}, that is, the realm type of the layer does not
+match the realm type of it's first parameter export, then the operation must
+be defined.  In other words, if the operation is allowed in the current
+realm, and the next layer down belongs to a different realm where the
+operation is not allowed, then the operation must be defined in the
+current layer. The allowable realms for the operations are listed in the
+operations table,  whose format is detailed in @ref{Altering the
+Operations Table}.
+
+For instance, the @file{array} layer is a transitional layer going from
+realm @samp{ds} to realm @samp{mem}. The operation @code{getrec} is
+valid for the @samp{ds} realm, but not for @samp{mem}. Therefore, an
+implementation for @code{getrec} must be provided in the @file{array} layer.
+
+There are three operations that are exceptions to this exception: 
+@code{ref}, @code{iref}, and @code{pos}. These operations  do not have to be 
+defined for transitional layers  because xp knows what the defaults should be and
+can  generate the code itself. 
+
+Later on in @ref{Generic Layers}, it will be shown how to change the default for an entire
+layer.
+
+@node Adding Annotations , Parsing Annotations Details, Example - dlist.xp, xp Manual
+@section Adding Annotations
+
+@menu
+* Simple Annotations::          Takes 1 annotation
+* Optional Annotations::        Takes 0 or 1 annotation
+* Multiple Annotations::        Takes 0 or more annotations
+@end menu
+
+@node Simple Annotations, Optional Annotations, Adding Annotations , Adding Annotations
+@subsection Simple Annotations
+
+Annotations are used for layers that need some additional data provided
+by the user in order to process the layer. For instance, the array layer
+uses an annotation to specify the size of the array. Using
+@file{array.xp} as our sample code:
+
+@example
+@group
+layer ds array[ mem ] stable annotation retrieval_sometimes
+
+!#include "qopt.h"
+!#include "array.h"
+
+ddlhint( argc, argv ) 
+@{
+    limit 1 argument;
+    getarg( %a.size, argv[0] );
+@}
+@end group
+@end example
+
+Note that the layer heading contains the keyword @code{annotation}.
+
+The first line in @code{ddlhint} says that it only expects one argument
+to the annotation. The next line copies into the annotation structure
+field @code{size} the first argument, @code{argv[0]}. This annotation
+structure is defined in  @file{array.h}, which is listed below:
+
+@example
+@group
+struct array_annote @{
+    char size[20];  
+    struct array_annote *next;
+@};
+@end group
+@end example
+
+This is the specification of annotations. The first line is the new
+argument string. The second line is used to link annotations together.
+Even though @code{size} is an integer, we need to keep the value as a string
+due to the way the xp program generates code.
+
+@xref{Parsing Annotations Details} for functions within @code{ddlhint}. 
+
+@node Optional Annotations, Multiple Annotations, Simple Annotations, Adding Annotations
+@subsection Optional Annotations
+
+A layer can have optional annotations. One variant  of @file{malloc}, called
+@file{multimalloc}, determines if an annotation is present. If so, the layer
+would allocate @var{N}
+objects at a time (where @var{N} is the annotation). If there was no
+annotation, a default of 
+100 objects would be allocated. 
+The relevant code is below:
+
+@example
+@group
+layer ds multimalloc [ mem ] stable optional annotation retrieval_never
+
+ddlhint( argc, argv )
+@{
+    limit 1 argument;
+
+    /* the test for optional annotations! */
+    if ( argc == 0 ) @{ 
+        strcpy(%a.size,"100");
+    @} else @{ 
+        getarg( %a.size, argv[0]);
+    @}
+@}
+@end group
+@end example
+
+In a layer marked as @code{optional annotation}, the code @code{limit 1
+argument} will check to see if there are either zero or one annotations.
+
+@node Multiple Annotations,  , Optional Annotations, Adding Annotations
+@subsection Multiple Annotations
+
+@cindex multiple annotations
+@cindex optional multiple annotations
+Some layers can process many annotations at once (as opposed to 
+replicating the layer once per annotation). These layers are marked
+@samp{multiple annotations} if they require at least one annotation or
+@samp{optional multiple annotations} if they do not require any
+annotations. Here is an example from
+@file{hashcmp.xp}:
+
+@example
+@group
+layer ds hashcmp [ ds ] stable multiple annotations
+
+!#include "qopt.h"
+!#include "hashcmp.h"
+
+ddlhint( argc, argv )
+@{
+    limit 1 arguments;
+    getarg( %a.ofield, argv[0] );
+@}
+
+xform( element, container, cursor)
+@{
+    OP_TAB *t;
+    char fieldname[30];
+
+    foreach_annotation @{
+
+        // note that the name of the int field that is augmented
+        // has the layer number on it, to distinguish it from 
+        // the original field 
+
+        add element : short %a.ofield ; 
+
+        sprintf(%a.hfield,"%s%d",%a.ofield,%ln);
+     
+        t = find_data_type(element, %a.ofield);
+        %a.hashcmp   = t->hashcmp;
+        %a.is_literal = t->is_literal;
+        strcpy(%a.hashcmp_name, t->hashcmp_name);
+    @}
+    xform( element, container, cursor );
+@}
+@end group
+@end example
+
+
+The ddlhint procedure takes on one annotation at a time. Since the layer
+is marked with @samp{multiple annotations}, the annotations are added
+one at a time to an annotation list. Then, within @code{xform},
+the macro @code{foreach_annotation} iterates over this list and adds
+each of the fields to the element.
+
+@cindex automatic layer replication
+
+Layers marked as  @samp{multiple annotation}  are more
+complicated to write than single annotation layers.
+Another way to achieve this capability, for the most part, is the
+@dfn{automatic layer replication} mechanism of the pb program, mentioned
+in @ref{Automatic Repetition, , ,p2,Introductory P2 System
+Manual}. 
+Briefly stated, a layer in a type expression that accepts a single
+annotation will be automatically replicated once per 
+annotation in a container declaration. If a container declaration has
+three annotations, then there are three copies of the layer in the type
+expression. If the container declaration has no annotations, then the
+layer is removed from the type expression. 
+
+@ignore
+
+And in a final twist, a layer can be declared as having @samp{optional multiple
+annotations}, which means if there are no annotations, then some default
+code is executed. Otherwise, the layer can process multiple annotations.
+Even though  the file @file{nloops.xp} is marked as such, this may just
+be an error.
+
+@end ignore
+
+
+@node Parsing Annotations Details, Query Optimization, Adding Annotations , xp Manual
+@section Parsing Annotations Details
+@cindex annotations
+@cindex ddlhint
+
+The annotations are sent to a layer by calling the layer's @code{ddlhint}
+function.
+Since there can be an arbitrary number of annotated values,
+the argc/argv format from C programming is used. 
+@ignore
+The difference is that
+pointers to NODE structures are passed, rather than pointers to strings.
+@end ignore
+There are two macros defined for processing the ddlhint
+argument vector.  They are:
+
+@deffn {ddlhint} getarg ( a, b )
+Convert argument @var{b} into string @var{a}. 
+@end deffn
+
+One example of its usage is from @file{bintree.xp},
+@example
+@group
+ddlhint( argc, argv )
+@{
+    char   ofield_type[30];
+    OP_TAB *t;
+
+    limit 1 argument;
+    getarg( %a.ofield, argv[0] );
+@}
+@end group
+@end example
+
+Note that the @code{limit 1 argument} statement makes sure that
+precisely one argument is  passed to @code{ddlhint}: the name of the
+ordering field. The @code{getarg}
+line converts the string provided through the @samp{argv} vector into the
+annotation field @code{ofield}.
+
+@deffn {ddlhint} findtype ( t, n )
+The argument @var{n} is a string containing the name of the data type. This function finds
+@var{t}, which is a pointer to @var{n}'s type table entry. 
+@end deffn
+For instance, the code:
+@example
+    findtype(t,"int");   
+@end example
+will have @samp{t} point to a table associated with the integer type. 
+
+
+@node Query Optimization, Generic Layers, Parsing Annotations Details, xp Manual
+@section Query Optimization
+@cindex optimize, writing
+@cindex writing optimize
+
+This section details advanced features about the @code{optimize} procedure.
+
+@menu
+* Query Optimization Introduction::  
+* Optimize Example::            
+* Query modification in optimize::  
+@end menu
+
+@node Query Optimization Introduction, Optimize Example, Query Optimization, Query Optimization
+@subsection Query Optimization Introduction
+
+First, The current values of the optimization constants.
+@cindex optimization constants
+
+@vtable @samp
+
+@item CONSTANT_TIME_QOPT_COST 
+@equiv{} 1 @*
+Cost of primary key retrieval O(1) 
+
+@item LOG_TIME_QOPT_COST
+@equiv{} 10 @*
+Cost of binary search O(log n) 
+
+@item LINEAR_TIME_QOPT_COST
+@equiv{} 1000 @*
+Cost of scanning O(n) 
+
+@item QSORT_QOPT_COST
+@equiv{} 2500 @*
+Cost of quicksorting O(n log n) 
+
+@item MAX_QOPT_COST
+@equiv{} 100000 @*
+Maximum cost O(infinity) 
+
+@item RANGE_QOPT_SEL
+@equiv{} 0.25 @*
+Selectivity of range predicate 
+
+@item PTR_FOLLOWING_QOPT_FACTOR
+@equiv{} 1.1 @*
+Cost of following a pointer 
+
+@item ARRAY_QOPT_FACTOR
+@equiv{} 1.2 @*
+Cost of array retrieval 
+
+@item HASH_COMPUTATION_QOPT_FACTOR
+@equiv{} 2.0 @* 
+Cost of computing a hash function 
+
+@item HASH_BUCKET_QOPT_FACTOR
+@equiv{} 1.5 @*
+Ratio empty to non-empty buckets 
+
+@item ZERO
+@equiv{} 0 @*
+The designated layer will process the join 
+
+@item NSQUARED 
+@equiv{} 5000 @*
+Nested loops 
+
+@end vtable
+
+@cindex use_layer
+
+If the layer (such as hash) has a key field, then this table below of
+sample layers lists
+three cost functions that apply respectively to each of the following
+three cases, corresponding to the three cases P2 distinguishes via the
+@code{use_layer()} procedure:
+
+@itemize @bullet
+
+@item 
+case @equiv{} 0 @*
+No qualification. All elements in the container has to be inspected on searches.
+
+@item
+case @equiv{} 1 @*
+Range qualification. Only a range of elements in a container have to be
+inspected during searches.
+
+@item
+case @equiv{} 2 @*
+Point qualification. A search is looking for an element matching a
+single value. 
+
+@end itemize
+
+Essentially, (cost of case 0) >= (cost of case 1) >= (cost of case 2).
+
+If the layer (such as array) does not have a key field, then this table
+either lists a single cost function that applies to all cases, "call
+down" if the layer does not affect the retrieval layer, or "do nothing"
+if it is a bottom layer, meaning it cannot handle retrievals.
+
+@cindex retrieval cost per layers example
+
+@table @var
+
+@item array
+LINEAR_TIME_QOPT_COST
+
+@item avail
+call down
+
+@item bintree
+(0) LINEAR_TIME_QOPT_COST @*
+(1) LINEAR_TIME_QOPT_COST * RANGE_QOPT_SEL * @*
+      PTR_FOLLOWING_QOPT_FACTOR @*
+(2) LOG_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+
+@item conceptual
+call down
+
+@item delflag
+call down
+
+@item dlist
+LINEAR_TIME_QOPT_COST * PTR_FOLLOWING_QOPT_FACTOR
+
+@item hash
+(0) & (1) LINEAR_TIME_QOPT_COST * HASH_BUCKET_QOPT_FACTOR @*
+(2) CONSTANT_TIME_QOPT_COST * HASH_COMPUTATION_QOPT_FACTOR
+
+@item hashcmp
+call down
+
+@item indx
+call down * PTR_FOLLOWING_QOPT_FACTOR
+
+@item malloc
+LINEAR_TIME_QOPT_COST * PTR_FOLLOWING_QOPT_FACTOR
+
+@item mlist
+cost of retrieving index with lowest retrieval cost * @*
+  PTR_FOLLOWING_QOPT_FACTOR
+
+@item odlist
+(0) LINEAR_TIME_QOPT_COST * PTR_FOLLOWING_QOPT_FACTOR @*
+(1) LINEAR_TIME_QOPT_COST * PTR_FOLLOWING_QOPT_FACTOR*(3/4) @*
+(2) LINEAR_TIME_QOPT_COST * PTR_FOLLOWING_QOPT_FACTOR*(1/2)
+
+@item part
+If predicate involves both primary and secondary containers:
+	cost of retrieving secondary container * PTR_FOLLOWING_QOPT_FACTOR @*
+Otherwise:
+	cost of retrieving primary or secondary container (whichever the predicate involves)
+
+@item slist
+LINEAR_TIME_QOPT_COST * PTR_FOLLOWING_QOPT_FACTOR
+
+@item transient
+do nothing
+
+
+@end table
+
+Note how the cost for the @file{part} layer is computed. If the predicate
+involves both the primary and secondary containers, then the cost
+reflects the cost of retrieving the secondary container only. 
+This is because the algorithm searches the secondary container and
+follows links to get to the primary container. 
+Thus, this
+cost does not consider or handle the case in which the cost of
+retrieving the primary container is less than that of retrieving the
+secondary container.
+
+
+@node Optimize Example, Query modification in optimize, Query Optimization Introduction, Query Optimization
+@subsection Optimize Example
+
+@cindex optimize example
+
+@findex use_layer
+If  a retrieval layer  has a key field, it must deal with the three
+return values of @code{use_layer}. 
+The example code below is adapted from the file @file{bintree.xp}.
+
+@example
+@group
+#define COST0   LINEAR_TIME_QOPT_COST * PTR_FOLLOWING_QOPT_FACTOR * 2
+#define COST1   LINEAR_TIME_QOPT_COST * RANGE_QOPT_SEL * 
+                    PTR_FOLLOWING_QOPT_FACTOR * 2
+#define COST2   LOG_TIME_QOPT_COST * PTR_FOLLOWING_QOPT_FACTOR
+
+optimize( cursor )
+@{
+
+   optimize( cursor );
+   switch( use_layer(&(%c.b), predicate, %a.ofield, %a.bi) ) @{
+
+   case 0:  // whole container search
+            if (cost>COST0) @{
+                cost = COST0;
+                layer = %ln;
+                if (strcmp( %a.ofield, orderby_field ) == 0)
+                  retrieval_direction = 1;
+                else
+                  retrieval_direction = 0;
+            @}
+            break;
+
+   case 1:  // range search
+            if (cost > COST1) ....
+            
+   case 2:  // point search
+            if (cost > COST2) ....
+
+   default: fatal_err( "use_layer failed" );
+   @}
+@}
+@end group
+@end example
+
+The constants used in the definitions of the @samp{COST0}, @samp{COST1},
+and @samp{COST2} are
+defined in @ref{Query Optimization}. 
+The @code{use_layer} function takes four
+arguments: the structure which describes the range
+of the query, the cursor predicate,  the key 
+field @code{ofield}, and the set of comparison functions. 
+Based on the @code{use_layer} return value, different cost assessments are made. 
+
+
+
+@node Query modification in optimize,  , Optimize Example, Query Optimization
+@subsection Query modification in optimize
+
+@cindex query modification in optimize
+
+Another capability  of the optimize procedure is to modify cursor
+predicates. The example is
+excerpted from @file{orderby.xp}.
+
+@example
+@group
+xform( element, container, cursor )
+@{
+    ....
+    add element : int odf;
+    ....
+@}
+
+optimize( cursor )
+@{
+    char q[40];
+    sprintf(q,"$.odf%d == 0", %ln);
+    post_and( predicate, q );
+    optimize( cursor );
+    ....
+@}
+@end group
+@end example
+
+First, field @code{odf} is added to the element. If at run-time an
+element's @code{odf} field is 1, then the element  has been deleted. Since it does not make
+sense to retrieve deleted elements, the query is modified by post-appending
+the current value of predicate with the test @code{$.odf@var{ln} == 0} where
+@var{ln} is the layer number of the current layer and @samp{$} represents
+the cursor's name. So if the value of the predicate
+was @code{"cursor.age > 50"} before this transformation, and orderby is
+the 5th layer in the type expression, the value afterwards
+would be @code{"cursor.age > 50 && cursor.odf5 == 0"}. 
+
+@node Generic Layers, Multiple Containers and Cursors, Query Optimization, xp Manual
+@section Generic Layers
+
+@cindex generic layers
+
+The motivation for generic layers was that there were a few things that
+we wanted to apply to every operation. Rather than list them one by one
+(and change the list whenever we add adhoc operations), we developed
+a  shorthand notation for generic operation manipulations.
+The example below is based on the file called @file{generic.xp}.
+
+@example
+@group
+layer ds generic[ ds ] stable no annotation retrieval_always
+
+!#include "qopt.h"
+
+ref( cursor, field )
+%@{
+    ref( cursor, field )
+%@}
+
+
+def_cursor_func : 
+$HEADER
+@{
+    if (cursor_id == -1) @{ 
+        char func[200];
+        
+        sprintf(func,"/* %s proceduralized by generic */(%s).op_vec[%d] ",
+                $STRNAME, cursor, op_list_match( op_list, $STRNAME, 0));
+        sprintf( container, "*(%s).con", cursor);
+        %@{
+            %v.func $GENERICARGS 
+        %@} 
+    @} else @{ 
+        $CALLDOWN ;
+    @}
+    $GENSEMI ; /* add semicolon to procedures */
+@}
+
+def_container_func : 
+$HEADER
+@{
+    if (container_id == -1) @{ 
+        char func[200];
+        sprintf(func,"/* %s proceduralized by generic */(%s).op_vec[%d] ",
+                $STRNAME, container, op_list_match( op_list, $STRNAME, 0)); 
+        %@{
+            %v.func $GENERICARGS
+        %@} 
+    @} else @{ 
+        $CALLDOWN ;
+    @}
+    $GENSEMI ; /* add semicolon to procedures */
+@}
+@end group
+@end example
+
+The @code{def_cursor_func} is used to generate the body of all cursor-based
+operations whereas @code{def_container_func} is used to generate the
+body of all container-based operations.
+Operations which are neither (such as @code{ddlhint} and @code{xform})
+are not automatically generated.
+These two def-based procedures are placed at the end of the xp file. 
+
+All procedures that are declared between the layer declaration and the @code{def_} declarations  
+do not take on the new default values. 
+In the example above, the @code{ref} operation does not go
+through the transformation; rather it takes on the traditional default value
+of calling down to the next layer. 
+
+There are special words called @dfn{dollarwords} which begins with a dollar
+sign and are all caps (@pxref{Dollarwords}).  Dollarwords are generally treated as if they were
+surrounded by @code{%@{ %@}}s. The dollarwords that appear in the example above
+(with their interpretations) are:
+
+@table @samp
+@item $GENSEMI
+Generates a semicolon if the operation is a procedure. If the operation
+is an expression, like @code{end_adv} or @code{gettime}, then the
+semicolon is not generated.
+
+@item $STRNAME
+Returns the quoted name of the operation.
+
+@item $HEADER
+Generates the header of the operation.
+
+@item $GENERICARGS
+Generates argument list for generic procedures.
+
+@item $CALLDOWN
+Generates the code to call down to the next layer.
+
+@end table
+
+For instance, applying the new default for container operations to the
+@code{open} function would result in this equivalent code:
+
+@example
+@group
+open (container) 
+@{
+    if (container_id == -1) @{ 
+        char func[200];
+        sprintf(func,"/* %s proceduralized by generic */(%s).op_vec[%d] ",
+                "open", container, op_list_match( op_list, "open", 0)); 
+        %@{
+            %v.func (&container) ;
+        %@} 
+    @} else @{ 
+        %@{
+            open(container) ;
+        %@}
+    @}
+@}
+@end group
+@end example
+
+@node Multiple Containers and Cursors, Link Layers, Generic Layers, xp Manual
+@section Multiple Containers and Cursors
+
+@cindex multiple containers and cursors
+@cindex member cursors
+
+The xp program doesn't gracefully handle layers with multiple container and cursor
+types.  The problem is that xp is a preprocessor, not a full-fledged
+compiler@footnote{Specifically, xp has neither a full-fledged symbol
+table nor notion of lexical scoping.  xp is a macro processor and only
+recognizes a pre-defined set of keywords; everything else is un-interpreted.}
+Recall that xp can recognize up to 10 cursors (called @samp{cursor} or
+@samp{cursor0}, @samp{cursor1}, ... @samp{cursor9}), containers, etc. 
+For xp to do the right translation, two
+things must occur: (1) there must be a binding of a @samp{cursor@var{n}}
+to a particular parameter of a layer and (2) the strings associated with
+all the keywords of @samp{cursor@var{n}} must be properly initialized.
+
+The first problem is dealt with inside the @code{xform} procedure of a
+layer.  This procedure  performs the type transformations - i.e., the mapping of
+the input record type to the output record types.  It is in this
+procedure that new container, element, and cursor types are created.
+The structures to aid the bindings are called @dfn{member cursors}. 
+
+@menu
+* Member Cursor Details::       
+* Member Cursor Example::       
+* Many Cursors in One Container::  
+* Assigning Values to Cursors::  
+@end menu
+
+@node Member Cursor Details, Member Cursor Example, Multiple Containers and Cursors, Multiple Containers and Cursors
+@subsection Member Cursor Details
+
+@cindex multiple cursors
+@cindex member cursors
+
+Below are listed some utility functions for creating new element types
+and for enumerating members of structures (element types).
+
+@cindex member cursor functions
+
+@deffn {Member Cursor Function} new_struct ( name, flag )
+Returns a  handle to a new structure with the name
+@var{name}. If @var{flag} is true, add the structure to the symbol table
+of pb.
+@end deffn
+
+@deffn {Member Cursor Function} mcursor ( i )
+Returns a pointer to a member cursor for the @var{i} structure.
+@end deffn
+
+@deffn {Member Cursor Function} init_mcursor ( c, i )
+Initialize the member cursor @var{c} to the @var{i} structure.
+@end deffn
+
+@deffn {Member Cursor Function} mcursor_adv ( c )
+Advance the member cursor @var{c} to the next member.
+@end deffn
+
+@deffn {Member Cursor Function} mcursor_res ( c )
+Reset the member cursor @var{c} to first member. 
+@end deffn
+
+@deffn {Member Cursor Function} mcursor_eof ( c )
+Returns true if member cursor @var{c} is positioned past the last
+member. 
+@end deffn
+
+@deffn {Member Cursor Function} name_of ( c )
+Returns the name (as a string pointer) of the member referenced by
+member cursor @var{c}.
+@end deffn
+
+@deffn {Member Cursor Function} ctype_of ( c )
+Returns the ctype structure of the member
+referenced by member cursor @var{c}.
+@end deffn
+
+@deffn {Member Cursor Function} type_of ( c )
+Returns the name of the type (as a string
+pointer) referenced by member cursor @var{c}.
+@end deffn
+
+@deffn {Member Cursor Function} position_member ( c, field )
+The @var{field} argument is a string containing the name of a
+field. This operation positions the member cursor @var{c} on this field.
+@end deffn
+
+@deffn {Member Cursor Function} foreach_member ( c ) @{ code @}
+This operation executes @var{code} for each member in member cursor c.
+@end deffn
+
+@deffn {Member Cursor Declaration} replicate_cursor@var{digit1} @b{as_cursor}@var{digit2}.  
+This declares keywords such as @samp{container}, @samp{cursor},
+@samp{cursor_type}, etc. which end in @var{digit2}, to have the same values as
+the corresponding keywords which end in @var{digit1}.
+@end deffn
+
+@deffn {Member Cursor Declaration} new_container_type@var{digit1} name @b{with_type} name2 @b{mapped_via_param} digit2 
+Declare a new container @code{container@var{digit1}}. The @var{name} is used
+to generate the container, cursor, and element types.
+The type of the new container is @var{name2}. The container
+will be implemented via the type expression in parameter @var{digit2}. 
+@end deffn
+
+@node Member Cursor Example, Many Cursors in One Container, Member Cursor Details, Multiple Containers and Cursors
+@subsection Member Cursor Example
+
+The @code{xform} procedure in @file{part.xp} partitions the
+fields of an abstract record into two sets where each set is stored in
+a new record type. If the original record was:
+
+@example
+@group
+struct a @{ 
+    char name[30];
+    int age;
+    int dept_no;
+    char dept[30];
+@}
+@end group
+@end example
+
+and the partition argument was @samp{dept_no}, then these two structures are
+created:
+
+@example
+@group
+struct a_prim @{
+    char name[30];
+    int age;
+@}
+
+struct a_sec @{
+    int dept_no;
+    char dept[30];
+@}
+@end group
+@end example
+
+
+This is accomplished by the following code:
+
+@example
+@group
+xform( element, container, cursor )
+@{
+MCURSOR *m;
+BOOLEAN sec;
+IDENT   *p;
+IDENT   *s;
+char    name[100];
+
+   // Step 1:  create the primary and secondary element types
+   //          initially they will have no fields
+
+   sprintf(name,"%s_prim", obj_type);
+   p = new_struct(name, TRUE);
+
+   sprintf(name,"%s_sec", obj_type);
+   s = new_struct(name, TRUE);
+
+   add_field_to_sec = TRUE;
+
+   m = mcursor( element );
+@end group
+@end example
+
+The procedure @code{new_struct} takes the name of a structure and the
+constant @samp{TRUE} (which tells xp to add the structure to the symbol
+table) and returns an identifier type.
+The @code{xform} procedure uses this to create a pair of record
+types: a primary type and a secondary type, each containing only a
+portion of the base element types.
+The @code{mcursor} call creates a member cursor object
+@code{m} from the fields in the element.
+At this point, note that @code{element} is possibly transformed.
+
+@example
+@group
+   // cycle through each field of element; if a field appears
+   // before %a.pfield, put it in the secondary element type
+
+   foreach_member( m ) @{
+      if (add_field_to_sec) @{
+        add s : mcurs m;
+        if (strcmp( name_of( m ), %a.part_at_field ) == 0)
+          add_field_to_sec = FALSE;
+      @} else @{
+        add p : mcurs m;
+      @}
+   @}
+   ...
+@}
+@end group
+@end example
+
+@ignore
+ ( though, in general, layers between the topmost
+layer and part do not usually augment elements).
+@end ignore
+
+The code within the @code{foreach_member} construct takes one field at a time from member cursor
+@code{m} and adds it to either structure @code{s} or @code{p}. The value
+of the annotation @code{%a.part_at_field} is the name of the last field
+to add to the secondary type. All fields after this annotated value are
+inserted into the primary type.
+
+
+
+Once a record type has been created, the next step is to create a
+container of its instances.  
+
+@ignore
+@example
+@group
+new_container_type@var{digit1} @var{type_name} with_type 
+    @var{type_ident} mapped_via_param@var{digit2} ;
+@end group
+@end example
+
+This  statement requires: a digit after @code{new_container_type}
+representing the name of the new container ( the digits 0 and 1 are
+reserved ), a type name and a type identifier for the container, and
+@var{digit2} which is the number of the layer parameter that the
+container will use to connect to lower layers. 
+An example of its use is listed below (which follows @samp{...} in the
+previous code fragment):
+@samp{} 
+
+@end ignore
+
+
+@example
+@group
+    // Step 2:  create primary and secondary container types
+    //          this initializes variables element3, container3,
+    //          cursor3 and element5, container5, cursor5.
+    //          NOTE: calling new_container_type automatically
+    //          calls xform().
+
+    // the 2+ merely skips over the "__" characters that 
+    // are appended by pb to begin with, and generally shortens
+    // names
+   
+    sprintf(name,"%s_prim", 2+ container_type );
+    new_container_type3 name with_type p mapped_via_param 0;
+
+    sprintf(name,"%s_sec", 2+ container_type );
+    new_container_type5 name with_type s mapped_via_param 1;
+
+@end group
+@end example
+
+The first two statements will generate a new container type,
+@code{container3}, which will have as its element the fields that were
+added to the @code{p} structure. The instantiation of the container (and
+element and cursor) will be done through the layers called down using
+parameter 0. The next two statements declare @code{container5} similarly, which
+uses the secondary record structure @code{s} and is instantiated through parameter 1.
+
+Finally, we need to create the actual containers and have the two record
+types point to each other. Here's the remaining code:
+
+
+@example
+@group
+   // Step 3:  Add pointers to corresponding segment.
+ 
+   add element3 : struct element5  *sec;   // Add ptr to secondary segment.
+   add element5 : struct element3  *prim;  // Add ptr to primary segment.
+
+   // Step 4:  Create primary and secondary container instances
+
+   add container : struct container3 prim;
+   add container : struct container5 sec;
+
+   // Step 5:  Add to the abstract cursor, cursors over the primary and
+   //          secondary containers.
+
+   add cursor : struct cursor3 p;
+   add cursor : struct cursor5 s;
+
+   // Step 6:  Remember handles to each element type.
+
+   %k.p = p;
+   %k.s = s;
+   %k.a = element;
+@end group
+@end example
+
+Step 3 adds a pointer to each element type which points to the other
+element type. Step 4
+creates two containers, @code{prim} and @code{sec}. Step 5 adds
+a cursor for each new container. Step 6 stores cursor and element types
+in the container state. 
+
+@node Many Cursors in One Container, Assigning Values to Cursors, Member Cursor Example, Multiple Containers and Cursors
+@subsection Many Cursors in One Container
+
+Occasionally, one needs to declare multiple cursor types over a single
+container within a layer.  This occurs, for example,  when different cursors over the
+same container have different predicates.  The @file{mlist.xp} layer is an
+example where different cursor types are used to search a container
+than those that are used to update an index container. To accomplish this,
+let the @code{new_container_type5} statement create the
+container type.  Keywords, such as  @code{container5} and @code{cursor5}, have specific
+meanings.  However, @code{cursor5} will be assigned to be one cursor type; we
+still need another set of keywords to reference another cursor type.
+The xp statement  used to accomplish this is:
+
+@example
+replicate_cursor@var{digit1} as_cursor@var{digit2}
+@end example
+
+In @file{mlist.xp}, the actual code used is:
+
+@example
+replicate_cursor5 as_cursor7;
+@end example
+
+That is, keywords @code{container7}, @code{cursor7}, etc. are now legal to use.
+Associated with a cursor or container is a set of strings to
+define its type, cursor expression, etc.  This statement tells xp that
+@code{cursor5} and @code{cursor7} are mapped via the same type expression, that they
+have the same container type, element type, and (usually a different)
+cursor type.  Thus, whenever xp sees the keyword @code{cursor7}, it knows to
+map it via whatever the parameter was for @code{cursor5} (parameter 1 in this example).
+
+@node Assigning Values to Cursors,  , Many Cursors in One Container, Multiple Containers and Cursors
+@subsection Assigning Values to Cursors
+
+Finally, there needs to be a way to assign values to the
+keywords @code{cursor5}, @code{container5}, etc. 
+One way to do this is by using a @code{cursor_func} to define these
+strings. Here's another  example from @file{part.xp}:
+
+@example
+@group
+cursor_func cursorbind3( cursor )
+@{
+    sprintf( cursor3,         "(%s.p%d)", cursor, %ln );
+    sprintf( cursor_type3,    "%s_prim_curs", container_type );
+    sprintf( obj_type3,       "%s_prim_xf", container_type );
+    sprintf( container3,      "(%s.prim%d)", container, %ln );
+    sprintf( container_type3, "%s_prim_cont", container_type );
+    sprintf( orig_type3,      "%s_prim", obj_type );
+    strcpy(  predicate3,      %c.prim_p );
+    cursor_id3 = %c.id3;
+    cost3  = %c.retrieval_cost3;
+    layer3 = %c.retrieval_layer3;
+    funbody3 = -1;
+@}
+@end group
+@end example
+
+When this procedure is called, the value of @code{cursor3} gets whatever the
+current cursor expression is plus the field @code{.p@var{ln}} so @code{cursor3}
+points at the new primary structure. Note that the strings for @code{cursor3},
+@code{container3}, etc. is based on the current value (@code{cursor0}). 
+Notice that some of these values have been precomputed and stored in a cursor state variable.  Now, whenever xp
+sees @code{cursor3}, it will have string that was given to it in this procedure.  Check the
+@file{mlist.xp} for other examples of cursor bindings. 
+
+@node Link Layers, Adding New Operations to xp, Multiple Containers and Cursors, xp Manual
+@section Link Layers
+
+This section of the documentation is unstable. Currently there is only
+one link layer implementation. When more link layers are implemented, some
+of this material may change. 
+
+@menu
+* Link Introduction::           What are link layers and how are 
+                                they used?
+* Link Expressions::            Keywords for link layers.
+* Link Declaration::            How to declare a link
+* Link Helper Functions::       
+* Link Layer Details::          
+@end menu
+
+@node Link Introduction, Link Expressions, Link Layers, Link Layers
+@subsection Link Introduction
+
+@cindex link
+@cindex parent
+@cindex child
+A @dfn{link} is a named relationship between objects in two
+containers. The relationship is usually specified by a join predicate
+that relates objects in one container (the @dfn{parent}) to objects of
+the second (the @dfn{child}). It is possible for no predicate to be used
+to connect parent records to child records. In such cases, child-parent
+pairings are specified manually. However, our primary concern will be
+on links that have predicates.
+
+@vindex one
+@vindex many 
+@vindex at_most_one
+
+@cindex cardinalities
+@cindex link cardinalities
+Link cardinalities are important ways of understanding limitations on
+relationships, as well as means for optimization. Cardinalities are
+expressed in terms of designators: one (@code{one}), zero-or-more (@code{many}),
+or at-most-one (@code{at_most_one}). Parent records can have  one, many,
+or at-most-one child records and vice versa.
+A cardinality is expressed as a pairing of designators
+@code{p:c}, where @code{c} is the cardinality designator of child records for each
+parent record, and @code{p} is the cardinality designator of parent records for
+each child record. Thus, the cardinality @code{at_most_one:many} means that
+each parent record is associated with any number of child records, but
+child records will have at most one parent record. Similarly, @code{one:many}
+means that parents can have any number of children, but each child is
+required to have precisely one parent.
+
+In principle, there can be up to nine different pairings of cardinality
+designators. By convention, parent labels are assigned to containers so
+that their cardinalities @code{p:c} is such that @code{p <= c}.
+That is, a cardinality @code{many:one} is really a @code{one:many}
+relationship where the roles of parent and child are reversed.
+
+@node Link Expressions, Link Declaration, Link Introduction, Link Layers
+@subsection Link Expressions
+@cindex link expressions
+
+These keywords are used only in link layers. Like container and cursor 
+expressions, these keywords can be optionally followed by a digit,
+0-9. In the absence of a digit, 0 is assumed.
+
+@vtable @samp
+@item apply
+This variable is bound by the @code{linkpartition} operation to all
+predicates within @var{lpredicate} which involves
+neither the  parent nor the child cursors. 
+
+@item bound
+True if the cursor is bound. 
+
+@item ccard
+The child cardinality.
+
+@item cresidual
+The residual predicate from the child container.
+
+@item linkannote
+Holds the current link annotation. 
+
+@item linkcost
+Holds the current lowest cost for link layer processing.
+
+@item linklayer
+Holds the layer name with the lowest link layer processing.
+
+@item linkname
+The name of the link that will be used as the link retrieval layer.
+
+@item linkpredicate
+The predicate for the link layers. 
+
+@item lstate
+The link state variable associated with the link. It contains fields
+that are needed for processing that are neither in the parent cursor nor
+the child cursor.
+
+@item pcard
+The parent cardinality.
+
+@item presidual
+The residual predicate from the parent container. 
+
+@item schema
+The schema associated with the container. 
+
+@item special_foreachl
+This variable affects the @code{foreachl} operation when neither parent nor child cursor is already
+bound. 
+If this variable is true, then the retrieval layer determines which of the two 
+cursors to bind first. 
+If this variable is false, then the 
+parent is bound and iteration is done  over the child cursor.
+
+@end vtable
+
+@node Link Declaration, Link Helper Functions, Link Expressions, Link Layers
+@subsection Link Declaration
+@cindex link declaration
+
+A link is declared in a @file{.p2} file by the following annotation:
+
+@example
+@group
+@samp{link} linkname @samp{on} c-card parent-container 
+                     @samp{to} p-card child-container
+    [ @samp{using} layername ] [ @samp{where} link-predicate ]
+@end group
+@end example
+
+The @samp{using} layername clause is optional; if it is not specified, any link
+layer that implements a join algorithm will be used by P2 to implement
+the link. If specified, that layer is given preference. (Links that are
+implemented by pointers must have explicitly specified layer names. If
+such names were not made explicit, P2 wouldn't know what pointers to
+augment to object types, etc.).
+
+@cindex link predicate
+
+Likewise the @samp{where} clause is optional.
+A @dfn{link-predicate}  defines the relationship between  parent
+objects and child objects. The  syntax 
+@code{$p} references parent objects and @code{$c} references child
+objects.  As an example, consider the @code{works_in} link, which relates
+@samp{Department} objects to @samp{Employee} objects.  This link might be expressed
+as:
+
+@example
+link works_in on one Department to many Employee using ringlist
+    where "$p.deptno == $c.deptno";
+@end example
+
+The cardinality indicators mean that each employee works in exactly one
+department and that a department can have any number of employees. The
+@samp{using} clause specifies using the layer @file{ringlist.xp} to
+implement the links. The where clause restrict pairings to the
+department that the employee belongs to.
+
+Note that not all link layers support links of all cardinalities.
+The @code{ring_list} and @code{pointer_array} layers
+do not support @code{many:many} links.
+Thus, cardinalities can be used to verify that the selected layers are in fact
+able to implement the declared relationship.
+
+
+@cindex self-referential link
+
+A @dfn{self-referential} link is a link that connects objects within the same
+container. The relationship of people who work in the same
+department  is captured by the @code{same_dept} link:
+
+@example
+link same_dept on many Employee to many Employee 
+    where "$p.deptno == $c.deptno";
+@end example
+
+@node Link Helper Functions, Link Layer Details, Link Declaration, Link Layers
+@subsection Link Helper Functions
+
+@deffn {Link Functions} card ( name , layername )
+Returns the value @code{ONE}, @code{MANY}, or @code{AT-MOST-ONE}.
+@end deffn
+
+@ignore 
+@deffn {Link Functions} make_field_list ( field_arg, name, linkpred )
+??? where is this defined ?????
+@end deffn
+
+@deffn {Link Functions} name_of_ident ( name, container )
+?????????
+@end deffn
+
+@deffn {Link Functions} name_of_type ( name_type, cursor/container )
+?????????
+@end deffn
+
+@vindex companion
+There is also the construct
+@example
+companion@var{digit} @var{name} mapped_via_param @var{digit2}
+@end example
+which does ????
+@end ignore
+
+@defun linkpartition ( lpredicate, presidual, cresidual, rest )
+This function splits the link predicate @var{lpredicate} into 3 predicates: the parent
+residual predicate, @var{presidual}, which are all predicates involving the
+parent and not the child, the child residual predicate, @var{cresidual},
+which are all predicates involving the child but not the parent, and
+@var{rest}, which are all the predicates involving neither parent nor child.
+@end defun
+
+@ignore
+@defun id_of ( container ) 
+?????????
+Returns some special value
+@end defun
+@end ignore
+
+
+
+@node Link Layer Details,  , Link Helper Functions, Link Layers
+@subsection Link Layer Details
+@cindex link layers
+
+@cindex schema
+A link layer exports all operations in the data structure realm, plus the operations on link
+cursors ( @pxref{Link Operations} ).
+To explain what a link
+layer does, let us define a @dfn{schema} to be 
+a collection of containers. A link
+is a relationship between pairs of containers. A link layer is a
+transformation on schemas; it maps schemas with links of a given variety
+(ring list, pointer array, etc.) 
+to schemas without such links. The stacking
+of link layers defines a transformation that progressively removes links
+of the varieties that were represented in the layers. Ultimately, the
+resulting schema is simply a collection of non-linked containers, which
+are implemented via their ds type expressions.
+
+There is a realm called @samp{lnk}, which has two layers: @file{nloops},
+which implements joins using nested loops
+and @file{linkterm}, which makes the transition from the link
+realm to the data structures realm.
+Each layer in the @samp{lnk} realm  transform each @samp{ds} operation accordingly. For
+example, on @code{insert}, a ring list layer implementation  will automatically
+connect the new record to its corresponding parents and children;
+@code{nloops}, since it doesn't use pointers to make connections,
+will do nothing. The same holds for other @samp{ds} operations.  Each
+@samp{lnk} layer will transform each link cursor operation by either
+passing it to the next lower @samp{lnk} layer or by processing the
+operation (possibly by converting it into @samp{ds} operations). A
+@samp{lnk} layer processes a link operation if that layer implements
+that link. Thus, the a ringlist layer will process all operations on
+ringlist links, the @code{nloops} layer will process operations on join
+algorithm links, etc.  The @code{linkterm} layer transmits @samp{ds} operations as is;
+if it receives any link operations, it means that no @samp{lnk} layer above
+it could process the link operation. This is a fatal error and should
+not occur; thus @code{linkterm} is a safety net.
+
+Links are relationships among containers, not container types. As
+mentioned earlier, links are declared in the context of schemas.  The
+mapping of a schema is specified by a type expression and is done one
+container at a time. For example, suppose a schema had an employee
+container and a department container and the
+link @code{works_in} related
+the two implemented using @code{nloops}.  
+When the employee container is mapped, the @code{nloops} layer
+would augment child fields (as employees are the children of the
+@code{works_in} link); when the department container is mapped, the @code{nloops}
+layer would augment parent fields.
+
+In general, a link layer will have multiple annotations; one annotation
+for each link declaration. When a container is being mapped, each link
+layer will examine its links and determine if the container that is
+being transformed participates as a child or parent of any of these
+links. If so, the appropriate fields will be added for each link.
+That is, if a container is the child of one
+link and the parent of a second, the link layer will add both parent
+and child fields to the objects of that container. All of this mapping
+is done by the @samp{xform} operation.
+
+@ignore
+Also, as part of the @code{l_verbatim} operation, is the definition of the
+@code{lstate} data type, which is a state variable for processing join
+operations. The name that is given to this data type (or actually,
+typedef) should be standardized so that it can be referenced inside data
+types for composite cursors. 
+@end ignore
+
+
+
+@node Adding New Operations to xp, Add Layer, Link Layers, xp Manual
+@section Adding New Operations to xp
+
+Adding a new operation to the xp layers requires writing the operation
+for one or maore layers and changing the operations table. 
+
+@menu
+* Adding the Operation::        
+* Altering the Operations Table::  
+@end menu
+
+@node Adding the Operation, Altering the Operations Table, Adding New Operations to xp, Adding New Operations to xp
+@subsection Adding the Operation
+
+
+@cindex adhoc operations
+Adding a new operation to the P2 system is done  via  the @dfn{adhoc
+operation}, which are  operations not explicitly defined in the xp grammar.
+Adding a basic operation would entail rewriting large parts
+of xp and is generally not worth the effort. 
+The only difference between an adhoc operation and a basic operation
+is that adhoc operations names must be preceded by the word @samp{adhoc} in
+both its definition and usage. 
+
+The steps to adding an adhoc operation:
+
+@enumerate 
+
+@item
+Make sure that the first argument to the adhoc operation is either a
+cursor or a container. 
+
+@item
+Add the operation to all layer files that need its definition. For
+instance, @code{gettime} was added to the layer @file{timestamp.xp}.
+
+@item
+Determine the transitional layers that need explicit default values for
+the operation. This is achieved by (1) Determining the lowest realm the
+operation can belong to. (2) Find all layers that transition from that
+realm to another realm.
+
+For instance, the operation @code{gettime}  belongs to
+the ds realm. There are four layers, @file{array.xp}, @file{qsort.xp},
+@file{malloc.xp}, and @file{multimalloc.xp} which makes the transition
+from the ds realm to the mem realm. Therefore @code{gettime} has to be
+explicitly defined for these four layers.
+
+@item 
+To the file @file{op-tab.h} in the @file{common} subdirectory, add the
+name of the operation, in all caps, appended with @samp{_OP} to the
+enumerated list @code{ADHOCS_OP}. If this is inserted after
+@samp{IS_DELETED_OP}, then alter the constant @samp{HIGHEST_ADHOC_OP}.
+
+@item
+To the file @samp{op-tab.c} in the same subdirectory, add the operation
+information in the @code{op_tab} table. The adhoc definitions are at the
+end (the order within  the adhoc operation definitions doesn't
+matter---however, adhoc operations appear after all other operations). 
+
+@end enumerate
+
+@node Altering the Operations Table,  , Adding the Operation, Adding New Operations to xp
+@subsection Altering the Operations Table
+
+@cindex operations table
+@cindex op-tab.c
+The table that is stored in @file{op-tab.c} contains information about
+each operation in xp.
+Each operation is of the form:
+
+@example
+@{ "k_verbatim", 0, 0, 1, 0, 1, 1, 1, 1, 0, 
+    @{ 1, 1, 1, 1, 1 @}, 
+    1, @{ CON @}, 
+    K_VERBATIM_OP, "K_VERBATIM_OP", 
+    "NODE *k_verbatim_%s(TE_PTR te, CONT_ARG *container0)",
+    "1, container0" 
+    @}
+@end example
+
+The first entry is the name of the operation. The next nine are boolean variables. They represent, in order:
+@itemize @bullet
+@item
+Is the operation available to the user?
+
+@item
+Does the operation return type void?
+
+@item
+Can the operation be converted into an expression?
+
+@item
+Can the operation be converted into a procedure?
+
+@item
+Is the operation a verbatim operation?
+
+@item
+Does the operation have a container for its first argument?
+
+@item
+Does the operation have to print local variables?
+
+@item
+Does the operation have to print the return statement?
+
+@item
+Is the operation a delete operation?
+
+@end itemize
+
+@cindex op-tab.h
+The next structure is a list of booleans signifying if the operation is
+part of a realm. The order of the realms is the same order as specified
+in 
+@ref{Layer Format, , , p2,Introductory P2 System Manual}, i.e. @samp{ds}, @samp{top}, @samp{mem}, @samp{lnk}, and
+@samp{toplnk}.
+
+Next is the  number of operation arguments. Then in
+curly braces, the list of argument types. Then the enumerated constant
+for the operation, the string for this enumerated constant, the header for
+the procedure declaration of the operation and the string used to make
+generic arguments.
+
+The enumeration constants are found in @file{op-tab.h}. Basic operations
+are grouped in one enumerated class, adhoc operations are grouped in another
+enumerated class.  
+
+
+@subsection Adhoc Operation Example
+
+This example below is  the file @file{cardinality.xp}. The new operation
+added to xp is the @samp{cardinality} function.
+
+@example
+@group
+layer ds cardinality[ ds ] stable no annotation
+
+xform( element, container, cursor)
+@{
+    add container : int size; 
+    xform( element, container, cursor);
+@}
+
+insert( cursor, record )
+%@{ 
+    (container.size)++ ; 
+    insert(cursor, record) 
+%@}
+
+delete( cursor ) 
+%@{ 
+    (container.size)--; 
+    delete(cursor) 
+%@}
+
+init_cont( container ) 
+%@{ 
+    container.size = 0; 
+    init_cont( container ) 
+%@} 
+
+adhoc cardinality ( container ) 
+%@{
+    (container.size)
+%@}
+@end group
+@end example
+
+In this file, the size of the container is monitored through insertions
+and deletions on the container. 
+The adhoc operation is the function @code{cardinality}, which returns the value of
+the size of container. Note that @code{cardinality} evaluates into an expression
+rather than a statement, so there is no ";" in its definition. An adhoc
+operation can  have either @code{container} or @code{cursor} as its first argument. To
+call the cardinality operation from another layer (another @file{foo.xp} file), 
+the code is @code{adhoc cardinality( cont1 )}. To call @code{cardinality} from
+a @file{foo.p2} file, the code is @code{cardinality(cont1)}: the "adhoc"
+keyword is not used. 
+
+For this file, we would add before the terminating operation definition
+in @file{op-tab.c}:
+
+@example
+@group
+@{ "cardinality", 1, 0, 1, 1, 0, 1, 1, 1, 0, 
+    @{ 1, 1, 0, 1, 1 @}, 1, @{ CON @},
+    CARDINALITY_OP, "CARDINALITY_OP",
+    "NODE *cardinality_%s(TE_PTR te, CONT_ARG *container0)", 
+    "1, container0" 
+    @} 
+@end group
+@end example
+
+
+
+@node Add Layer,  , Adding New Operations to xp, xp Manual
+@section Adding a New Layer
+
+To add a new layer @file{new} to the P2 system:
+
+@itemize @bullet
+@item 
+Create the files @file{new.xp} (and optionally, @file{new.h}).
+
+@item 
+Edit the files @file{layers} and @file{layers.all} in the top-level directory and add the
+name @samp{new} to it. 
+
+@item 
+If the layer uses an annotation that is not already recognized, alter
+@file{ddl-gram.y} to add the new annotation grammar and, if necessary, add some
+new keywords in @file{ddl-lex.l}.
+
+@item 
+In the file @file{attr.txt} in the @file{lib} subdirectory, add the
+layer and its attributes used in layer composition checking. @xref{Layer
+Composition Checks}.
+
+@item
+At the top level of the p2 hierarchy, run @code{make}.
+All the necessary files will be made automatically. 
+
+@end itemize
+

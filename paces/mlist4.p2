@@ -1,0 +1,194 @@
+/* $Id: mlist4.p2,v 45.0 1997/09/19 05:43:46 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Bug appears only for:
+   * mlist/part
+   * qualify
+   * orderby
+     That the bug only appears for orderby seems strange, because the
+     bug occurs even if emp_curs does not have an orderby clause, and
+     thus orderby shouldn't add any code.  But, orderby does add a
+     field named "odf" to each element (even if though the orderby
+     layer doesn't do anything with "odf".  Note that we should modify
+     the orderby layer so that it only adds the "odf" field when
+     necessary. (JAT) */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define PART        1
+#define MLIST       1
+#define ORDERBY     1
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   int   i; /* just a placeholder--age can't be last member of struct*/
+} EMP_TYPE;
+
+
+EMP_TYPE rawdata[] = {
+  { 10010,42 },           
+  { 10050,42 },
+  { -1 }
+};
+
+typex {
+#if 0
+  /* No bug: no orderby */
+  t = top2ds[inbetween[qualify[mlist[part[top2ds[inbetween[qualify[delflag[array1[transient]]]]],
+					 top2ds[inbetween[qualify[delflag[array2[transient]]]]]],
+				    top2ds[inbetween[qualify[delflag[array3[transient]]]]]]]]];
+#elif 0
+  /* No Bug: no orderby */
+  t = top2ds_qualify[inbetween[mlist[part[top2ds_qualify[inbetween[delflag[array1[transient]]]],
+					 top2ds_qualify[inbetween[delflag[array2[transient]]]]],
+				    top2ds_qualify[inbetween[delflag[array3[transient]]]]]]];
+#elif 0
+  /* No Bug: no part */
+  t = top2ds_qualify[orderby_fast[inbetween[mlist[top2ds_qualify[inbetween[array1[transient]]],
+						 top2ds_qualify[inbetween[array2[transient]]]]],
+				 top2ds[inbetween[array3[transient]]]]];
+#elif 0
+  /* No Bug: no mlist */
+  t = top2ds_qualify[orderby_fast[inbetween[part[top2ds_qualify[inbetween[array1[transient]]],
+						top2ds_qualify[inbetween[array2[transient]]]]],
+				 top2ds[inbetween[array3[transient]]]]];
+#elif 0
+  /* No Bug: no qualify */
+  t = top2ds[orderby_fast[mlist[part[top2ds[array1[transient]],
+				    top2ds[array2[transient]]],
+			       top2ds[array3[transient]]],
+			 top2ds[array4[transient]]]];
+#elif 0
+  /* No Bug: no qualify */
+  t = top2ds[inbetween[mlist[part[top2ds[inbetween[qualify[delflag[array1[transient]]]]],
+				 top2ds[inbetween[qualify[delflag[array2[transient]]]]]],
+			    top2ds[inbetween[qualify[delflag[array3[transient]]]]]]]];
+#elif 0
+  /* No Bug: no qualify */
+  t = top2ds[orderby_fast[mlist[part[top2ds[dlist[malloc[transient]]],
+				    top2ds[dlist[malloc[transient]]]],
+			       top2ds[dlist[malloc[transient]]]],
+			 top2ds[dlist[malloc[transient]]]]];
+#elif ORDERBY
+  /* Bug */
+  t = conceptual[mlist[part[conceptual[delflag[array1[transient]]],
+			   conceptual[delflag[array2[transient]]]],
+		      conceptual[delflag[array3[transient]]]]];
+#elif 0
+  /* Bug */
+  t = conceptual[mlist[part[conceptual[array1[transient]],
+			   conceptual[array2[transient]]],
+		      conceptual[array3[transient]]]];
+#elif 0
+  /* Bug */
+  t = top2ds[orderby_fast[inbetween[qualify[mlist[part[top2ds[inbetween[qualify[delflag[array1[transient]]]]],
+						      top2ds[inbetween[qualify[delflag[array2[transient]]]]]],
+						 top2ds[inbetween[qualify[delflag[array3[transient]]]]]]]],
+			 top2ds[inbetween[dlist[malloc[transient]]]]]];
+#elif 0
+  /* Bug */
+  t = top2ds_qualify[orderby_fast[inbetween[mlist[part[top2ds_qualify[inbetween[delflag[array1[transient]]]],
+						      top2ds_qualify[inbetween[delflag[array2[transient]]]]]],
+					   top2ds_qualify[inbetween[delflag[array3[transient]]]]],
+				 top2ds[inbetween[dlist[malloc[transient]]]]]];
+#elif 0
+  /* Bug */
+  t = top2ds_qualify[orderby_fast[inbetween[mlist[part[top2ds_qualify[inbetween[array1[transient]]],
+						      top2ds_qualify[inbetween[array2[transient]]]]],
+					   top2ds_qualify[inbetween[array3[transient]]]],
+				 top2ds[inbetween[dlist[malloc[transient]]]]]];
+#elif 0
+  /* Bug */
+  t = top2ds_qualify[orderby_fast[mlist[part[top2ds_qualify[array1[transient]],
+					    top2ds_qualify[array2[transient]]],
+				       top2ds_qualify[array3[transient]]],
+				 top2ds[dlist[malloc[transient]]]]];
+#elif 0
+  /* Bug */
+  t = top2ds_qualify[orderby_fast[mlist[part[top2ds_qualify[dlist[malloc[transient]]],
+					    top2ds_qualify[dlist[malloc[transient]]]],
+				       top2ds_qualify[dlist[malloc[transient]]]],
+				 top2ds[dlist[malloc[transient]]]]];
+#elif 0
+  /* Bug */
+  t = top2ds_qualify[orderby_fast[mlist[part[top2ds[dlist[malloc[transient]]],
+					    top2ds[dlist[malloc[transient]]]],
+				       top2ds[dlist[malloc[transient]]]],
+				 top2ds[dlist[malloc[transient]]]]];
+#elif 0
+  /* Bug */
+  t = top2ds_qualify[orderby_fast[mlist[part[top2ds[dlist[malloc[transient]]],
+					    top2ds[dlist[malloc[transient]]]],
+				       top2ds[dlist[malloc[transient]]]],
+				 top2ds[dlist[malloc[transient]]]]];
+#elif 0
+  /* Bug */
+  t = top2ds_qualify[orderby_fast[mlist[part[top2ds[dlist[malloc[transient]]],
+					    top2ds[dlist[malloc[transient]]]],
+				       top2ds[dlist[malloc[transient]]]],
+				 top2ds[dlist[malloc[transient]]]]];
+#else
+  /* Bug */
+  t = top2ds_qualify[orderby_fast[mlist[part[top2ds[array1[transient]],
+					    top2ds[array2[transient]]],
+				       top2ds[array3[transient]]],
+				 top2ds[array4[transient]]]];
+#endif
+}
+
+container <EMP_TYPE> stored_as t with {
+#if 1
+  array1 size is 30;
+#if PART || MLIST
+  array2 size is 30;
+#endif
+#if PART && MLIST
+  array3 size is 30;
+#if 0
+  array4 size is 30;
+#endif
+#endif
+#endif
+#if PART
+  part at field age;
+#endif
+#if MLIST
+  mlist on age;
+#endif
+} emp_cont;
+
+cursor <emp_cont>
+  where "$.age == 42"
+#if ORDERBY
+  orderby P2_ASCENDING empno
+#endif
+emp_curs;
+        
+void main(void) 
+{
+  int                  loop;
+  EMP_TYPE             *p;
+
+  open_cont( emp_cont );
+  init_curs( emp_curs );
+
+  for (p = rawdata; p->empno != -1; p++) 
+  {
+      insert( emp_curs, *p );
+  }
+
+  printf( "42 emp are:\n");
+  P2_ITERATOR( emp_curs )
+  {
+    printf("%d %d\n",
+	   emp_curs.empno, 
+           emp_curs.age
+	  );
+  }
+
+  close_cont( emp_cont );
+  exit( 0 );
+}

@@ -1,0 +1,2 @@
+log.o: log.xp log.xph ../config.h ../common/op-id.h op-vec.h \
+  ../common/print-log.h

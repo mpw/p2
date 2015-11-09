@@ -1,0 +1,55 @@
+/* $Id: fatal-err-for-uncalled-ops.p2,v 45.0 1997/09/19 05:43:19 jthomas Exp $ */
+
+/* This file tests for the presence of a specific bug in some layers
+   (such as malloc), that results in incorrect error handling.
+
+   In particular, P2 fails to compile this file, because this file
+   declares type expressions that include both init_generic and one layer
+   (such as malloc) that does not implement some operation (such as
+   adv()).
+
+   The problem is that init_generic calls all operations (such as adv()),
+   even if they are not called at runtime.  These layers (such as malloc)
+   used to reported errors at compile time via fatal_err().
+
+   These layers should be modified to report errors at run time via
+   P2_runtime_error().
+
+   I have saved the code as a regression test. (JAT) */
+
+#include "P2_paces.h"
+
+typedef struct {
+ int empno;
+} EMP_TYPE;
+
+typex {
+  a = top2ds[init_generic[malloc[transient]]];
+#if 0
+  b = top2ds[init_generic[avl[malloc[transient]]]];
+#endif
+  c = top2ds[init_generic[bintree[malloc[transient]]]];
+  d = top2ds[init_generic[hashcmp[malloc[transient]]]];
+  e = top2ds[init_generic[odlist[malloc[transient]]]];
+}
+
+container <EMP_TYPE> stored_as a with { } k1;
+#if 0
+container <EMP_TYPE> stored_as b with { avl key is empno; } k2;
+#endif
+container <EMP_TYPE> stored_as c with { bintree key is empno; } k3;
+container <EMP_TYPE> stored_as d with { } k4;
+container <EMP_TYPE> stored_as e with { odlist key is empno; } k5;
+
+cursor <k1> c1;
+#if 0
+cursor <k2> c2;
+#endif
+cursor <k3> c3;
+cursor <k4> c4;
+cursor <k5> c5;
+
+main()
+{
+  exit( 0 );
+}

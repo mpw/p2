@@ -1,0 +1,102 @@
+#!/bin/sh
+#
+# $Id: checkpoint,v 45.0 1997/09/19 05:40:41 jthomas Exp $
+#
+
+#
+# This program makes an RCS checkpoint of all P2 source.
+# It takes two arguments:
+#   Argument 1 specifies the revision number of the checkpoint.
+#     This number must be higher than the highest existing revision
+#     number of any P2 source file.
+#   Argument 2 specifies the rcs log message of the checkpoint.
+#     This can be any string, although if it contains separators,
+#     it must be quoted, so that it is parsed as a single command
+#     line argument.
+#
+# This program must be run from the root of the source hierarchy.
+#
+
+#
+# The list sub_dirs is a list of the sub-directories of the root.
+#
+
+sub_dirs="common ddl doc gc info paces pb rl tools x xp"
+
+if [ $# != 2 ]
+then
+  echo "usage: $0 revision-number rcs-log-message"
+  exit 1
+fi
+
+# Step 1: Check-in all files.
+
+echo "[1] Check-in all files"
+./ci-all
+if [ $? -eq 1 ]
+then
+  echo "error executing ci-all"
+  exit 1
+fi
+
+# Step 2: Make sure no other user has files checked-out
+
+echo "[2] Make sure no other user has files checked-out"
+for dir in . $sub_dirs ;  do
+  echo "cd $dir"
+  cd $dir
+  lockedfiles=`rlog -L -R RCS/*,v`
+  if [ "x$lockedfiles" != "x" ]
+  then
+    echo "locked files:"
+    echo "$lockedfiles"
+    exit 1
+  fi
+  if [ $dir != . ]
+  then
+    cd ..
+  fi
+done
+
+# Step 3: Make checkpoint
+
+echo "[3] Make checkpoint"
+for dir in . $sub_dirs ; do
+  echo "cd $dir"
+  cd $dir
+  for file in `find RCS/* -type f -name '*,v' -print`
+  do
+###    echo $file
+    co -l -q $file
+    if [ $? -eq 1 ]
+    # If we can't check-out the file, print an error and exit
+    then
+      name=`echo $file | sed -e 's,^.*/,,' -e 's/,v$//'`
+      echo "error checking-out file: $name"
+      exit 1
+    fi
+    ci -f$1 -m"$2" $file
+    # If we can't check-in the file with the new revision number,
+    # just plain check-in the file in order to release the lock.
+    if [ $? -eq 1 ]
+    then
+      ci $file
+    fi
+  done
+  if [ $dir != . ]
+  then
+    cd ..
+  fi
+done
+
+# Step 4: Check-out all files.
+
+echo "[4] check-out all files"
+co co-all
+./co-all
+
+#
+# Exit.
+#
+
+exit 0

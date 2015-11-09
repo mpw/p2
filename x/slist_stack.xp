@@ -1,0 +1,17 @@
+// $Id: slist_stack.xp,v 45.1 1997/09/29 03:51:08 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds slist_stack [ ds ] unstable no annotation retrieval_sometimes
+
+// Stack: singly linked list in which (1) new elements are added to
+// the front of the list and (2) retrievals always begin at the front
+// of the list.  Guarantees that elements will be ordered newest
+// first, oldest last.  That is, reset_start() will position the
+// cursor on the newest (non-deleted) element; reset_end() will
+// position the cursor on the oldest (non-deleted) element.
+
+// Force this layer to be used, in order to preserve stack semantics.
+// Why not use the retrieval_always layer option??? (JAT)
+#define P2_LAYER_COST MIN_QOPT_COST
+
+#include "slist.xph"

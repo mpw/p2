@@ -1,0 +1,20 @@
+/* $Id: generic05.p2,v 1.1 1997/09/24 14:54:08 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* SCHEMA member container, standard typex. */
+
+#include "P2_paces.h" /* P2_PACES_ELEMENT, PACES_SCHEMA_ANNOTE */
+
+typex {
+  t = P2_PACES_TYPEX;
+}
+
+schema {
+  container <P2_PACES_ELEMENT> k;
+} stored_as t with {
+  P2_PACES_SCHEMA_ANNOTE(k, i, 10);
+} s;
+
+#define P2_PACES_CONTAINER s.k
+
+#include "generic04.p2h"

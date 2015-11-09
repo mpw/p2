@@ -1,0 +1,73 @@
+/* $Id: xact16.p2,v 45.0 1997/09/19 05:45:36 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Simplified version of paces/xact01.p2 designed to demonstrate bug
+   in x/protocol_simple.xp */
+
+/* Transaction with named schema, begin_xact(), commit_xact(),
+   and abort_xact(). */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define BUG 0
+
+typedef struct {
+  int x;
+} E;
+
+typex {
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+}
+
+schema {
+  container <E> cont;
+} stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(cont, x, 1);
+} s;
+
+cursor <s.cont> curs;
+
+int main (void) 
+{
+  E e;
+
+  open_schema(s);
+  open_cont(s.cont);
+  init_curs(curs);
+
+#if !BUG
+  /* begin_xact() DOES work here. */
+  /* Since we are beginning the transaction that will own the 2nd lock
+     before we take the 1st lock, both locks will be owned by the same
+     transaction, and will thus be compatible. (JAT) */
+  begin_xact(s);
+#endif /* !BUG */
+
+  e.x = 1234; 
+
+  /* 1st lock: exclusive */
+  insert(curs, e);
+
+#if BUG
+  /* begin_xact() does NOT work here. */
+  /* Since we took the 1st lock before beginning the transaction that
+     will own the 2nd lock, the locks are owned by different
+     transactions, and will thus be incompatible. (JAT) */
+  begin_xact(s);
+#endif /* BUG */
+
+  reset_start(curs);
+
+  /* 2nd lock: shared */
+  printf("x = %d\n", ref(curs, x));
+
+  commit_xact(s);
+
+  close_cont(s.cont);
+  close_schema(s);
+
+  /* Exit. */
+  exit(0);
+
+}

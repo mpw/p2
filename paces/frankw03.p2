@@ -1,0 +1,43 @@
+/* $Id: frankw03.p2,v 1.3 1997/09/23 13:44:01 jthomas Exp $ */
+
+/* Program by Frank Weil (frankw@comm.mot.com) */
+
+/* This program demonstrated a bug in which P2 was trying to
+   proceduralize the upd operation for fields (e.g., PACKET.h and
+   PACKET.d) that weren't of type int or str.  I have added code to
+   pb/pb-type.c:new_op_list1() to fix this problem by adding field
+   operations (such as upd) to the op_list iff the field is an int or
+   str. (JAT) */
+
+typex {
+   ta = conceptual[odlist[malloc[transient]]];
+}
+
+typedef struct {    /* header block */
+   int seq_num;
+} HEADER;
+
+typedef struct {    /* data block */
+   int seq_num;
+} DATA;
+
+typedef container < DATA > stored_as ta with {
+   odlist key is seq_num;
+} BLOCK_LIST;
+
+typedef struct {    /* packet */
+   int seq_num;
+   HEADER h;        /* P2 was trying to proceduralize upd() to this field. */
+   BLOCK_LIST d;    /* P2 was trying to proceduralize upd() to this field. */
+} PACKET;
+
+container < PACKET > stored_as ta with {
+   odlist key is seq_num;
+} pl;
+
+cursor < pl > all_packets;
+
+main()
+{
+  exit(0);
+}

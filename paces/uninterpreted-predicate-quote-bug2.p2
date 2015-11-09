@@ -1,0 +1,54 @@
+/* $Id: uninterpreted-predicate-quote-bug2.p2,v 45.0 1997/09/19 05:44:40 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* Regression test for bug invloving single quotes in
+   uninterpreted compcurs predicates. (JAT) */
+
+#include "P2_paces.h"
+
+typedef struct {
+  char label[1];
+} ELEMENT;
+
+typex {
+  t = P2_COMPCURS_TYPEX;
+}
+
+container <ELEMENT> stored_as t with {
+  P2_COMPCURS_ANNOTE(label, 10);
+} x;
+
+compcurs < a x >
+  where "strcmp($a.label,'A')>=0 && strcmp($a.label,'Z')<=0"
+xx;
+
+static void
+read_data (void)
+{
+  ELEMENT e;
+  int i;
+
+  cursor <x> xxx;
+
+  for (i = 0; i < 10; i++) {
+    strcpy(e.label, "A");
+    e.label[0] += i;
+    insert(xxx, e);
+  }
+}
+
+main()
+{
+  open_cont(x);
+
+  read_data();
+
+  initk(xx);
+  foreachk(xx) {
+    printf("%s\n", (xx.a).label);
+  }
+
+  close_cont(x);
+
+  exit(0);
+}

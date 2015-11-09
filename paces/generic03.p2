@@ -1,0 +1,44 @@
+/* $Id: generic03.p2,v 45.0 1997/09/19 05:43:26 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* generic-extra-semicolon bug */
+
+#include "P2_paces.h"
+
+typedef struct {
+  char *name;
+} EMPLOYEE;
+
+typex {
+#if 0
+  t = conceptual[array[transient]];
+#else
+  t = generic[array[transient]];
+#endif
+}
+
+container <EMPLOYEE> stored_as t with {
+  array size is 10;
+} employee;
+
+void
+read_data (void)
+{
+  cursor < employee > c;
+  /*
+     Bug: extra semicolon (;) appears here, between the declaration of
+     c and it's op_vec function prototypes.  This semicolon looks to
+     gcc like a null statement.  In C, a statment signals the end of
+     declarations and the beginning of statements.
+
+     The extra semicolon is the verbatim ptree.
+
+     (JAT)
+  */
+}
+
+int
+main ()
+{
+  return(0);
+}

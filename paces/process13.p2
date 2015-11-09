@@ -1,0 +1,54 @@
+/* $Id: process13.p2,v 45.0 1997/09/19 05:44:08 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Multiple calls to P2_sleep_process_unix() */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+/*****************************************************************************/
+/*                  Declare typex and schema.                                */
+/*****************************************************************************/
+
+typex {
+#if 1
+  /* Normal. */
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+#else
+  /* Debugging. */
+  t = top2ds[log[xact[lock[process[trace[avail[array[transient]]]]]]]];
+#endif
+}
+
+typedef struct {
+  int i;
+} E;
+
+schema {
+  container <E> k;
+} stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, 1);
+} s;
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main ()
+{
+  /* Open schema. */
+  open_schema(s);
+
+  P2_sleep_process_unix(1);
+  P2_sleep_process_unix(1);
+  P2_sleep_process_unix(1);
+
+  /* Close schema. */
+  close_schema(s);
+  /* Exit. */
+  exit(0);
+}

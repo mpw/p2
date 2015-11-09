@@ -1,0 +1,263 @@
+/****************** NEG1
+  - note: since no objects of a are deleted, there really
+    doesn't need to be a shadow container....
+
+(literalize count val)
+(literalize a b)
+
+
+(p r1
+  (count ^val {<x> < 10})
+-->
+  (make a ^b <x>)
+  (modify 1 ^val (compute <x> + 1))
+)
+
+(p r2
+  (a ^b <x>)
+ -(a ^b > <x>)
+-->
+  (write <x> is the biggest number)
+)
+
+**********************************************/
+
+
+#include "ops5.h"
+
+/************ generated #defines ********************/
+
+#define cont_count_num  1
+#define cont_a_num 2
+#define shadow_a_num 3
+
+/************* generated forward refs ******************/
+
+VOID_FUNC instance1_1, instance2_1, instance2_2;
+
+
+/************* Generated Record types ***************************/
+/*----------- _ts is added to each type ------------------------*/
+
+struct count             /* foo record */
+{
+  int  val ;
+  int  _ts ;           /* visible time stamp */
+} ;
+
+struct a
+{
+   int b;
+   int _ts;
+};
+
+
+
+/**************** generated container declarations ******************/
+
+container <struct count> stored_as nostruct_x with {
+   vtimestamp field is _ts counter is global_counter;
+} cont_count;
+
+container <struct a> stored_as only_scan_x with {
+   vtimestamp field is _ts counter is global_counter;
+} cont_a, shadow_a;
+
+
+/**************** cursor declarations for rules *********************/
+
+/* names given to types are c_rule#_%  where # is the number of the
+   rule and % is the number of the container that is dominant.
+
+   Note: rules that have arity 1 to begin with will generate no 
+   cursors. Such is the case for the sole no_join rule */
+
+/* rule 1: no cursor needed */
+
+/* rule 2: (a.b == <x>) -(a.b > <x>) */
+
+cursor<cont_a> where "$.b > d_a.obj->b" c_2_1;
+
+cursor<shadow_a> where "$.b > d_a.obj->b && $._ts > dom_timestamp" s_2_1;
+
+/* now consider shadow_a as dominant. simplify rule 2 to 
+        (a.b == ds_a.b) 
+       -(a.b > ds_a.b) 
+   we need two meta rule cursors + a positive cursor */
+
+cursor<cont_a> where "$.b > ds_a.obj->b" c_2_2;
+
+cursor<shadow_a> where "$.b > ds_a.obj->b && $._ts > dom_timestamp" s_2_2;
+
+typedef cursor<cont_a>
+        where "$.b == ds_a.obj->b"
+        P_2_2;
+
+
+/****************  utility cursor declarations *********************/
+
+
+cursor <cont_count>    d_count,  /* references dominant object */
+                       a_count,  /* used for actions */
+                       v_count;  /* used for validation */
+
+
+cursor <cont_a>        d_a,  /* references dominant object */
+                       a_a,  /* used for actions */
+                       v_a;  /* used for validation */
+
+cursor<shadow_a>       ds_a; /* references dominant object */
+
+
+/***************** validation functions ****************************/
+/* a validation function makes sure the the object in the specified
+   container has not yet been deleted.  There's one validation
+   function per container, followed by an operation vector indexed
+   by container number; see #define for test_valid */
+
+
+BOOL valid_count( void *o ) {
+   pos(v_count, o);
+   return( valid(v_count) );
+}
+
+BOOL valid_a( void *o ) {
+   pos(v_a, o);
+   return( valid(v_a) );
+}
+
+BOOL_FUNC  valid_vect[ ] =
+   { 0, valid_count, valid_a };
+
+
+/***************************** instance procedures *********************/
+
+/* check procedures determine if the dominant object (which is
+   valid) can fire the given rule.
+
+   the selected (reduced) rule can be fired if there's an instantiation
+   to fire.
+
+   first, test to see if fresh is TRUE.  If so, allocate new cursor.
+   otherwise, get cursor from wait stack.
+
+   next, advance cursor.  If there is an instance, fire the rule.
+
+   suppose there is no instance.   deallocate the cursor for the rule.  
+
+   pop_ws if there is no other rule for this object.
+   otherwise, set fresh and call the next rule to fire.
+
+*/
+
+
+/* naming convention instanceX_Y : X is rule number, Y is dominant of rule */
+
+void instance1_1()
+{
+   /* Step 1:  test to see if dominant object satisfies conditions.
+               fire rule if so */
+
+   pos(d_count, wsc.cursor_position);
+
+   if (d_count.bar < 10 && d_count._ts <= dom_timestamp)
+      file_rule1( &d_foo );
+
+   /* Step 2: since this is the last rule for foo dominant objects,
+              just pop the wait stack */
+   pop_ws();
+}
+
+
+void instance2_1()
+{
+   /* Step 1:  position on dominant object; there is no positive
+               condition to satisfy */
+
+   pos(d_a, wsc.cursor_position);
+
+   /* Step 2:  now check to see if the negated condition holds */
+ 
+   meta_test(c_2_1);
+   meta_test(s_2_1);
+   fire_rule2(d_a);
+   return;
+
+fail:
+   pop_ws();
+}
+
+void instance2_2()
+{
+   init_c( P_2_2, ds_a);
+   /* apply "constant" tests first */
+
+   meta_test(cc_2_1);
+   meta_test(ss_2_1);
+
+   /* now try to continue from suspended join */
+   trylastc;
+   fire_rule2(c);
+   return;
+
+fail:
+   pop_ws();
+}
+
+
+VOID_FUNC first_rule[] =
+  { 0, instance2_1, instance1_1, instance2_2 };
+
+
+/************** actions ***************************/
+
+
+void fire_rule1( cursor<cont_count> *c1 )
+{
+     printf("firing rule 1\n") ;
+     { struct a r;
+       r.b = c1->val;
+       insert(a_a, r);
+       push_wl( a_a.obj, a_a._ts, cont_a_num );
+     }
+     { struct a r;
+       getrec(*c1, r);
+       insert(shadow_a, r);
+       push_wl( ashadow_a.obj, a_shadow_a._ts, shadow_a_num );
+     }
+     c1->val = c1->val + 1;
+     push_wl( c1->obj, c1->_ts, cont_count_num );
+}
+
+void fire_rule2( cursor<cont_a> *c1 )
+{
+     printf("firing rule 2\n") ;
+     printf("%d is the biggest number", c1->b);
+}
+
+
+void init_all()
+{
+   init_cont( cont_a );
+   init_cont( cont_count );
+   init_cont( shadow_a );
+
+   init_curs( d_a );
+   init_curs( a_a );
+   init_curs( v_a );
+
+   init_curs( d_count );
+   init_curs( a_count );
+   init_curs( v_count );
+
+   init_curs( d_shadow_a );
+   init_curs( a_shadow_a );
+   init_curs( v_shadow_a );
+
+   init_curs( c_2_1 );
+   init_curs( s_2_1 );
+   init_curs( c_2_2 );
+   init_curs( s_2_2 );
+}
+
+#include "ops5.c"

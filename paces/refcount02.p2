@@ -1,0 +1,81 @@
+/* $Id: refcount02.p2,v 45.0 1997/09/19 05:44:10 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+   int   i;
+} S;
+
+typex {
+  t = top2ds[inbetween[qualify[odlist[refcount[malloc[transient]]]]]];
+}
+
+container <S> stored_as t with {
+  odlist key is i;
+} cont;
+
+cursor <cont> curs[10];
+
+void
+print_container (void)
+{
+  cursor <cont> c;
+  init_curs(c);
+  foreach(c)
+  {
+    printf("%5d", c.i);
+  }
+  printf("\n");
+  foreach(c)
+  {
+    printf("%5d", refcount(c) - 1);
+  }
+  printf("\n");
+  delete_curs(c);
+}
+
+void
+init_container (void)
+{
+  cursor <cont> c;
+  S s;
+  init_curs(c);
+  for (s.i = 1; s.i <= 10; s.i++)
+  {
+    insert(c, s);
+  }
+  delete_curs(c);
+}
+
+int i, j;
+
+int
+main (void) 
+{
+  open_cont(cont);
+  init_container();
+  print_container();
+
+  for (i = 0; i < 10; i++)
+  {
+    init_curs(curs[i]);
+    reset_start(curs[i]);
+  }
+  
+  printf("\n");
+  print_container();
+
+  for (i = 0; i < 10; i++) {
+    for (j = 0; j < 10; j++)
+    {
+      adv(curs[i]);
+      printf("\n");
+      print_container();
+    }
+  }
+
+  close_cont(cont);
+  exit(0);
+}

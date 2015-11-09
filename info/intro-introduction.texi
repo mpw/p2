@@ -1,0 +1,183 @@
+@c $Id: intro-introduction.texi,v 45.0 1997/09/19 05:42:04 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node    Introduction, P2 Language, Installation, Top
+@chapter Introduction
+
+@ignore
+@quotation
+Less than 10% of the code has to do with the ostensible purpose of the
+system; the rest deals with input-output, data validation, data
+structure maintenance, and other housekeeping.
+@*-Mary Shaw-
+@end quotation
+@end ignore
+
+P2 is a state-of-the-art generator for data structures.
+It is an extension of ANSI C that allows programmers
+to interact with complex data structures using high-level
+and easy-to-use abstractions.  With minimal specifications from 
+programmers, P2 replaces program references to these
+abstractions with C code  that implements them.
+The number of potential implementations of the basic
+P2 abstractions is already large and is open-ended.
+
+The goals of this manual are (1) to show how powerful programs
+can be written in terms of P2 abstractions and (2) to show how
+implementations of P2 abstractions are specified.
+
+
+@section The Conceptual Basis for P2
+
+@cindex big picture of P2
+@cindex GenVoca
+
+P2 is among a new breed of generators that rely on software 
+components to synthesize software.  P2 is based on the @dfn{GenVoca}
+model of software system construction.  In essence, the 
+premise of GenVoca is that fundamental programming abstractions underly all 
+mature software domains.  By standardizing abstractions
+and their implementations, one can realize a software components
+technology for a domain.
+
+@cindex layer
+@cindex component
+
+Although the number of fundamental programming abstractions in
+a domain is rather small, there is a huge number of possible
+implementations.  The GenVoca approach also advocates a layered
+decomposition of implementations, where each @dfn{layer} (or @dfn{component})
+encapsulates a primitive software building block.  The number
+of primitive building blocks in a domain is generally small 
+(i.e., on order of 100); however the number of ways in which 
+building blocks can be combined is exceedingly large.
+
+The model of data structures that is implemented by P2 
+relies on a small number of simple but powerful programming
+abstractions that have been standardized.  Moreover, the 
+P2 library consists of over thirty components that encapsulate
+many of the common data structure building blocks.
+
+In this manual, we will explain in detail the standardized
+programming abstractions of P2 and the current set of building
+blocks in the P2 library.
+
+
+
+
+
+
+@section  The Organization of the P2 Generator
+
+P2 consists of a series of three interconnected preprocessors:
+
+@itemize @bullet
+
+@cindex p2
+
+@item 
+P2 - a shell script that converts a .p2 program into a
+          format understandable by ddl.
+
+@cindex  ddl
+
+@item 
+ddl - a preprocessor that repackages implementation specifications 
+          for P2 abstractions into a format understandable by pb.
+
+@cindex  pb
+
+@item 
+pb - a preprocessor that translates P2 constructs into C code
+@end itemize
+
+
+As a .p2 file is being "compiled", different intermediate formats 
+of the file (e.g., .ddl, .pb) are  produced.  Errors are detected and
+reported at all stages of translation, where different classes
+of errors are detected during each translation phase.
+
+@cindex xp
+There is a fourth preprocessor that is not part of the .p2 to .c
+translation pipeline.  This is @dfn{xp}, a special language/preprocessor that 
+is used to write P2 components.  We will not discuss xp further
+in this manual; readers interested in writing P2 components are urged to read
+@ref{xp Manual, , , p2-adv, Advanced P2 System Manual}.
+
+
+The figure below illustrates the P2 system organization:
+
+@example
+@group
+       --------       --------       --------       --------
+       |      |       |      |       |      |       |      |
+       |  P2  |       | ddl  |       |  pb  |       |ANSI C|
+------>|      |------>|      |------>|      |------>|      |------>
+ .p2   |      | .ddl  |      | .pb   |      | .c    |      | executable
+       --------       --------       --------       --------
+@end group
+@end example
+
+
+To compile the program @file{foo.p2}, simply type:
+@display
+@code{P2 foo.p2}
+@end display
+
+P2 understands several command-line options.
+These are explained in @ref{P2 options}.
+A sample program is listed and dissected in @ref{Example P2 program}. 
+
+
+@menu
+* How to Use this Manual::      
+@end menu
+
+@node How to Use this Manual,  , Introduction, Introduction
+@section How to Use this Manual
+
+We assume that the reader is familiar with  C,  UNIX, and  GNU make. 
+
+
+This manual has several chapters. The ones which are worth reading
+depends on your goals:
+
+For P2 novices:
+
+@itemize @bullet
+@item
+Introduction - This chapter. 
+
+@item
+P2 Language - The syntax for a @file{foo.p2} file. @xref{P2 Language}.
+
+@item
+P2 Operations - The list of functions in the P2 system to provide the
+container/cursor operations. @xref{P2 Operations}.
+
+@item
+P2 Layers - The different layers that can be used to describe the method
+elements are organized in containers. @xref{P2 Layers}.
+
+@item
+Invoking P2 - How to run P2 and the arguments for the P2
+system. @xref{Invoking P2}.
+
+
+@end itemize
+
+People who intend to write layers should first read this manual and
+then the Advanced P2 System Manual
+(@pxref{xp Manual, , , p2-adv, The Advanced P2 System Manual})
+which contains information about how to write a layer in xp. 
+
+For people who are installing the P2 system, please read the section 
+
+@itemize @bullet
+@item
+Installation - This chapter provides a brief, but useful, introduction
+to  installing P2. @xref{Installation}.
+@end itemize
+
+People who are responsible for maintenance of the P2 hierarchy should 
+be familiar with  @code{GNU autoconf} and @code{make}.

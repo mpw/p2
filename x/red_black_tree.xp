@@ -1,0 +1,113 @@
+// $Id: red_black_tree.xp,v 45.0 1997/09/19 05:46:48 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds red_black_tree[ ds ] unstable annotation curs_state retrieval_sometimes
+
+!#include "qopt.h"
+!#include "red_black_tree.h"
+
+xform(element, container, cursor)
+{
+#if 0
+  add element : int color;
+  add element : struct element *parent;
+  add element : struct element *left;
+  add element : struct element *right;
+  // header node has root as parent, leftmost node in the tree as left
+  // child and rightmost node in the tree as right child.
+  add container : struct element header;
+  // empty node is used for all NIL nodes in the tree.
+  add container : struct element empty;
+  // NIL is a pointer to empty. Just for convenience...
+  add container : struct element *NIL;
+#endif
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  optimize(cursor);
+}
+
+init_curs(cursor)
+{
+#if 0
+  define_bounds(te, &(%c.b), cursor, predicate, %a.ofield, %a.bi);      
+  %{
+     init_curs(cursor);
+  %}
+#endif
+}
+
+query(cursor)
+{
+  %{
+     query(cursor)
+  %}
+}
+
+ddlhint(argc, argv)
+{
+}
+
+init_cont(container)
+%{
+   init_cont (container);
+%}
+
+insert(cursor, record)
+{
+  %{ 
+     insert(cursor, record);
+  %}
+}
+
+end_rev(cursor)
+{
+}
+
+adv(cursor)
+{
+}
+
+rev(cursor)
+{
+}
+
+delete(cursor)
+{
+  %{
+      delete(cursor);
+  %}
+}
+
+reset_start(cursor)
+{
+}
+
+reset_end(cursor)
+{
+}
+
+swap(cursor0, cursor1) 
+%{
+   P2_runtime_error("cannot swap records in red-black tree");
+%}
+
+upd(cursor, field, expr)
+{
+#if 0
+  if (strcmp(field, %a.ofield) != 0)
+  %{
+     upd(cursor, field, expr);
+  %}
+  else
+  {
+  }
+#endif
+}
+
+pos( cursor, expr )
+{
+}
+

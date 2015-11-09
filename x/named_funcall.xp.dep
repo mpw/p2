@@ -1,0 +1,4 @@
+named_funcall.o: named_funcall.xp /usr/include/assert.h \
+  /usr/include/sys/cdefs.h /usr/include/sys/_symbol_aliasing.h \
+  /usr/include/sys/_posix_availability.h ../common/qopt.h \
+  named_funcall.h

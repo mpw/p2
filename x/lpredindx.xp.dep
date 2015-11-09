@@ -1,0 +1,1 @@
+lpredindx.o: lpredindx.xp ../common/qopt.h lpredindx.h

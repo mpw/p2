@@ -1,0 +1,84 @@
+/* $Id: t3.p2,v 45.0 1997/09/19 05:44:22 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Demonstrate a bug in orderby_smart. */
+/* This file was derrived from paces/t2.p2 */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} emp_type;
+
+emp_type rawdata[] = {
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10070,22,"Biology","Andrews, Kay" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10010,40,"Biology","Akin, Monica" },
+   { 10050,42,"Biology","Akerson, Suzanne" },
+   { 10040,53,"Biology","Akerson, Mary" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10030,23,"Biology","Akerson, Gwyn" },
+   { -1 }
+};
+
+/* Bug is displayed only if orderby_smart and odlist are present. */
+typex {
+#if 0
+  t = conceptual[odlist[malloc[transient]]];
+#else
+  t = top2ds_qualify[orderby_smart[
+        inbetween[odlist[malloc[transient]]],
+	top2ds[inbetween[dlist[malloc[transient]]]]]];
+#endif
+}
+
+/* Bug is displayed only if odlist key is age. */
+container <emp_type> stored_as t with {
+  odlist key is age;
+} emp_cont;
+
+cursor <emp_cont>                    orderby descending empno all_emp;
+cursor <emp_cont> where "$.age > 40" orderby  ascending age   old_emp;
+
+void print_all_emp( char *cursor_name )
+{
+  printf( "contents of %s:\n", cursor_name );
+  foreach( all_emp ) {
+    printf( "       name: %s",   all_emp.name );
+    printf( "  dept_name: %s\n", all_emp.dept_name );
+    printf( "        age: %d",   all_emp.age );
+    printf( "      empno: %d\n", all_emp.empno );
+  }
+}
+
+int main ( void ) 
+{
+  emp_type *p;
+
+  open_cont( emp_cont );
+  init_curs( old_emp );
+  init_curs( all_emp );
+
+  for (p = rawdata; p->empno != -1; p++) 
+  {
+      insert( all_emp, *p );
+  }
+
+  print_all_emp("All Employees");
+    
+  foreach( old_emp )
+  {
+    delete( old_emp );
+  }
+
+  print_all_emp("remaining emp");
+
+  close_cont( emp_cont );
+  exit( 0 );
+}

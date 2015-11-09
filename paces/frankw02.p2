@@ -1,0 +1,7 @@
+// $Id: frankw02.p2,v 45.0 1997/09/19 05:43:20 jthomas Exp $
+
+// P2 version.
+
+#define P2
+
+#include "frankw01.p2h"

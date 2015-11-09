@@ -1,0 +1,165 @@
+// $Id: generic.xp,v 45.1 1997/09/23 09:07:32 jthomas Exp $
+// Copyright (C) 1994, The University of Texas at Austin.
+
+layer ds generic[ ds ] stable no annotation retrieval_always
+
+!#include "qopt.h"
+
+#define FAIL_ON_ERROR   0
+
+optimize(cursor)
+{
+  if (cursor_id == GENERIC_CURS_ID)
+  {
+    layer = %ln;
+  }
+  else
+  {
+    optimize(cursor);
+  }
+}
+
+#if 0
+open_cont(container)
+{
+  if (container_id == GENERIC_CONT_ID)
+  {
+    char func[200];
+    sprintf(func, "/* open_cont proceduralized by x/generic.xp: */"
+                  "(%s).op_vec[%d]",
+            container, op_list_match(op_list, "open_cont", 0));
+    %{
+       %v.func (container);
+    %} 
+  }
+  else
+  %{
+     open_cont(container);
+  %}
+}
+
+open_cont_number(container, expr)
+%{
+  open_cont_number(container, expr);
+%}
+#endif
+
+pos(cursor, expr)
+{
+#if FAIL_ON_ERROR
+  if (cursor_id == GENERIC_CURS_ID)
+    error("special op pos doesn't work for generics");
+  else
+#endif
+  {
+    %{
+       pos(cursor, expr);
+    %}
+  }
+}
+
+
+ref(cursor, field)
+{
+#if FAIL_ON_ERROR
+  if (cursor_id == GENERIC_CURS_ID)
+    error("special op ref doesn't work for generics");
+  else
+#endif
+  {
+    %{
+       ref(cursor, field)
+    %}
+  }
+}
+
+iref(cursor, field)
+{
+#if FAIL_ON_ERROR
+  if (cursor_id == GENERIC_CURS_ID)
+    error("special op iref doesn't work for generics");
+  else
+#endif
+  {
+    %{
+       iref(cursor, field)
+    %}
+  }
+}
+
+
+swap(cursor0, cursor1)
+{
+#if FAIL_ON_ERROR
+  if (cursor_id0 == GENERIC_CURS_ID || cursor_id1 == GENERIC_CURS_ID) {
+    %{
+      P2_runtime_error("swap not available for generics");
+    %}
+  }
+  else
+#endif
+  {
+    %{
+       swap(cursor0, cursor1);
+    %}
+  }
+}
+
+
+upd(cursor, field, expr)
+{
+#if FAIL_ON_ERROR
+  if (cursor_id == GENERIC_CURS_ID)
+    error("special op update doesn't work for generics");
+  else
+#endif
+
+  {
+    %{
+       upd(cursor, field, expr);
+    %}
+  }
+}
+
+def_cursor_func : 
+$HEADER
+{
+    if (cursor_id == GENERIC_CURS_ID)
+    { 
+        char func[200];
+        
+        sprintf(func, "/* %s proceduralized by x/generic.xp */"
+                "(%s).op_vec[%d]",
+                $STRNAME, cursor, op_list_match(op_list, $STRNAME, 0));
+        sprintf(container, "*(%s).con", cursor);
+        %{
+           %v.func $GENERICARGS 
+        %} 
+    }
+    else
+    { 
+          $CALLDOWN ;
+    }
+    $GENSEMI ; /* add semicolon to procedures */
+}
+
+def_container_func : 
+$HEADER
+{
+    if (container_id == GENERIC_CONT_ID)
+    { 
+        char func[200];
+        sprintf(func, "/* %s proceduralized by x/generic.xp */"
+                "(%s).op_vec[%d]",
+                $STRNAME, container, op_list_match(op_list, $STRNAME, 0)); 
+        %{
+            %v.func $GENERICARGS
+        %} 
+    }
+    else
+    { 
+         $CALLDOWN ;
+    }
+    $GENSEMI ; /* add semicolon to procedures */
+}
+

@@ -1,0 +1,14 @@
+// $Id: dlist_stable.xp,v 45.0 1997/09/19 05:46:21 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds dlist_stable[ ds ] stable no annotation retrieval_sometimes
+
+// STABLE doubly-linked list layer.
+
+// In most cases, this layer should have WORSE performance than the
+// default, stable dlist layer.  Thus, it's not clear to me why we
+// need this layer.  (JAT)
+
+#define STABLE
+
+#include "dlist.xph"

@@ -1,0 +1,9 @@
+// $Id: malloc_free.xp,v 45.0 1997/09/19 05:46:35 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds malloc_free [ mem ] stable no annotations
+
+#define P2_MALLOC_FREE
+
+#include "malloc.xph"
+

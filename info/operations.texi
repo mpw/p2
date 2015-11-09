@@ -1,0 +1,222 @@
+@c $Id: operations.texi,v 45.0 1997/09/19 05:42:07 jthomas Exp $
+@c Copyright (C) 1997, The University of Texas at Austin.
+
+@node  P2 Operations, P2 Layers, P2 Language, Top
+@chapter P2 Operations 
+@cindex operations
+@cindex functions
+
+@cindex cursor-based
+@cindex container-based
+
+This is the list of operations understood by P2.
+An operation is @dfn{cursor-based} if the first argument is a cursor,
+@dfn{container-based} if it is a container.
+
+
+@menu
+* Container Operations::        
+* Cursor Operations::           
+@end menu
+
+@node Container Operations, Cursor Operations, P2 Operations, P2 Operations
+@section Container Operations
+
+@cindex container-based operations
+
+@ignore
+@defun init_cont ( container )
+This operation initializes the container.
+This operation is not called by the user, but by xp. 
+@end defun
+@end ignore
+
+@defun open ( container ) 
+@defunx close ( container )
+The @code{open} procedure performs two tasks: 
+@itemize @bullet
+@item
+Creates the record for the container if this has not
+already been done. (Persistent containers would create such a record on
+open time). 
+
+@item 
+Initializes the container if it has not already been done.
+@end itemize
+
+The @code{close} procedure is the counterpart to open.
+It destroys the container.
+Most of the current layers do not do anything for @code{close},
+but @code{mmap_persistent} and @code{mmap_shared} do.
+@end defun
+
+@defun overflow ( container )
+This operation returns a conditional expression representing 
+the test for a completely filled container. This operation is required
+only in layers, such as array, which allocate a fixed number of
+elements.
+
+Note that the name of this operation is a little misleading:
+@code{overflow} is true if container is full, not over-full.
+That is, @code{overflow} is true if an insertion will cause the
+container to be over-full.
+Thus, the paradigm is to test @code{overflow}, before an @code{insert},
+not after.
+@end defun
+
+
+@defun cardinality ( container )
+This operation returns the size of (number of elements in) the
+container. This operation may not be provided by all layers.
+@end defun
+
+@node Cursor Operations,  , Container Operations, P2 Operations
+@section Cursor Operations
+
+@cindex cursor-based operations
+
+@menu
+* Element Retrieval Ops::       adv, rev, reset_start, etc.
+* Element Update Operations::   insert, delete, update
+* Composite Cursor Operations::  
+* Miscellaneous Cursor Operations::  swap, init_curs
+@end menu
+
+@node Element Retrieval Ops, Element Update Operations, Cursor Operations, Cursor Operations
+@subsection Element Retrieval Operations
+
+A retrieval operation is one that either moves the cursor over the elements in
+a container or determines if there are no more elements in the container.
+
+@defun reset_start ( cursor )
+@defunx reset_end ( cursor )
+The @code{reset_start} (@code{reset_end}) operation positions the cursor
+on the first (last) object in the
+container.  
+If there are no elements, the operation will point to a value defined in
+the component (usually @samp{NULL}). 
+@end defun
+
+@defun adv ( cursor )
+@defunx rev ( cursor )
+The @code{adv} (@code{rev}) operation moves the cursor to the next
+(previous) object. If there is no next (previous) record,
+@code{cursor.obj} is set to some layer-defined value
+so that the @code{end_adv} (@code{end_rev}) function can recognize that
+no more advances (reverses) can be made. 
+@end defun
+
+@defun end_adv  ( cursor )
+@defunx end_rev ( cursor )
+The @code{end_adv} (@code{end_rev}) operation generates a boolean
+expression which determines whether or not the cursor
+has been advanced (reversed) past the end of the container. 
+@end defun
+
+
+@defun foreach ( cursor ) @{ code @}
+@defunx rofeach ( cursor ) @{ code @}
+These two operations are looping constructs. 
+These operation will move the cursor to the first (last) element in the
+container, execute the body of code, and iterate over the collection
+forwards (backwards) until the cursor reaches the end (beginning)
+of the container. 
+@end defun
+
+
+
+
+
+If a cursor is qualified  to range over a subset of the elements, then
+these operations only apply to the qualified elements. For instance, if
+the cursor is restricted to point to all primes ending in @samp{1}, then  
+@code{reset_start} will move the cursor to the first element ending in
+@samp{1}, @code{adv} will move the cursor to the next element ending in @samp{1}, and so on. 
+
+
+
+
+@node Element Update Operations, Composite Cursor Operations, Element Retrieval Ops, Cursor Operations
+@subsection Element Update Operations
+
+
+@defun delete ( cursor )
+This operation removes the element on which the cursor is positioned. 
+Ideally, there should be two delete operations: both 
+delete a record, but one positions the cursor for subsequent advancing,
+and the other for subsequent reversing. Currently, the semantics of
+delete is the former. However, calling @code{delete} within a
+@code{rofeach} will do the latter, which is correct. 
+@end defun
+
+@defun insert  ( cursor,  record )
+This operation adds a new element into the cursor's container. 
+If the container  maintains an  ordering, the operation will place it
+in the proper position. 
+@end defun
+
+
+@cindex halloween problem
+@defun upd ( cursor,  field,  expr ) 
+@defunx @w{cursor.field = expr}
+This is the update function, which is equivalent to the expression
+@code{cursor.field = expr}. 
+Some ordered layers will generate an error if the operation is performed
+over the 
+ordering field. This is a result of the famous 
+"Halloween problem"@footnote{The @var{Halloween Problem} arises when the
+list of elements that are being updated must be kept in order. Suppose
+we have a collection @samp{10 20 30} and we wish to add @samp{30} to each
+element, while still maintaining the order. After changing @samp{10} to @samp{40}, the
+list looks like this: @samp{20 30 40}. Now @samp{30} is no longer the
+last element in the collection, and in fact, this process will not
+terminate as the three elements will be continuously updated.
+P2 will catach the error at runtime (actually, it should be caught at
+compile-time).}.
+See @file{bintree.xp} layers for an example.
+@end defun
+
+
+@node Composite Cursor Operations, Miscellaneous Cursor Operations, Element Update Operations, Cursor Operations
+@subsection Composite Cursor Operations
+
+@defun initk ( compcurs ) 
+This operation initializes composite cursors. 
+@end defun
+
+@defun foreachk ( compcurs ) @{ code @} 
+This looping construct  is similar to the @code{foreach} operation
+except the argument is a composite cursor and iterates over each
+composite tuple. 
+@end defun
+
+
+@node Miscellaneous Cursor Operations,  , Composite Cursor Operations, Cursor Operations
+@subsection Miscellaneous Cursor Operations
+
+@defun deleted ( cursor )
+This operations returns true if the current element the
+cursor is pointing to has been marked as deleted. This operation may not
+be provided by all layers.
+@end defun
+
+@defun getrec  ( cursor,  record ) 
+This operation copies the data from the cursor into the record variable. 
+@end defun
+
+@defun gettime ( cursor )
+This operation returns the timestamp of the element pointed at by the
+cursor. This operation may not be provided by all layers.
+@end defun
+
+@defun init_curs ( cursor )
+This operation initializes the cursor.
+This operation should be called before any other operation
+is performed on the cursor.
+@end defun
+
+@defun swap ( cursor0,  cursor1 )
+This operation swaps the elements referenced by the two cursor
+arguments. Only layers that do not maintain an ordering can implement this
+operation. All layers maintaining an order report an error at code generation time.
+@end defun

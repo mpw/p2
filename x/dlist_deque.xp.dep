@@ -1,0 +1,1 @@
+dlist_deque.o: dlist_deque.xp dlist.xph

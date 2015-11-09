@@ -1,0 +1,121 @@
+# Generated automatically from Makefile.in by configure.
+# $Id: Makefile.in,v 45.0 1997/09/19 05:46:15 jthomas Exp $
+# Copyright (C) 1994, The University of Texas at Austin.
+# This file requires GNU make -- it will not work with the normal Unix make.
+# Generated automatically from Makefile.in by configure.
+
+#### Start of system configuration section. ####
+
+srcdir = .
+srcroot = ./..
+objroot = ..
+
+include ../Makeconfig
+
+#### End of system configuration section. ####
+
+.PRECIOUS:	%.nxp %.xp %.c %.o %.i %.c %-ref.h %.cdef %.kdef 
+
+ifeq ($(INCLUDE),1)
+include ../Makefile.layers
+endif
+
+SRCS =		$(patsubst %,%.xp,$(LAYERNAMES))
+OBJS =		$(patsubst %,%.o,$(LAYERNAMES))
+XP =		../bin/xp
+XPFLAGS =	-w 
+XSPLIT =	../share/xps.awk
+
+all:		$(OBJS)
+
+install\
+install-hetero:	all
+
+# XP
+
+# Note: the suffix "-xp.c" is not the same as "-xps.c"
+# We use these suffixes instead of ".c", because we must either delete
+# or hide the intermediate ".c" targets. If we left the ".c" targets,
+# deleted the ".o" target, and then did a build, make would
+# incorrectly try to build ".o" from ".c" (using the implict rule
+# %.o: %.c ...)
+
+%-xp.c \
+%-ref.h:	$(XP) %.nxp
+		$(XP) $(XPFLAGS) $* > $*-xp.c
+		$(INDENT) $*-xp.c
+
+# Eliminate all lines beginning with the sharp character (#),
+# except the ones we put in using liner.
+
+# Note: if you change the extenison "-xps", you must also change
+# XSPLIT (xps.awk). (JAT)
+
+###%.nxp:		%-xps.xp
+###		$(AWK) -f $(XSPLIT) $<
+###
+###%-xps.xp:	%-xps.c
+###		$(CPP) -P $(CPPFLAGS) $*-xps.c \
+###		  | sed -e "/^# *pragma [^l][^i][^n][^e][^r]/d" > $*-xps.xp
+###		$(RM) $*.cdef $*.kdef
+###
+###%-xps.c:	%.xp
+###		sed 's://.*::' $(srcdir)/$*.xp > $*-xps.c
+
+%.nxp:		%.xp
+		sed 's://.*::' $(srcdir)/$*.xp > $*-xps.c
+		$(CPP) -P $(CPPFLAGS) $*-xps.c \
+		  | sed -e "/^# *pragma [^l][^i][^n][^e][^r]/d" > $*-xps.xp
+		$(RM) $*.cdef $*.kdef
+		$(AWK) -f $(XSPLIT) $*-xps.xp 
+
+# Eliminate all lines beginning with the sharp character (#).
+
+%.i:		%-xp.c pb.h
+		$(CPP) -P -I$(srcdir)/../pb $(CPPFLAGS) $*-xp.c \
+		  | sed -e "/^#/d" -e '/^[\t ]*$$/d' > $*.i
+		$(INDENT) $*.i
+
+%.o:		%.i
+		$(CC) $(XP_CFLAGS) $(CPPFLAGS) -c $*.i
+
+clean:
+		$(RM) *-xps.xp *-xps.c *-ref.h
+		$(RM) *.o *.i *-xp.c *.nxp *.cdef *.kdef $(OBJS)
+		$(RM) *~ *.BAK
+
+mostlyclean:	clean
+
+distclean:	clean
+		$(RM) Makefile *.dep
+
+realclean:	clean
+		$(RM) Makefile *.dep
+
+# Make dependencies from .xp files.
+# We trick $(CPP) -M into generating dependencies for %.xp as follows:
+# (1) Remove the bang (!) from the bang lines in %.xp
+#     (to make them visible to CPP) and place the result in %.c
+# (2) Replace %.c with %.xp in the .dep file
+# (3) Delete %.c
+# See analogous rule to make dependecies from .p2 files in paces/Makefile.in
+
+# It is not necessary to name the dependency files .xp.dep (rather
+# than just .dep), because there are no intermediate .c files produced
+# by xps, etc.  But, we do it here for safety, clarity, and
+# consistency with paces/Makefile.in
+
+%.xp.dep:	%.xp
+		@echo $(ECHO_N) "Generating $@ ... $(ECHO_C)"
+		@-rm -f $*.c
+		@# Make bang (!) lines visible to CPP.
+		@sed -e 's%^!%%' $< > $*.c
+		$(CPP) -M $(CPPFLAGS) $*.c \
+		  | $(SED) -e 's%$*.c%$*.xp%' \
+		  > $(notdir $@)
+		@-rm -f $*.c
+		@echo "done"
+
+ifeq ($(INCLUDE),1)
+include $(patsubst %,%.xp.dep,$(notdir $(basename $(SRCS))))
+endif

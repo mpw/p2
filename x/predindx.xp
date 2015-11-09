@@ -1,0 +1,250 @@
+// $Id: predindx.xp,v 45.0 1997/09/19 05:46:45 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds predindx[ ds ] annotation curs_state retrieval_sometimes
+
+!#include "predindx.h"
+!#include "qopt.h"
+
+// predindx adds prev, next to elements
+// predindx adds first, last to container
+// NULL is (struct obj_type *) 0
+// predindx has one annotation -  predindx [container] predicate "<predicate>"
+// predindx does 2 things. 
+// 1) It restricts all elements to those that satisfy the predicate pred.
+// 2) It provides a chronological list of changes. 
+
+cursor_func link(cursor)
+{
+    char *newpred;
+
+    newpred = bind_predicate(te, cursor, obj_type, %a.pred);
+%{
+    if (%v.newpred) {
+       if (container.first == (struct obj_type *) 0) {
+          container.first = cursor.obj;
+          container.last  = cursor.obj;
+          cursor.next     = (struct obj_type *) 0;
+          cursor.prev     = (struct obj_type *) 0;
+       } else {
+          cursor.next       = container.first;
+          cursor.prev       = (struct obj_type *) 0;
+          cursor.next->prev = cursor.obj;
+          container.first   = cursor.obj;
+       }
+    }
+%}
+}
+
+
+cursor_func unlink(cursor)
+{
+    char *newpred;
+
+    newpred = bind_predicate(te, cursor, obj_type, %a.pred);
+%{
+    if (%v.newpred) {
+      // note record prev and next ptrs still intact for advancing
+      if (cursor.prev)
+         cursor.prev->next = cursor.next;
+      else
+         container.first = cursor.next;
+      if (cursor.next)
+         cursor.next->prev = cursor.prev;
+      else
+         container.last = cursor.prev;
+    }
+%}
+}
+
+cursor_func test_opt(cursor)
+{
+        char litpred[80], basepred[80], rresult[80], bkuppred[80];
+        VOID_FUNC bi;
+        char fld[80], rln[80], val[80], nwfld[80];
+        char *pred2;
+        int thislayer;
+        BOUNDS b;
+        ENTRY *e = symtab_lookup(symtab[SUE], obj_type);
+
+        /* test to see if %a.pred modifies the incoming predicate. If so, 
+         *  simplify it. If predicate was A && B && C and the predicate 
+         *  in predindx layer is B && C, then the new value of predicate 
+         *  should be A since passing through this layer satisfies B and C.
+         *  
+         * There are five cases:  
+         *  %a.pred   |  predicate     | result
+         *    A       |    A & B       |   B - use predindx layer
+         *    A       |    A||B        | A||B (go down layer)
+         *    A       |     B          | B (go down layer)
+         *   A&B      |   A&C&D        | A&C&D (go down layer)
+         *   A        |     A          | "1" - use predindx layer
+         *
+         */
+    
+        strcpy(bkuppred,predicate);
+        strcpy(basepred,%a.pred);
+        pred2 = basepred;
+        thislayer = 1;
+        while (*pred2) {
+            *fld = 0; *rln = 0; *val=0; 
+            next_clause(&pred2,0,fld,rln,val);
+            strcpy(nwfld,2+fld);
+            strcpy(litpred,fld);strcat(litpred," ");
+            strcat(litpred,rln);strcat(litpred," ");
+            strcat(litpred,val);
+            /* litpred is the current predicate to apply to predicate */
+            bi = (find_data_type(e->ident,nwfld))->bounds_impact;
+            define_bounds(te, &b,cursor,litpred,nwfld,bi);
+            simplify_predicate(predicate,&b,nwfld,TRUE,rresult);
+            if (!strcmp(predicate, rresult)) {
+                /* the pred in predindx did not change the overall 
+                 * predicate. Therefore we cannot use this layer to 
+                 * do the query 
+                 */     
+                strcpy(predicate, bkuppred);
+                thislayer = 0;
+                break;
+            } else {
+                strcpy(predicate,rresult);
+            }
+        }
+        if (thislayer) {
+            strcpy(%c.npred, predicate);
+        }
+        %c.within = thislayer;
+    }
+
+
+xform(element, container, cursor)
+{
+   add element   : struct element *next; 
+   add element   : struct element *prev; 
+   add container : struct element *first; 
+   add container : struct element *last;
+   xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+    char tstfn[100];
+    optimize(cursor);
+
+    call test_opt(cursor);
+    if (%c.within) { 
+       if (cost >= 1000) {
+           cost   = 900;
+           layer  = %ln;
+       }
+   }
+}
+
+init_curs(cursor)
+%{
+  init_curs(cursor);
+%}
+
+ddlhint(argc, argv)
+{
+    char newpred[100];
+
+    limit 1 argument;
+//    get_ddlhint_argument(%a.pred, argv[1]);
+
+    sprint_ptree(%a.pred, argv[1]);
+
+    if (*(%a.pred) == '"') { 
+        /* remove beginning and trailing double quotes */
+        strcpy(newpred, (%a.pred+1));
+        newpred[strlen(newpred)-1] = 0;
+        strcpy(%a.pred, newpred);
+    }
+
+
+}
+
+init_cont(container)
+%{
+   init_cont (container);
+
+   container.first = (struct obj_type *) 0;
+   container.last  = (struct obj_type *) 0;
+%}
+
+query(cursor)
+{
+    char tstfn[100];
+    char *p;
+
+    if (layer == %ln) {
+        call test_opt(cursor);
+        if (%c.within) { 
+            p = bind_predicate(te, cursor, obj_type, %c.npred);
+            strcpy(predicate, p);
+            %{ %v.p %}
+        } else {
+            %{ query(cursor) %} 
+        }
+    } else {
+        %{ query(cursor) %}
+    }
+}
+
+insert(cursor, record)
+{
+    %{ insert(cursor,record);  call link(cursor); %}
+    }
+
+end_adv(cursor)
+%{
+   (cursor.obj == (struct obj_type *) 0)
+%}
+
+end_rev(cursor)
+%{
+   (cursor.obj == (struct obj_type *) 0)
+%}
+
+adv(cursor)
+%{
+   cursor.obj = cursor.next;
+%}
+
+rev(cursor)
+%{
+   cursor.obj = cursor.prev;
+%}
+
+delete(cursor)
+{
+    
+   // for post-positioning - remember next pointer
+   if (layer == %ln) 
+   %{ 
+        {
+           struct obj_type *p = cursor.next;
+           delete (cursor);
+           call unlink(cursor);
+           cursor.obj = p;
+        }
+     %}
+   else
+     %{ delete(cursor); call unlink(cursor); %}
+}
+
+reset_start(cursor)
+%{
+   cursor.obj = container.first;
+%}      
+
+reset_end(cursor)
+%{
+   cursor.obj = container.last;
+%}
+
+upd(cursor, field, expr)
+%{
+    call unlink(cursor);
+    upd(cursor, field, expr);
+    call link(cursor);
+%}

@@ -1,0 +1,39 @@
+
+Check for set_size:
+CASE set_size PASS.
+
+Check for set_is_empty:
+CASE set_is_empty PASS.
+
+Check for set_in:
+CASE set_in PASS.
+
+Check for set_element:
+CASE set_element PASS.
+
+Check for set_remove:
+CASE set_remove PASS.
+
+Check for set_add:
+CASE set_add PASS.
+
+Check of set_copy:
+CASE set_copy PASS.
+
+Check of set_interseciton:
+CASE set_intersection PASS.
+
+Check for set_union
+CASE set_union PASS.
+
+Check of set_difference:
+CASE set_difference PASS.
+
+Check for set_equal
+CASE set_equal PASS.
+
+Check for set_subset
+CASE set_subset PASS.
+
+Check for set_proper_subset:
+CASE set_proper_subset PASS.

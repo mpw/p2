@@ -1,0 +1,31 @@
+
+all employees are:
+10000  60 Akers, Mark Biology
+10010  42 Akin, Monica Biology
+10020  21 Alexander, Joe Biology
+10030  23 Anderson, Gwyn Biology
+10040  53 Anderson, Mary Biology
+10050  42 Anderson, Suzanne Biology
+10060  61 Andrews, John Biology
+10070  22 Andrews, Kay Biology
+
+42 emps are:
+10010  42  Akin, Monica
+10050  42  Anderson, Suzanne
+
+old employees are:
+10000 60 Akers, Mark
+10010 42 Akin, Monica
+10040 53 Anderson, Mary
+10050 42 Anderson, Suzanne
+10060 61 Andrews, John
+
+old employees are:
+
+remaining employees are:
+10020  Alexander, Joe
+10030  Anderson, Gwyn
+10070  Andrews, Kay
+
+recent employees are:
+10070 Andrews, Kay

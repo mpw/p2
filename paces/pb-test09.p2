@@ -1,0 +1,11 @@
+/* $Id: pb-test09.p2,v 45.0 1997/09/19 05:44:01 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* Long Double. */
+
+long double ld = 0;
+
+int main()
+{
+  return 0;
+}

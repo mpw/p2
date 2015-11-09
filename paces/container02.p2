@@ -1,0 +1,42 @@
+/* $Id: container02.p2,v 45.0 1997/09/19 05:43:05 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Container declaration with non-NULL container base type. */
+/* Analogous to container0[01], but non-NULL container base type. */
+/* Analogous to container03, but container element is typedef "E"
+   and container base type is typedef "C" */
+/* Analogous to cursor02.p2, but container not cursor declaration. */
+
+#include "P2_paces.h"
+
+/* Type expression. */
+typex {
+  t = top2ds[container_structure[malloc[transient]]];
+}
+
+/* Element. */
+typedef struct {
+  int i;
+} E;
+
+/* Container. */
+typedef struct {
+  int a;
+  int b;
+  int c;
+} C;
+
+container <E> stored_as t with {
+  container_structure "C";
+} cont;
+
+int
+main()
+{
+  int i;
+  open_cont(cont);
+  cont.a = 0;
+  i = cont.a;
+  close_cont(cont);
+  return(i);
+}

@@ -1,0 +1,33 @@
+/* $Id: container04.p2h,v 45.0 1997/09/19 05:43:07 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Demonstrate a bug that occurs when a non-schema container has a
+   type expression that includes the layer x/log.xp.  The problem is
+   that log.xp needs "VERBATIM" global declarations made in
+   s_verbatim(), but since since their is no schema, s_verbatim() is
+   never called. */
+/* The solution to this bug was to eliminate all such global variables,
+   by moving them, either to (1) paces/P2_log-manager.[ch], or
+   (2) the local scope of x/log.xp:s_verbatim():P2_undo_or_redo_function()
+   (JAT) */
+
+#include "P2_paces.h"
+#define N 10
+
+typedef struct {
+  int i;
+} E;
+
+typex {
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+}
+
+container <E> stored_as t with {
+  P2_BOTTOM_ANNOTE(i, N);
+} k;
+
+int main (void) 
+{
+  /* Exit. */
+  exit(0);
+}

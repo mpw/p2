@@ -1,0 +1,64 @@
+/* $Id: gcc2.p2,v 45.0 1997/09/19 05:43:22 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* gcc-specific extensions: __attribute__ */
+
+#include "P2_paces.h"
+
+/* Variable Attributes */
+
+int x1 __attribute__ ((aligned (1))) = 0;
+struct foo1 { int x2[2] __attribute__ ((aligned (1))); };
+short array[3] __attribute__ ((aligned (1)));
+struct foo2
+{
+  char a;
+  int x[2] __attribute__ ((packed));
+};
+char stack[10000] __attribute__ ((aligned (1))) = { 0 };
+int init_data_copy __attribute__ ((aligned (1))) = 0;
+
+/* Variable Attributes */
+
+struct S1 { short f[3]; } __attribute__ ((aligned (1)));
+typedef int more_aligned_int __attribute__ ((aligned (2)));
+struct S2 { short f[3]; } __attribute__ ((aligned (1)));
+
+union foo3
+{
+  char a;
+  int x[2];
+}
+#if 0
+/* Using transparent_union here seems to break gcc. (JAT) */
+__attribute__ ((transparent_union));
+#else
+__attribute__ ((aligned (1)));
+#endif
+
+typedef struct { short f[3]; } T __attribute ((aligned (1)));
+T static foo4 __attribute__ ((aligned (1))) = { 0 };
+static T foo5 __attribute__ ((aligned (1))) = { 0 };
+struct { short f[3]; } foo6 __attribute__ ((aligned (1))) = { 0 };
+struct S1 foo7 __attribute__ ((aligned (1))) = { 0 };
+int x3 __attribute__ ((aligned (1))),
+    x4 __attribute__ ((aligned (1))) = 0,
+    ***p1 __attribute__ ((aligned (1)));
+
+/* Function Attributes */
+
+void foo10 () __attribute__ ((noreturn));
+int square (int) __attribute__ ((const));
+extern int my_printf (void *my_object, const char *my_format, ...)
+  __attribute__ ((format (printf, 2, 3)));
+extern void foobar (void) __attribute__ ((noreturn));
+#if 0
+/* alias seems to break purify. (JAT) */
+void f () __attribute__ ((weak, alias ("__f")));
+#endif
+
+int
+main ()
+{
+  return(x1);
+}

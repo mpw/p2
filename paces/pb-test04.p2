@@ -1,0 +1,29 @@
+/* $Id: pb-test04.p2,v 45.0 1997/09/19 05:43:59 jthomas Exp $ */
+
+#include <stdio.h>
+
+/* This file tests for the presence of a specific (and now fixed)
+   bug in pb, that resulted in the incorrect interpretation of
+   declarations of function pointers.
+   I have saved the code as a regression test. (JAT) */
+
+/* The following typedef exhibited the bug. */
+
+typedef int (*INTEGER_FUNCTION)( void );
+
+/* The following code is intended to make sure that the
+   above typedef is semantically correct. */
+
+INTEGER_FUNCTION a[10];
+
+int f ( void )
+{
+  return( 123 );
+}
+
+void main(void)
+{
+  a[3] = f;
+  printf( "%d\n", (*a[3])());
+  exit( 0 );
+}

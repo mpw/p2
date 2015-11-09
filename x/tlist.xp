@@ -1,0 +1,455 @@
+// $Id: tlist.xp,v 45.0 1997/09/19 05:46:52 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds tlist [ ds ] stable annotation retrieval_sometimes
+
+!#include "qopt.h"
+!#include "tlist.h"
+
+// tlist adds prev, next to elements
+// tlist adds first, last to container
+
+// tlist maintains a doubly-linked list of chronologically-insert-
+// ordered elements w/ cursor timestamp skipping over stuff. What's 
+// also confusing is the ordering. The higher timestamps come first, not 
+// last.
+
+/********************
+tlist is a time-stamp ordered list.  The timestamp field is input
+to the layer via the annotaion:
+
+    tlist key is <timestamp-field-name>
+
+Thus, tlist can use the same annotations as bintree, odlist, etc.
+
+The semantics of tlist are:
+
+   (1) on every element update (with one exception), the object
+       becomes the first element of the list.  The exception 
+       is updates to the timestamp field, which tlist ignores.
+
+   (2) tlist is stable, in that elements are unlinked when deleted, 
+       but their pointers remain intact.  Thus:
+
+       originally:            A <-> B <-> C <-> D ...
+
+       now delete B yields:   A <-> C <-> D ...
+                              ^     ^
+                              |--B--|  (that is, B still points to
+                                        its former neighbors after deletion).
+
+   (3) the ordering of tlist elements is most recent to least recent
+       (i.e., timestamps of more recent elements are larger than
+              timestamps of older elements).
+
+   (4) expect queries to involve predicates on the timestamp field.
+       example: if _ts is the timestamp field, one might get the query:
+
+       "age > 40 && _ts < domtimestamp"
+
+       This means that were' only interested in objects whose
+       timestamp is less than the variable domtimestamp.
+
+       This implies that we can optimize container searches by
+       ignoring those records whose timestamp is greater than domtimestamp.
+       (this optimization would be put into reset_start, which would
+       skip over the appropriate records).
+
+       Similarly, the query:
+
+       "age > 40 && _ts > domtimestamp"
+
+       would allow tlist searches to terminate early, as once an 
+       element has been found whose timestamp is less than domtimestamp.
+       (again, steal code from the end_adv operation from odlist to
+       accomplish this).
+       terminating a search whenever an object is reached whose
+       timestamp is < domtimestamp.
+
+   (5) every cursor will have an augmented timestamp field.  The
+       value of this field is the value of the timestamp of the
+       last object that the cursor was positioned on.  The idea
+       here is that a cursor could be pointing to object B (above).
+       Object B gets modified by some other cursor, thus bringing
+       B to the head of the list.  By advancing to the next record
+       on the list whose timestamp is less than cursor.timestamp,
+       this should be the next record to retrieve.
+
+**********************/
+
+
+cursor_func link(cursor)
+%{
+    cursor.next = container.first;
+    cursor.prev = 0;
+    if (container.first) { 
+        container.first->prev = cursor.obj;
+    }
+    container.first = cursor.obj;
+    if (! container.last) { 
+        container.last = cursor.obj;
+    }
+%}
+
+cursor_func unlink(cursor)
+%{
+    // Note record prev and next ptrs still intact for advancing.
+    if (cursor.prev) {
+        cursor.prev->next = cursor.next;
+    } else {
+        container.first = cursor.next;
+    }
+    if (cursor.next) {
+        cursor.next->prev = cursor.prev;
+    } else { 
+        container.last = cursor.prev;
+    }
+%}
+
+
+
+// xforms
+
+
+xform(element, container, cursor)
+{
+   add element   : struct element *next; 
+   add element   : struct element *prev; 
+   add container : struct element *first; 
+   add container : struct element *last;
+   add cursor    : int timestamp;
+
+   // Step 2:  remember additional info about annotations
+
+   %a.typeptr     = find_data_type(element, %a.ts_field);
+   %a.bi          = %a.typeptr->bounds_impact;
+
+   xform(element, container, cursor);
+}
+
+
+ddlhint(argc, argv)
+{
+    limit 1 argument;
+    get_ddlhint_argument(%a.ts_field, argv[1]);
+}
+      
+
+#define COST0   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+#define COST1   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*(3.0/4)
+#define COST2   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*(1.0/2)
+
+optimize(cursor)
+{
+  BOUNDS b;
+
+  optimize(cursor);
+  switch(use_layer(te, &b, cursor, predicate, %a.ts_field, %a.bi)) {
+
+  case 0:  // Layer won't help in processing.
+           // Use this layer if there is nothing else available.
+
+    if (cost>COST0) {
+      cost  = COST0;
+      layer = %ln;
+      if (strcmp(%a.ts_field, orderby_field) == 0)
+        retrieval_direction = 1;
+      else
+        retrieval_direction = 0;
+    }
+    break;
+
+  case 1:  // We can do a range search.
+           // Use this layer if there is nothing better.
+
+    if (cost>COST1) {
+      cost = COST1;
+      layer = %ln;
+      if (strcmp(%a.ts_field, orderby_field) == 0)
+        retrieval_direction = 1;
+      else
+        retrieval_direction = 0;
+    }
+    break;
+
+  case 2:  // Point qualification.
+           // Bingo--this is probably the best layer to use.
+           // We can do a range search.
+
+    if (cost > COST2) {
+      cost = COST2;
+      layer = %ln;
+      if (strcmp(%a.ts_field, orderby_field) == 0)
+        retrieval_direction = 1;
+      else
+        retrieval_direction = 0;
+    }
+    break;
+
+  default: error("use_layer failed");
+  }
+}
+
+// retrieval operation - query
+
+query(cursor)
+
+{
+
+  BOUNDS b;
+  char rresult[100];
+  char *p;
+
+  // query() is called only within a FOREACH construct.
+  // We have already satisfied the lower-bound (since we
+  // are advancing in a forward direction).
+  // Thus, we can simplify the predicate by eliminating
+  // the test for the lower bound.
+  // We modify the query, however only if this is the
+  // layer that is doing the retrieval.
+
+  define_bounds(te, &b, cursor, predicate, %a.ts_field, %a.bi);
+
+  simplify_predicate(predicate,&b,%a.ts_field,TRUE,rresult);
+  p = bind_predicate(te, cursor, obj_type, rresult);
+  
+  // p = bind_predicate(te,  cursor, obj_type, predicate);
+  
+  %{
+       %v.p
+  %}
+  xfree(p);
+}
+
+
+// retrieval operations - adv, rev
+
+adv(cursor)
+%{
+    do { 
+        cursor.obj = cursor.next;
+    }
+    while(cursor.obj && (cursor.timestamp < cursor.%a.ts_field)) ;
+    if (cursor.obj) { 
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+
+%}
+
+
+rev(cursor)
+%{
+    do { 
+        cursor.obj = cursor.prev;
+    }
+    while(cursor.obj && (cursor.timestamp > cursor.%a.ts_field)) ;
+    if (cursor.obj) { 
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+
+%}
+
+// retrieval operations - end_adv
+
+end_adv(cursor)
+{
+   char   lim[100];
+   char   func[50];
+   BOUNDS b;
+
+   // See if the cursors predicate specifies a lower bound
+
+   define_bounds(te, &b, cursor, predicate, %a.ts_field, %a.bi);
+   if (b.bottom) {
+       // The cursors predicate does not specify a lower bound.
+       // We have advanced to the end of the list iff cursor.obj 
+       %{
+       (!cursor.obj)
+       %}
+   } else {
+       // The cursors predicate specifies a lower bound.
+       // We have advanced to the end of the list iff cursor.obj == 0
+       // or we have advanced to a record whose ofield is less than the lower bound.
+       strcpy(lim, b.lower);
+       if (b.inc_lower) {
+           strcpy(func,"int_LT");
+       } else {
+           strcpy(func,"int_LE");
+       }
+       %{
+           (!cursor.obj || %v.func(cursor.%a.ts_field, %v.lim))
+       %}
+   }
+}
+
+
+
+// retrieval operations - end_rev
+
+
+end_rev(cursor)
+{
+     char   lim[100];
+     char   func[50];
+     BOUNDS b;
+
+     define_bounds(te, &b, cursor, predicate, %a.ts_field, %a.bi);
+
+     // See if the cursor's predicate specifies an upper bound
+     if (b.top) {
+         %{
+         // The cursor's predicate does not specify an upper bound.
+         // We have advanced to the beginnning of the list iff cursor.obj == 0.
+         (!cursor.obj)
+         %}
+     } else {
+        // The cursor's predicate specifies an upper bound.
+        // We have advanced to the beginning of the list iff cursor.obj == 0
+        // or we have advanced to a record whose ofield exceeds the upper bound.
+        strcpy(lim,b.upper);
+        if (b.inc_upper) {
+           strcpy(func,"int_GT");
+        } else {
+           strcpy(func,"int_GE");
+        }
+        %{
+           (!cursor.obj || %v.func(cursor.%a.ts_field, %v.lim))
+        %}
+     }
+}
+
+
+// retrieval operations - reset_start
+
+reset_start(cursor)
+{
+  char   lim[100];
+  char   func[50];
+  BOUNDS b;
+  
+  define_bounds(te, &b, cursor, predicate, %a.ts_field, %a.bi);
+
+  if (!b.top) { 
+    if (b.inc_upper) {
+      strcpy(func, "int_GT");
+    } else {
+      strcpy(func, "int_GE");
+    }
+    strcpy(lim, b.upper);
+    %{
+       cursor.obj = container.first;
+       while (cursor.obj && %v.func(cursor.%a.ts_field, %v.lim)) { 
+         cursor.obj = cursor.next; 
+       } 
+    %} 
+  } else {
+      %{  
+          cursor.obj = container.first; 
+      %} 
+  }
+
+  %{
+    if (cursor.obj) {
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+  %}
+}
+
+// retrieval operations - reset_end
+
+reset_end(cursor)
+{
+  char   lim[100]; 
+  char   func[50]; 
+  BOUNDS b;
+
+  define_bounds(te, &b, cursor, predicate, %a.ts_field, %a.bi);
+  if (!b.bottom) { 
+    if (b.inc_lower) {
+      strcpy(func, "int_LT"); 
+    } else  {
+      strcpy(func, "int_LE"); 
+    }
+    strcpy(lim, b.lower); 
+    %{ 
+       cursor.obj = container.last; 
+       while (cursor.obj && %v.func(cursor.%a.ts_field, %v.lim)) { 
+         cursor.obj = cursor.prev; 
+       } 
+    %} 
+  } else {
+      %{ 
+          cursor.obj = container.last; 
+      %} 
+  }
+  %{
+    if (cursor.obj) { 
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+  %}
+}
+
+
+// non-retrieval operations - init_cont
+
+init_cont(container)
+%{
+   init_cont (container);
+
+   container.first = 0;
+   container.last  = 0;
+%}
+
+init_curs(cursor)
+{
+    // define_bounds(te, &(%c.b), cursor, predicate, %a.ts_field, %a.bi);
+    %{
+        cursor.timestamp = 0;
+        init_curs(cursor);
+    %}
+}
+
+// non-retrieval operations - insert
+
+insert(cursor, record)
+%{
+   insert(cursor, record);
+   call link(cursor);
+%}
+
+
+// non-retrieval operations - delete
+
+delete(cursor)
+%{
+    call unlink(cursor);
+    delete(cursor);
+%}
+
+// non-retrieval operations - update
+
+upd(cursor, field, expr)
+{ 
+    if (strcmp(field, %a.ts_field)!=0) { 
+        %{
+            call unlink(cursor);
+            call link(cursor);
+        %}
+    }
+
+    %{
+        upd(cursor, field, expr);
+    %}
+}
+        
+// non-retrieval operations - pos
+
+pos(cursor, expr) 
+%{
+    pos(cursor, expr);
+    if (cursor.obj) {
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+%}
+
+

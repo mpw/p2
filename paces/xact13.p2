@@ -1,0 +1,116 @@
+/* $Id: xact13.p2,v 45.0 1997/09/19 05:45:35 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* The SEGFAULT bug was caused by the upd() special operation.  The
+   problem was that, for string data, upd() was incorrectly sizing the
+   log record to hold the new (post-update) value of the field,
+   and then (correctly) saving the current (pre-update) value of the
+   field in the (possibly too-small) record. (JAT) */
+
+/* Toy program to demonstrate bug: log_tid_hack SEGFAULT. */
+/* Transaction with named schema, begin_xact(), commit_xact(),
+   and abort_xact(). */
+/* This program SEGFAULTs when run with the log_tid_hack layer. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+   int   empno;
+   int   age;
+   char  name[22];
+} EMP_TYPE;
+
+EMP_TYPE rawdata[] = {
+   { 10000,60,"Akers, Mark" },
+#if 0	      
+   { 10070,22,"Andrews, Kay" },
+   { 10020,21,"Alexander, Joe" },
+   { 10010,40,"Akin, Monica" },
+   { 10050,42,"Akerson, Suzanne" },
+   { 10040,53,"Akerson, Mary" },
+   { 10060,61,"Andrews, John" },
+#endif	      
+   { 10030,23,"Akerson, Gwyn" },
+   { -1 }
+};
+
+typex {
+#if 0
+  t = top2ds[init_generic[inbetween[P2_LOG_LAYER[xact[qualify[delflag[
+          array[transient]]]]]]]];
+#else
+  t = top2ds[init_generic[log_tid_hack[xact[delflag[array[transient]]]]]];
+#endif
+}
+
+schema {
+  container <EMP_TYPE> emp_cont;
+} stored_as t with {
+  array size of emp_cont is 100;
+} emp_schema;
+
+cursor <emp_schema.emp_cont>
+all_emp;
+
+int main (void) 
+{
+  EMP_TYPE *p;
+
+#if 0
+  /* Initialize xact manager. */
+  P2_init_xact_manager();
+#endif
+
+  open_schema(emp_schema);
+  open_cont(emp_schema.emp_cont);
+  init_curs(all_emp);
+
+  /*** Transaction 1 ***/
+
+  /* Insert. */
+  begin_xact(emp_schema);
+  for (p = rawdata; p->empno != -1; p++)
+    insert(all_emp, *p);
+  commit_xact(emp_schema);
+
+  /*** Transaction 2 ***/
+
+  begin_xact(emp_schema);
+  printf("Before:\n");
+  rofeach(all_emp)
+  {
+    printf("%d %d %s\n", all_emp.empno, all_emp.age, all_emp.name);
+  }
+  /* Update. */
+  rofeach(all_emp)
+  {
+    upd(all_emp, name, "Updated");
+  }
+  abort_xact(emp_schema);
+
+  /*** Transaction 3 ***/
+
+  begin_xact(emp_schema);
+  printf("After:\n");
+  rofeach(all_emp)
+  {
+    printf("%d %d %s\n", all_emp.empno, all_emp.age, all_emp.name);
+  }
+  rofeach(all_emp)
+  {
+    upd(all_emp, name, "Updated");
+  }
+  commit_xact(emp_schema);
+
+  close_cont(emp_schema.emp_cont);
+  close_schema(emp_schema);
+
+#if 0
+  /* Delete xact manager. */
+  P2_delete_xact_manager();
+#endif
+
+  /* Exit. */
+  exit(0);
+}

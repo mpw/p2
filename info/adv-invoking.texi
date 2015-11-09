@@ -1,0 +1,119 @@
+@c $Id: adv-invoking.texi,v 45.0 1997/09/19 05:42:01 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node Invoking the P2 Programs, Layer Composition Checks, xp Operations, Top
+@chapter Invoking the P2 Programs
+
+The programs @file{ddl}, @file{xp}, and @file{pb} all take short and
+long option forms (one hyphen or two). All of them can display the
+current version using @code{-v} or @code{--version}. All of them can
+display the list of command line options using @code{-h} or @code{--help}.
+
+
+@menu
+* ddl options::                 Options for the ddl program
+* xp options::                  Options for the xp program
+* pb options::                  Options for the pb program
+@end menu
+
+@node ddl options, xp options, Invoking the P2 Programs, Invoking the P2 Programs
+@section ddl options
+
+@example
+@code{ddl} @var{options} filename[@code{.ddl}] 
+@end example
+
+@defvr {ddl Option} @code{-d}
+@defvrx {ddl Option} @code{--debug-yacc}
+Display the tokens parsed by ddl.
+@end defvr
+
+@defvr {ddl Option} @code{-h}
+@defvrx {ddl Option} @code{--help}
+Display the list of valid command line options and quit. 
+@end defvr
+
+@defvr {ddl Option} @code{-w}
+@defvrx {ddl Option} @code{--warnings}
+Display warnings. 
+@end defvr
+
+@defvr {ddl Option} @code{-v}
+@defvrx {ddl Option} @code{--version}
+Display the version number of the program and quit.
+@end defvr
+
+
+@node xp options, pb options, ddl options, Invoking the P2 Programs
+@section xp options
+
+@example
+@code{xp} @var{options} filename[@code{.xp}]
+@end example
+
+@defvr {xp Option} @code{-h}
+@defvrx {xp Options} @code{--help}
+Display the command line options for xp and quit.
+@end defvr
+
+@defvr {xp Option} @code{-c}
+@defvrx {xp Options} @code{--hierarchy-comments}
+For every procedure in the layer, write out a comment string containing
+the name of the procedure at the beginning and the end of the
+procedure. This is known as a @dfn{hierarchical comment}. 
+Used in conjunction with the @code{-c} flag below for debugging. 
+@end defvr
+
+@defvr {xp Option} @code{-v}
+@defvrx {xp Options} @code{--version}
+Display the version number of xp and quit.
+@end defvr
+
+@defvr {xp Option} @code{-w}
+@defvrx {xp Options} @code{--warnings}
+Display all warnings. The default is not to display any warnings. 
+@end defvr
+
+@defvr {xp Option} @code{-d}
+@defvrx {xp Options} @code{--debug-yacc}
+Display the tokens parsed by xp. 
+@end defvr
+
+@node pb options,  , xp options, Invoking the P2 Programs
+@section pb options
+
+@example
+@code{pb} @var{options} filename[@code{.pb}] 
+@end example
+
+@defvr {pb Option} @code{-h}
+@defvrx {pb Option} @code{--help}
+Display the options for pb and quit.
+@end defvr
+
+@defvr {pb Option} @code{-a}
+@defvrx {pb Option} @code{--attribute-file} 
+Read the attribute file for design rule checking from @var{filename}.
+@end defvr
+
+@defvr {pb Option} @code{-v}
+@defvrx {pb Option} @code{--version}
+Display the version number of pb and quit.
+@end defvr
+
+@defvr {pb Option} @code{-d}
+@defvrx {pb Option} @code{--debug-yacc}
+Display the tokens parsed by pb. 
+@end defvr
+
+@defvr {pb Option} @code{-w}
+@defvrx {pb Option} @code{--warnings}
+Display all warnings. The default is not to display any warnings. 
+@end defvr
+
+@defvr {pb Option} @code{-c}
+@defvrx {pb Option} @code{--hierarchical-comments}
+If a layer is compiled with hierarchical comments (see @code{-c (xp)} above),
+then this flag will allow the hierarchical comments to pass through to
+the generated C code. 
+@end defvr

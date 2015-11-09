@@ -1,0 +1,76 @@
+/* $Id: typex01.p2,v 45.0 1997/09/19 05:44:39 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#define N 10
+
+typedef struct {
+  int i;
+} X;
+
+typex {
+  t_typex = top2ds[array[transient]];
+  n_typex = top2ds[named_funcall[array[transient]]];
+  g_typex = top2ds[init_generic[generic_funcall[array[transient]]]];
+  c_typex = conceptual[array[transient]];
+}
+
+container <X> stored_as t_typex with { array size is N; } t_cont;
+container <X> stored_as n_typex with { array size is N; } n_cont;
+container <X> stored_as g_typex with { array size is N; } g_cont;
+container <X> stored_as c_typex with { array size is N; } c_cont;
+
+cursor <t_cont> t_curs;
+cursor <n_cont> n_curs;
+cursor <g_cont> g_curs;
+cursor <c_cont> c_curs;
+
+X x;
+
+int
+main()
+{
+  open_cont(t_cont);
+  open_cont(n_cont);
+  open_cont(g_cont);
+  open_cont(c_cont);
+
+  init_curs(t_curs);
+  init_curs(n_curs);
+  init_curs(g_curs);
+  init_curs(c_curs);
+
+  for (x.i = 0; x.i < N; x.i++)
+  {
+    insert(t_curs, x);
+    insert(n_curs, x);
+    insert(g_curs, x);
+    insert(c_curs, x);
+  }
+  foreach(t_curs)
+  {
+    printf("%d", t_curs.i);
+  }
+  printf("\n");
+  foreach(n_curs)
+  {
+    printf("%d", n_curs.i);
+  }
+  printf("\n");
+  foreach(g_curs)
+  {
+    printf("%d", g_curs.i);
+  }
+  printf("\n");
+  foreach(c_curs)
+  {
+    printf("%d", c_curs.i);
+  }
+  printf("\n");
+
+  close_cont(t_cont);
+  close_cont(n_cont);
+  close_cont(g_cont);
+  close_cont(c_cont);
+
+  return(0);
+}

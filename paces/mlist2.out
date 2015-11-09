@@ -1,0 +1,31 @@
+
+all emp are:
+10000 60 Akers, Mark
+10010 42 Akin, Monica
+10020 21 Alexander, Joe
+10030 23 Anderson, Gwyn
+10040 53 Anderson, Mary
+10050 42 Anderson, Suzanne
+10060 61 Andrews, John
+10070 22 Andrews, Kay
+
+42 emp are:
+10010 42 Akin, Monica
+10050 42 Anderson, Suzanne
+
+old emp are:
+10000 60 Akers, Mark
+10010 42 Akin, Monica
+10040 53 Anderson, Mary
+10050 42 Anderson, Suzanne
+10060 61 Andrews, John
+
+old emp are:
+
+remaining emp are:
+10020 21 Alexander, Joe
+10030 23 Anderson, Gwyn
+10070 22 Andrews, Kay
+
+recent emp are:
+10070 22 Andrews, Kay

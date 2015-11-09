@@ -1,0 +1,41 @@
+/* $Id: container10.p2,v 45.0 1997/09/19 05:43:10 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include "P2_paces.h"
+
+/* Indirect schema member container PROVIDED. */
+
+/* Analogous to paces/P2_error-container10.p2
+     (indirect schema member container REQUIRED) */
+
+typedef struct {
+  int i;
+} E;
+
+typex {
+  t = top2ds[malloc[mmap_shared]];
+}
+
+schema {
+  container <E> *k; /* indirect PROVIDED */
+} stored_as t with {
+  mmap_shared of k file is "/tmp/P2_container10-data" with size 1024;
+} sss;
+
+cursor <*(sss.k)> c;
+
+int main (void) 
+{
+  E e;
+  int i;
+  open_schema(sss);
+  open_cont(*(sss.k));
+  init_curs(c);
+  e.i = 0;
+  insert(c, e);
+  i = c.i;
+  delete_curs(c);
+  close_cont(*(sss.k));
+  close_schema(sss);
+  return(i);
+}

@@ -1,0 +1,10 @@
+// $Id: mmap_shared.xp,v 45.0 1997/09/19 05:46:38 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer mem mmap_shared[] stable annotation indirect_only
+
+// mmap shared storage layer 
+
+#define PERSISTENT 0
+!#include "mmap_shared.h"
+#include "mmap.xph"

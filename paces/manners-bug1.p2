@@ -1,0 +1,261 @@
+/* $Id: manners-bug1.p2,v 45.0 1997/09/19 05:43:42 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include "P2_paces.h"
+
+#if 0
+/* Booleans are defined in P2_paces.h */
+/******************* type declarations **************************/
+typedef enum { FALSE, TRUE } BOOLEAN;
+#endif
+
+/***************** global variables ******************************/
+
+int    dom_timestamp;       /* dominant timestamp */
+
+/**************** generated #defines *******************/
+
+#define DEBUG 0
+
+#define bind( curstype, kdcurs, active_rule, skiprule, alist) \
+   curstype *c; \
+   if (fresh) { \
+      c = (curstype*) malloc(sizeof(curstype)); \
+      top.curs = (void*) c;\
+      initk(*c); \
+      pos(kdcurs,top.cursor_position); \
+   } else {  \
+      c = (curstype *) top.curs; \
+      goto cnt; \
+   } \
+   foreachk(*c) {
+
+#define next_rule( nextrule, alist ) \
+      return; \
+cnt: ; \
+   } \
+   free(c); \
+   fresh = TRUE; top.current_rule = nextrule; \
+   nextrule(); return;
+
+/************ generated record types ***************/
+
+typedef struct {
+   char    name[20];
+   char    sex[20];
+   int     hobby;
+   int     _ts;
+} guest;
+
+typedef struct {
+   int     seat1;
+   char    name1[20];
+   char    name2[20];
+   int     seat2;
+   int     id;
+   int     pid;
+   char    path_done[20];
+   int     _ts;
+} seating;
+
+typedef struct {
+   char    value[20];
+   int     _ts;
+} context;
+
+typedef struct {
+   int     id;
+   char    name[20];
+   int     seat;
+   int     _ts;
+} path;
+
+typedef struct {
+   int     id;
+   char    name[20];
+   int     hobby;
+   int     _ts;
+} chosen;
+
+typedef struct {
+   int     c;
+   int     _ts;
+} count;
+
+/************ generated container declarations ***************/
+
+typex { leaps_x = top2ds_qualify[
+                  llist[
+                  P2_DELFLAG_LAYER[malloc[transient]]]]; }
+
+container < guest > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_guest;
+
+container < seating > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_seating;
+
+container < context > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_context;
+
+container < path > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_path;
+
+container < path > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  shadow_path;
+
+container < chosen > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_chosen;
+
+container < chosen > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  shadow_chosen;
+
+container < count > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_count;
+
+/*****************  valid defines ****************/
+
+#define ta " $a._ts <= dom_timestamp "
+#define tb " $b._ts <= dom_timestamp "
+#define tc " $c._ts <= dom_timestamp "
+#define tddd " $ddd._ts <= dom_timestamp "
+#define te " $e._ts <= dom_timestamp "
+#define tf " $f._ts <= dom_timestamp "
+
+#define va " (!deleted($a)) "
+#define vb " (!deleted($b)) "
+#define vc " (!deleted($c)) "
+#define vddd " (!deleted($ddd)) "
+#define ve " (!deleted($e)) "
+#define vf " (!deleted($f)) "
+
+#define and " && "
+
+#define t2_a and tb
+#define t2_b and ta
+#define t3_a and tb and tc
+#define t3_b and ta and tc
+#define t3_c and ta and tb
+#define t4_a and tb and tc and tddd
+#define t4_b and ta and tc and tddd
+#define t4_c and ta and tb and tddd
+#define t4_ddd and ta and tb and tc
+#define t5_a and tb and tc and tddd and te
+#define t5_b and ta and tc and tddd and te
+#define t5_c and ta and tb and tddd and te
+#define t5_ddd and ta and tb and tc and te
+#define t5_e and ta and tb and tc and tddd
+#define t6_a and tb and tc and tddd and te and tf
+#define t6_b and ta and tc and tddd and te and tf
+#define t6_c and ta and tb and tddd and te and tf
+#define t6_ddd and ta and tb and tc and te and tf
+#define t6_e and ta and tb and tc and tddd and tf
+#define t6_f and ta and tb and tc and tddd and te
+
+#define v2_a vb
+#define v2_b va
+#define v3_a vb and vc
+#define v3_b va and vc
+#define v3_c va and vb
+#define v4_a vb and vc and vddd
+#define v4_b va and vc and vddd
+#define v4_c va and vb and vddd
+#define v4_ddd va and vb and vc
+#define v5_a vb and vc and vddd and ve
+#define v5_b va and vc and vddd and ve
+#define v5_c va and vb and vddd and ve
+#define v5_ddd va and vb and vc and ve
+#define v5_e va and vb and vc and vddd
+#define v6_a vb and vc and vddd and ve and vf
+#define v6_b va and vc and vddd and ve and vf
+#define v6_c va and vb and vddd and ve and vf
+#define v6_ddd va and vb and vc and ve and vf
+#define v6_e va and vb and vc and vddd and vf
+#define v6_f va and vb and vc and vddd and ve
+
+/************ utility cursor decls ***************/
+
+typedef cursor <cont_guest> guest_cursor;
+typedef cursor <cont_seating> seating_cursor;
+
+/**************************** rule #2: find_seating :
+   (context ^value  assign_seats  )
+   (seating ^seat1  <seat1> ^seat2  <seat2> ^name2  <n2> ^id  <id> ^pid  <pid> ^path_done  yes  )
+   (guest ^name  <n2> ^sex  <s1> ^hobby  <h1>  )
+   (guest ^name  <g2> ^sex <> <s1> ^hobby  <h1>  )
+   (count ^c  <c>  )
+   - (chosen ^id  <id> ^name  <g2> ^hobby  <h1>  )
+   - (path ^id  <id> ^name  <g2>  )
+    -->  *******************************/
+
+int c_2;
+char *g2_2;
+int h1_2;
+char *s1_2;
+int pid_2;
+int id_2;
+char *n2_2;
+int seat2_2;
+int seat1_2;
+
+cursor <cont_chosen> where " $.id == id_2 && $.name == g2_2 && $.hobby == h1_2 "
+   C2_6;
+cursor <shadow_chosen> where " $.id == id_2 && $.name == g2_2 && $.hobby == h1_2  && $._ts > dom_timestamp"
+   S2_6;
+cursor <cont_path> where " $.id == id_2 && $.name == g2_2 "
+   C2_7;
+cursor <shadow_path> where " $.id == id_2 && $.name == g2_2  && $._ts > dom_timestamp"
+   S2_7;
+
+BOOLEAN N2_6(  seating_cursor *b, guest_cursor *c, guest_cursor *ddd )
+{
+   g2_2 = ddd->name;
+   h1_2 = c->hobby;
+   id_2 = b->id;
+   foreach(C2_6) { return FALSE; }
+   foreach(S2_6) { return FALSE; }
+   return TRUE;
+}
+
+BOOLEAN N2_7(  seating_cursor *b, guest_cursor *ddd )
+{
+   g2_2 = ddd->name;
+   id_2 = b->id;
+   foreach(C2_7) { return FALSE; }
+   foreach(S2_7) { return FALSE; }
+   return TRUE;
+}
+
+#define query_2 where " $a.value == 'assign_seats' && $b.path_done == 'yes' \
+        && $c.name == $b.name2 \
+        && $c.sex != $ddd.sex && $c.hobby == $ddd.hobby \
+        && (N2_6(&$b,&$c,&$ddd)) && (N2_7(&$b,&$ddd)) "
+
+typedef compcurs < a cont_context, b cont_seating, ddd cont_guest,
+                   c cont_guest, e cont_count >
+   given < ddd >
+   query_2 t5_a
+   valid v5_a
+   curs2_a;
+
+int main()
+{
+  curs2_a a;
+  initk(a);
+  resetk(a);
+  if (!endk(a)) {
+    /* To exercise the bug, we need to expand,
+       but not execute the following foreachk. (JAT) */
+    foreachk(a) {
+      /* Do nothing. */
+    }
+  }
+  return 0;
+}

@@ -1,0 +1,186 @@
+/* $Id: convex-hull.p2,v 45.0 1997/09/19 05:43:13 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* Convex Hull */
+
+#include <stdio.h>
+#include <math.h>
+#include <limits.h>
+#include <float.h>
+
+#define PRINT_DATA 0
+
+/* Unless over-ridden on the command line,
+this is used as the input data file name. */
+
+#define DATA_FILE_NAME "convex-hull.data"
+
+int region = 0;
+int tag = 0;
+
+typedef struct
+{
+  float x;
+  float y;
+  int	region;
+} E;
+
+#define ODLIST 0
+
+typex {
+#if ODLIST
+  t = conceptual[odlist[malloc[transient]]];
+#else
+  t = conceptual[array[transient]];
+#endif
+}
+
+container <E> stored_as t with {
+#if ODLIST
+  odlist key is region;
+#else
+  array size is 20000;
+#endif
+} k;
+
+cursor <k> where "$.region == region" qualified;
+
+#if PRINT_DATA
+cursor <k> all;
+#endif
+
+void read_data ( char *file_name )
+{
+  FILE *data_file;
+  int  data_count = 0;
+  E    e;
+
+  data_file = fopen( file_name, "r" );
+  if (data_file == NULL)
+  {
+     fprintf( stderr, "Could not open data file %s.\n", file_name );
+     exit( 1 );
+  }
+
+  while (!feof(data_file)) {
+    data_count++;
+    if (fscanf( data_file, "%f %f", &e.x, &e.y) != 2) {
+      if (feof(data_file))
+	break;
+      else {
+	fprintf( stderr, "Illegal data file record format.\n" );
+	exit( 1 );
+      }
+    }
+    e.region = tag;
+    insert( qualified, e );
+  }  
+  fclose( data_file );
+}
+
+#if PRINT_DATA
+void print_data ( void )
+{
+  foreach( all ) {
+    printf( "%f %f %d\n", all.x, all.y, all.region );
+  }
+}
+#endif
+
+void xmin_and_xmax ( E *emin, E *emax )
+{
+  float xmin = FLT_MAX;
+  float xmax = -FLT_MAX;
+
+  foreach( qualified ) {
+    if (qualified.x < xmin) {
+      xmin = qualified.x;
+      getrec( qualified, *emin );
+    }
+    else if (qualified.x > xmax) {
+      xmax = qualified.x;
+      getrec( qualified, *emax );
+    }
+  }
+}
+
+float perpendicular_distance ( E e1, E e2, E p )
+{
+  float ex = e1.x - e2.x;
+  float ey = e1.y - e2.y;
+  float l  = sqrt( (ex*ex) + (ey*ey) );
+  float dx = e1.x - p.x;
+  float dy = e1.y - p.y;
+  return( ((ex*dy) - (ey*dx)) / l );
+}
+
+float split ( E e1, E e2, E *pmax, int r )
+{
+  E     p;
+  float pd;
+  float pdmax = 0;
+
+  region = r;
+  foreach( qualified ) {
+    getrec( qualified, p );
+    pd = perpendicular_distance( e1, e2, p );
+    if (pd > 0) {
+      if (pd > pdmax) {
+        *pmax = p;
+        pdmax = pd;
+      }
+      upd( qualified, region, tag );
+    }
+  }
+  return( pdmax );
+}
+
+void convex_hull ( E e1, E e2, int r )
+{
+  E p;
+  int t;
+
+  if (split( e1, e2, &p, r ) > 0) {
+    t = tag;
+    tag++;
+    convex_hull( e1, p, t );
+    printf( "%f %f\n", p.x, p.y );
+    convex_hull( p, e2, t );
+  }
+}
+
+void main ( int argc, char *argv[] )
+{
+  E emin, emax;
+  int t;
+
+  if (argc < 1 || argc > 2) {
+    fprintf( stderr, "usage: %s [filename]\n", argv[0] );
+    exit( 1 );
+  }
+
+  open_cont( k );
+  init_curs( qualified );
+#if PRINT_DATA
+  init_curs( all );
+#endif
+
+  if (argc == 2)
+    read_data( argv[1] );
+  else
+    read_data( DATA_FILE_NAME );
+
+  xmin_and_xmax( &emin, &emax );
+  printf( "%f %f\n", emin.x, emin.y );
+  t = tag;
+  tag++;
+  convex_hull( emin, emax, t );
+  printf( "%f %f\n", emax.x, emax.y );
+  convex_hull( emax, emin, t );
+#if PRINT_DATA
+  printf( "\n" );
+  print_data();
+#endif
+  close_cont( k );
+  exit( 0 );
+}

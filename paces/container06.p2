@@ -1,0 +1,38 @@
+/* $Id: container06.p2,v 45.0 1997/09/19 05:43:08 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include "P2_paces.h"
+
+/* Array schema member container with NO annotation. */
+/* Analogous to paces/container07.p2 (ANNOTATION) */
+
+typedef struct {
+  int i;
+} E;
+
+typex {
+  t = top2ds[malloc[transient]];
+}
+
+schema {
+  container <E> k[2];
+} stored_as t with {
+} s;
+
+cursor <s.k[0]> c;
+
+int main (void) 
+{
+  E e;
+  int i;
+  open_schema(s);
+  open_cont(s.k[0]);
+  init_curs(c);
+  e.i = 0;
+  insert(c, e);
+  i = c.i;
+  delete_curs(c);
+  close_cont(s.k[0]);
+  close_schema(s);
+  return(i);
+}

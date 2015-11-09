@@ -1,0 +1,786 @@
+// $Id: mlist.xp,v 45.0 1997/09/19 05:46:37 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds mlist[ ds, top ] unstable curs_state cont_state multiple annotation retrieval_sometimes
+
+!#include "mlist.h"
+!#include "qopt.h"
+!#include "string-util.h" /* replace_string_inplace() */
+
+!#define FORECH_FIELD(i) for (i = 0; i < fieldno; i++)
+
+// This is a multi-list indexing layer; it can be used in LEAPS and is
+// essentially the classical multilist indexing algorithm.
+//
+// Zero or more attributes can be designated for indexing via
+// annotations.  If no attribute is selected for indexing, this layer
+// becomes a no-op.
+//
+// Queries are processed by using one index or by scanning a
+// container.
+
+// This layer has 2 parameters:
+//   (1) How data objects are stored.
+//   (2) How index objects are stored.
+
+// If any of adv, rev, reset_start, reset_end, end_adv, or end_rev is
+// called, we know that this layer is processing the query and that
+// %c.use_index is the number of the index that is being used to
+// process query.
+//
+// reset_start, reset_end, adv, rev always position on a
+// record (that satisfies %c.ipred) if such a record exists.
+// Otherwise, cursor.obj == 0
+
+// Precondition: cursor.obj must point to a data record.
+//
+// Remember that the query associated with an index cursor is
+// (%c.ipred && $$.first).
+//
+// We can optimize here: if %c.ipred is "attr == value"
+// then there is no other index record to examine.
+
+#define MOVE(ADV, END_ADV, NEXT, FIRST) \
+{ \
+  char comment[MAX_IDENT_LEN]; \
+  char idx[10]; \
+  sprintf(comment, "/* mlist: %s */", #ADV); \
+  sprintf(idx, "%d", %c.use_index); \
+  %{ \
+     %v.comment; \
+     cursor.obj = cursor.NEXT[%v.idx]; \
+  %} \
+  if (!%c.single) { \
+    call bindrc(cursor); \
+    %{ \
+       if (!cursor.obj) { \
+         ADV(cursor5); \
+         if (!END_ADV(cursor5)) { \
+           cursor.obj = cursor5.FIRST; \
+         } \
+       } \
+    %} \
+  } \
+}
+
+// Note that cursor.obj is 0 if there is no initial record on which to
+// position.
+//
+// Remember that the query associated with an index cursor is
+// (%c.ipred && $$.first).
+
+#define RESET(FOREACH, END_FOREACH, FIRST) \
+{ \
+   char comment[MAX_IDENT_LEN]; \
+   sprintf(comment, "/* mlist: reset */"); \
+   call bindrc(cursor); \
+   %{ \
+      %v.comment; \
+      cursor.obj = 0; \
+      FOREACH(cursor5) { \
+           cursor.obj = cursor5.FIRST; \
+           break; \
+      } END_FOREACH \
+   %} \
+}
+
+// Cursor and Container binding functions.
+//
+// #5 reserved for retrieval cursors
+// #7 reserved for update cursors
+//
+
+cursor_func bindrc(cursor)
+{
+  int i = %c.use_index;
+
+   sprintf(cursor5,         "(%s).%s", cursor, %k.x[i].ret_cur);
+   strcpy( cursor_type5,    %k.x[i].cur_type);
+   sprintf(container5,      "(%s).%s", container, %k.x[i].con_name);
+   strcpy( container_type5, %k.x[i].con_type);
+   strcpy( orig_type5,      %k.x[i].org_type);
+   strcpy( obj_type5,       %k.x[i].ele_type);
+   cursor_id5 = %c.x[i].retrieval_id;
+   funbody5 = MACRO_EXPAND_FUNBODY;
+
+   // Restore computed values for retrieval.
+   strcpy( predicate5,      %c.x[i].retrieval_predicate);
+   cost5  = %c.x[i].retrieval_cost;
+   layer5 = %c.x[i].retrieval_layer;
+}
+
+cursor_func binduc(cursor , "int i")
+{
+   sprintf(cursor7,         "(%s).%s", cursor, %k.x[i].upd_cur);
+   sprintf(cursor_type7,    %k.x[i].cur_type);
+   sprintf(container7,      "(%s).%s", container, %k.x[i].con_name);
+   strcpy( container_type7, %k.x[i].con_type);
+   strcpy( orig_type7,      %k.x[i].org_type);
+   strcpy( obj_type7,       %k.x[i].ele_type);
+   cursor_id7 = %c.x[i].update_id;
+   funbody7 = MACRO_EXPAND_FUNBODY;
+
+   // Restore computed values for update.
+   strcpy( predicate7,      %c.x[i].update_predicate);
+   cost7  = %c.x[i].update_cost;
+   layer7 = %c.x[i].update_layer;
+}
+
+container_func bindk(container , "int i")
+{
+   sprintf(container5,      "(%s).%s", container, %k.x[i].con_name);
+   strcpy( container_type5, %k.x[i].con_type);
+   strcpy( orig_type5,      %k.x[i].org_type);
+   strcpy( obj_type5,       %k.x[i].ele_type);
+   container_id5 = %k.x[i].con_id;
+   funbody5 = MACRO_EXPAND_FUNBODY;
+}
+
+// mlist has a single annotation:
+//         
+//    mlist [<container>] ON <attribute>
+//
+// containers:   original
+//               foreach index: index_container
+//
+//  data record :  (original fields, + next and prev pointers for
+//                  each index list).
+//  index record:  (data value, first_pointer, last_pointer)
+
+ddlhint(argc, argv)
+{
+  limit 1 argument;
+  get_ddlhint_argument(%a.xfield,      argv[1]);
+}
+
+// For each attribute that is to be indexed, xform creates
+// an index file (whose record type has fields: value, first, last):
+//   value ???
+//   first ???
+//   last ???
+// 
+// xform augments 3 pointer arrays (next, prev, index) to elements:
+//   next[i] pointer to next element on ith index. 0 if eol.
+//   prev[i] pointer to prev element on ith index. 0 if eol.
+//   index[i] pointer to index record.
+
+xform(element, container, cursor)
+{
+  IDENT   *p;
+  IDENT   *x;
+  char    xname[MAX_IDENT_LEN];
+  char    cname[MAX_IDENT_LEN];
+  char    kname[MAX_IDENT_LEN];
+  MCURSOR *m;
+  int     fieldno = %k.fieldno;
+  char    nox[20];   // number of indices (ie number of attributes to index)
+
+   // Step 1: count the number of attributes to index
+
+   fieldno = 0;
+   FOREACH_ANNOTATION { fieldno++; }
+   %k.fieldno = fieldno;
+   
+   if (fieldno > 0) {
+     sprintf(nox, "%d", fieldno);
+
+     // Step 2: append arrays to element
+
+     add element : struct element *next[%v.nox];
+     add element : struct element *prev[%v.nox];
+     add element : void           *index[%v.nox];
+
+     // Step 3: Create index cursor, container, and element types.
+     //         Add update and retrieval index cursors to dominant cursor.
+     //         Add an instance of the index container to the dominant container.
+
+     fieldno = 0;
+     FOREACH_ANNOTATION {
+
+        // Step 3.1: Create (empty) origional index element type.
+
+        sprintf(xname, "%s_%s_x", container_type, %a.xfield);
+        x = new_struct(xname, TRUE);
+
+        // Step 3.2: Fill-in attributes of index type.
+
+        m = new_mcursor(element);
+        position_member(m, %a.xfield);
+
+        add x : mcurs  m       val;
+        add x : struct element *first;
+        add x : struct element *last;
+
+        // Step 3.3: Create container of index elements.
+
+        sprintf(cname, "%s_x", %a.xfield);
+        new_container_type5 cname with_type x mapped_via_param 1;
+
+        // Step 3.4: Add index container instance to dominant container.
+
+        add container : struct container5  %a.xfield;
+
+        // Step 3.5: Add retrieval and update cursor to dominant cursor.
+        //           Remember: retrieval cursors are #5, update are #7
+
+        sprintf(kname, "%s_ret", %a.xfield);
+        add cursor : struct cursor5 %v.kname;
+
+        replicate_cursor5 as_cursor7;
+        sprintf(kname, "%s_upd", %a.xfield);
+        add cursor : struct cursor7 %v.kname;
+
+        // Step 3.6: Add local field--for processing queries. (DSB)
+        //           What exactly is local used for,
+        //           and why does it need to exist at runtime? (JAT)
+
+        add cursor5 : mcurs m    local;
+
+        // Step 3.7: Remember all relevant info.
+
+        %k.x[fieldno].abs = x;
+        %k.x[fieldno].ele = element5;
+        %k.x[fieldno].con = container5;
+        %k.x[fieldno].cur = cursor5;
+        %k.x[fieldno].con_id = cont_id_counter++;
+        strcpy(%k.x[fieldno].org_type, xname);
+        sprintf(%k.x[fieldno].ele_type, "P2_%s_xf", cname);
+        sprintf(%k.x[fieldno].con_type, "P2_%s_cont", cname);
+        sprintf(%k.x[fieldno].cur_type, "P2_%s_curs", cname);
+        strcpy(%k.x[fieldno].fld, %a.xfield);
+        strcpy(%k.x[fieldno].fld_type, type_of(m));
+        sprintf(%k.x[fieldno].ret_cur, "%s_ret%d", %a.xfield, %ln);
+        sprintf(%k.x[fieldno].upd_cur, "%s_upd%d", %a.xfield, %ln);
+        sprintf(%k.x[fieldno].con_name, "%s%d", %a.xfield, %ln); 
+
+        // Step 3.8: bump fieldnumber 
+
+       fieldno++;
+     }
+   }
+
+   // Step 4: Continue to map abstract element, container, cursor.
+
+   xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  char    pred[MAX_PRED_LEN];
+  char    refer[MAX_IDENT_LEN];
+  char    repla[MAX_IDENT_LEN];
+  int     l;
+  int     c;
+  int     i;
+  int     use_index;
+  BOOLEAN single;
+  int     fieldno = %k.fieldno;
+
+   // Step 1: Optimize the processing of each update cursor.
+   //         Remember results of optimization.
+
+   FORECH_FIELD(i) {
+
+      %c.x[i].update_id = curs_id_counter++;
+      %c.x[i].update_cost = MAX_QOPT_COST;
+      %c.x[i].update_layer = -1;
+      sprintf(%c.x[i].update_predicate, "$.val%d == $:local%d && $.first%d != 0",
+        %ln, %ln, %ln);
+
+      call binduc(cursor, "i");
+
+      // Optimize and save results of optimization.
+
+      optimize(cursor7);
+      %c.x[i].update_cost = cost7;
+      %c.x[i].update_layer = layer7;
+      strcpy(%c.x[i].update_predicate, predicate7);
+   }
+   
+   // Step 2: Determine cost of processing query without using index.
+   //         Remember results for possible later use.
+
+   optimize(cursor);
+   c = cost;
+   l = layer;
+   strcpy(pred, predicate);
+
+   // Step 3: Now consider the cost of processing the query
+   //         by using an index.  Consider each index in turn.
+   //         Note: we will assume that the selectivity of
+   //         attributes is listed in order of their annotations.
+   //         i.e., the most selective is listed first; the
+   //         least selective is listed last.  This is the 
+   //         reverse ordering encountered in FORECH_FIELD(i) (DSB)
+
+   use_index = -1;
+   FORECH_FIELD(i) {
+      int c5;
+
+      %c.x[i].retrieval_id = curs_id_counter++;
+      %c.x[i].retrieval_cost = MAX_QOPT_COST;
+      %c.x[i].retrieval_layer = -1;
+      %c.use_index = i;
+
+      separate_predicate(predicate, %k.x[i].fld, &single,
+        %c.x[i].retrieval_predicate, %c.x[i].residual_predicate);
+      if (strcmp(%c.x[i].retrieval_predicate, "1") == 0)
+         continue;
+
+      // In the retrieval predicate,
+      // replace all instances of $.fld with $.val (DSB)
+
+      sprintf(refer, "$.%s", %k.x[i].fld);
+      sprintf(repla, "$.val%d", %ln);
+      replace_string_inplace(%c.x[i].retrieval_predicate, refer, repla);
+
+      // Now add the the retrieval predicate, the extra qualification
+      // that there has to be at least one record (DSB)
+
+      sprintf(refer, " && $.first%d != 0", %ln);
+      strcat(%c.x[i].retrieval_predicate, refer);
+
+      // The predicate is nonnull--see what it costs to find the
+      // desired index records, multiply this cost by a fudge factor
+      // to indicate that we have to follow a set of pointers.
+      // If this adjusted cost is less than what we've seen sofar, then
+      // this is the best index to use (that we've sofar encountered).
+
+      call bindrc(cursor);
+
+      optimize(cursor5);
+      c5 = cost5*PTR_FOLLOWING_QOPT_FACTOR;
+      if (c5 < c) {
+         use_index = i;
+         %c.single = single;
+         %c.x[i].retrieval_cost = cost5;
+         %c.x[i].retrieval_layer = layer5;
+         c = c5;
+         l = %ln;
+      }
+   }
+
+   // Step 4: Return with the lowest cost and the layer number.
+   //          Note that if use_index == -1, then c and l
+   //          reflect the cheapest cost and the layer that generated
+   //          it sofar.
+
+   %c.use_index = use_index;
+   cost         = c;
+   layer        = l;
+}
+
+// link and unlink perform the linking and unlinking of data records
+// from index chains.  index chains (i.e., index records) are created
+// whenever they need to exist.  Index records are currently not
+// deleted once they are created.
+
+cursor_func unlink(cursor , "int ii")
+{
+  char i[30];
+
+   sprintf(i, "%d", ii);
+   call binduc(cursor, "ii");
+   %{
+      // We are updating the retrieval cursor.
+      // Step 1: update prev field linkages.
+      if (!cursor.prev[%v.i]) {
+   %}
+   // Two cases: either we are updating the retrieval index or not.
+   if (ii == %c.use_index)  {
+   call bindrc(cursor);
+   %{
+         // We are updating the retrieval index and deleting
+         // the first element of the index chain.
+         cursor5.first = cursor.next[%v.i];
+   %}
+   }
+   else 
+   %{
+         // We are not updating the retrieval index.
+         // We must position on the index record.
+         cursor7.obj = (struct obj_type7 *) cursor.index[%v.i];
+         cursor7.first = cursor.next[%v.i];
+   %}
+   %{ 
+      }
+      else {
+         // We are not deleting the first element of the index
+         // chain--update previous links.
+         cursor.prev[%v.i]->next[%v.i] = cursor.next[%v.i];
+      }
+      // Step 2: Update next linkages.
+      if (!cursor.next[%v.i]) {
+         // We are deleting the last element of the index chain.
+         // We must update the index record.
+   %}
+   if (ii == %c.use_index) 
+   %{
+         // We are updating the retrieval index.
+         cursor5.last = cursor.prev[%v.i];
+   %}
+   else
+   %{
+         // We are not updating the retrieval index.
+         // We must position on the index record.
+         cursor7.obj  = (struct obj_type7 *) cursor.index[%v.i];
+         cursor7.last = cursor.prev[%v.i];
+   %}
+   %{
+      }
+      else {
+         // We are not deleting the last element of the index
+         // chain--update next links.
+         cursor.next[%v.i]->prev[%v.i] = cursor.prev[%v.i];
+      }
+   %}
+}
+
+cursor_func link(cursor,  "int ii")
+{
+  char copy[MAX_IDENT_LEN];
+  char fld[MAX_IDENT_LEN];
+  char i[10];
+
+   sprintf(i, "%d",ii);
+   sprintf(copy, "%s_CPY", %k.x[ii].fld_type);
+   strcpy(fld, %k.x[ii].fld);
+   call binduc(cursor, "ii");
+   %{
+       // Perform query modification by copying value into local.
+
+       %v.copy(cursor7.local, cursor.%v.fld);
+     
+       reset_start(cursor7);
+       if (end_adv(cursor7)) {
+          // No such index record exists--create it.
+
+          struct orig_type7 irec;
+          %v.copy(irec..val, cursor.%v.fld);
+          irec..first         = cursor.obj;
+          irec..last          = cursor.obj;
+          insert(cursor7,irec);
+          cursor.next[%v.i]  = 0;
+          cursor.prev[%v.i]  = 0;
+          cursor.index[%v.i] = (void *) cursor7.obj;
+       }
+       else {
+          // The index record exists--link it to the head.
+
+          cursor.next[%v.i]  = cursor7.first;
+          cursor.prev[%v.i]  = 0;
+          cursor.index[%v.i] = (void *) cursor7.obj;
+
+          // The next line means cursor7.first->prev[%v.i] = cursor.obj
+          // It was changed, because xp doesn't know how to perform
+          // irefs across multiple container boundaries (DSB).
+
+          cursor.next[%v.i]->prev[%v.i] = cursor.obj;   
+          cursor7.first = cursor.obj;
+       }
+   %}
+}
+
+init_curs(cursor)
+{
+  int i;
+  int fieldno = %k.fieldno;
+
+   // Step 1: Initialize dominant cursor.
+
+   %{
+      init_curs(cursor);
+   %}
+ 
+   // Step 2: Initialize each update cursor.
+
+   FORECH_FIELD(i) {
+      call binduc(cursor, "i");
+      %{
+        init_curs(cursor7);
+      %}
+   }
+
+   // Step 3: If there is a retrieval cursor, initialize it too.
+
+   if (%c.use_index > -1) {
+      call bindrc(cursor);
+      %{
+         init_curs(cursor5);
+      %}
+   }
+}
+
+init_cont(container)
+{
+  int fieldno = %k.fieldno;
+
+   // Step 1: Just initialize dominant container.
+   //         Initialization of indices is done when they are open.
+
+   %{
+      init_cont (container );
+   %}
+}
+
+query(cursor)
+{
+  char *p;
+  int  i;
+
+   // If this function is called, we know that
+   // this layer is processing the query, and that
+   // %c.use_index is the number of the index
+   // that is being used to process the query.
+
+   // Note that %c.ipred was already satisfied by the
+   // index; report only the residual predicate.
+
+   i = %c.use_index;
+   p = bind_predicate(te, cursor, obj_type, %c.x[i].residual_predicate);
+   %{
+      (%v.p)
+   %}
+   xfree(p);
+}
+
+insert(cursor, record)
+{
+  char  copy[MAX_IDENT_LEN];
+  char fld[MAX_IDENT_LEN];
+  int  fieldno = %k.fieldno;
+  int  i;
+
+   // Insert record in dominant file
+   %{ 
+      insert(cursor, record);
+   %}
+
+   // Foreach update index, either locate the index record or 
+   // insert a record.
+
+   FORECH_FIELD(i) {
+      call binduc(cursor, "i");
+      %{
+         call link(cursor, "i");
+      %}
+   }
+}
+
+overflow(container)
+{
+  int i;
+  int fieldno = %k.fieldno;
+
+   // Step 1: Has dominant container overflowed?
+
+   %{
+      (overflow(container))
+   %}
+
+   // Step 2: Foreach index, test for overflow--this can 
+   //         result in a gruesome amount of code (DSB)
+
+   FORECH_FIELD(i) {
+      call bindk(container, "i");
+      %{ 
+         || (overflow(container5))
+      %}
+   }
+}
+
+// Positioning involves only the dominant cursor
+// and not index cursors.
+
+end_adv(cursor)
+%{
+   (cursor.obj == 0)
+%}
+
+end_rev(cursor)
+%{
+   (cursor.obj == 0)
+%}
+
+adv(cursor)
+{
+  MOVE(adv, end_adv, next, first)
+}
+
+rev(cursor)
+{
+  MOVE(rev, end_rev, prev, last)
+}
+
+delete(cursor)
+{
+  int i;
+  int fieldno = %k.fieldno;
+
+   // If we are retrieving via an index, we must
+   //   position the cursor on the next record to
+   //   retrieve.  Else, simply delete the data record.
+   // For all the indices, unlink the data record, but not 
+   //   until we set up the new pointers.    
+
+   //sprintf(idx, "%d", %c.use_index);
+
+   if (%ln == layer) {
+   %{
+      {
+        struct obj_type *p_deleted, *p_next;
+        p_deleted = cursor.obj;
+        adv#(cursor); 
+        p_next = cursor.obj;
+        cursor.obj = p_deleted; // Formerly: pnew (p_next) = cursor.next[%v.idx];
+   %} 
+     FORECH_FIELD(i) %{ call unlink(cursor, "i"); %}
+   %{
+        delete(cursor);
+        cursor.obj = p_next;
+        cursor.inbetween = 1; 
+      }
+   %}
+   }
+   else {
+     FORECH_FIELD(i) %{ call unlink(cursor, "i"); %} 
+    %{
+      delete(cursor);
+    %}
+   }
+}
+
+reset_start(cursor) 
+{
+  RESET(foreach, end_foreach, first)
+}      
+
+reset_end(cursor)
+{  
+  RESET(rofeach, end_rofeach, last)
+}
+
+swap(cursor0, cursor1)
+%{
+   P2_runtime_error("swap not implemented for mlist");
+%}
+
+open_cont(container)
+{
+  int fieldno = %k.fieldno;
+  int i;
+
+   // Step 1: Open dominant container.
+
+   %{
+      open_cont(container );
+   %}
+
+   // Step 2: Open each index container.
+
+   FORECH_FIELD(i) {
+      call bindk(container, "i");
+      %{
+        open_cont(container5);
+      %}
+   }
+}
+
+close_cont(container)
+{
+  int fieldno = %k.fieldno;
+  int i;
+
+   // Step 1: Close dominant container.
+
+   %{
+      close_cont(container );
+   %}
+
+   // Step 2: Close each index container.
+
+   FORECH_FIELD(i) {
+      call bindk(container, "i");
+      %{
+        close_cont(container5);
+      %}
+   }
+}
+
+upd(cursor, field, expr)
+{
+  int i;
+  int indexed, retr;
+  int fieldno = %k.fieldno;
+
+   // Step 1: Determine if field is indexed.
+
+   indexed = FALSE;
+   FORECH_FIELD(i) {
+      if (strcmp(%k.x[i].fld, field) == 0) {
+         indexed = TRUE;
+         break;
+      }
+   }
+
+   //sprintf(idx, "%d",i);  // for the next object index.
+
+   // Step 2: Determine if retrieval index is to be updated.
+ 
+   retr = FALSE; 
+   if (indexed) {
+      if (%c.use_index >= 0 && strcmp(%k.x[%c.use_index].fld, field) == 0)
+         retr = TRUE;
+   }
+
+   // Step 3: Generate appropriate code via case analysis.
+
+   if (!indexed) {
+   %{
+      upd(cursor, field, expr);
+   %}
+   }
+   else if (retr) {
+   %{
+      // Updating retrieval index field
+      // position on next record--see delete code
+      // this could be the halloween problem. (DSB)
+
+      {
+        struct obj_type *p_deleted, *p_next;
+        p_deleted = cursor.obj;
+        adv#(cursor);
+        p_next = cursor.obj;
+        cursor.obj = p_deleted; // Formerly: pnew (p_next) = cursor.next[%v.idx];
+        call unlink(cursor, "i");
+        upd(cursor, field, expr);
+        call link(cursor, "i");
+        cursor.obj       = p_next;
+        cursor.inbetween = 1;
+     }
+   %}
+   } else {
+   %{
+      // Updating indexed, but not retrieval, field.
+      call unlink(cursor, "i");
+      upd(cursor, field, expr);
+      call link(cursor, "i");
+   %}
+   }
+}
+
+c_verbatim(cursor)
+%{
+   // This probably doesn't work.
+   // It should call the index cursors as well. (DSB)
+
+   c_verbatim(cursor);
+%}
+
+k_verbatim(container)
+%{
+   // This probably doesn't work.
+   // It should call the index cursors as well. (DSB)
+
+   k_verbatim(container);
+%}

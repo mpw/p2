@@ -1,0 +1,48 @@
+\input texinfo  @c -*-texinfo-*-
+@c $Id: readme.texinfo,v 45.0 1997/09/19 05:42:08 jthomas Exp $
+@c Copyright (C) 1996, The University of Texas at Austin.
+
+@c %**start of header
+@setfilename README
+@settitle P2 README
+@setchapternewpage odd
+@c %**end of header
+
+@include edition.texi
+@include version.texi
+@set UPDATED April 1996
+
+@titlepage
+@title P2 README
+@subtitle Edition @value{EDITION}, @value{UPDATED}
+@author Don Batory
+@author Jeff Thomas
+@author Bart J. Geraci
+
+Copyright @copyright{} 1996, The University of Texas at Austin.
+
+For information, questions, and to report inaccuracies, please contact:
+@var{dsb@@cs.utexas.edu}
+
+@end titlepage
+
+@ifinfo
+@node Top, Abstract, (dir), (dir)
+@top P2: A Lightweight Database Management System Generator
+
+@c =================================================
+
+@menu
+* Abstract::        General information
+* Distribution::    Distribution information
+* Installation::    Installation information
+@end menu
+@end ifinfo
+
+@c =================================================
+
+@include abstract.texi
+@include distribution.texi
+@include installation.texi
+
+@bye

@@ -1,0 +1,579 @@
+// $Id: tpredindx.xp,v 45.0 1997/09/19 05:46:54 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds tpredindx [ ds ] stable annotation retrieval_sometimes curs_state
+
+!#include "qopt.h"
+!#include "tpredindx.h"
+
+// tlist adds prev, next to elements
+// tlist adds first, last to container
+
+// tlist maintains a doubly-linked list of chronologically-insert-
+// ordered elements w/ cursor timestamp skipping over stuff. What's 
+// also confusing is the ordering. The higher timestamps come first, not 
+// last.
+
+/********************
+
+(1) tpredindx takes the following annotation:
+
+    tpredindx predicate <p> with <e> <n>;
+
+    <p> is a predicate that consists of one or more conjuctions.
+        example: " $.plotted == 'nil' && $.label != 'nil' "
+
+    <e> this is a procedure that is called when no records of
+        a container satisfy the predicate.  <e> (e for empty) is
+        triggered on the deletion of that last record of the
+        predicate index list.
+
+    <n> this is a procedure that is called when the first record
+        is inserted onto an empty predicate index list. <n> (n for
+        nonempty) is called when the predicate index transitions
+        to being non-empty.
+
+        either <e> or <n> (or both) can be "null", in which case, 
+        no function is called. 
+
+
+(2) tpredindx maintains records in timestamp order.  Basically,
+    this means that whenever a record is updated, it is moved
+    to the head of the list.  When a record is deleted, it is
+    removed from the list (but its next pointer remains intact,
+    for exactly the same reasons as tlist).
+
+(3) checking for the invocation of <e> or <n> is simple;
+    <e> is invoked when the head of the predicate index list
+    goes to null. <n> is invoked when the head transitions from
+    null to nonnull.
+
+(4) cursors will need to be augmented with a timestamp, just
+    as in the case for tlist.  This allows for records to move
+    around the predicate index list and still enable you to
+    find the next record that would have been retrieved.  (See
+    the tlist notes).        
+
+**********************/
+
+cursor_func test_opt(cursor)
+{
+        char litpred[80], basepred[80], rresult[80], bkuppred[80];
+        VOID_FUNC bi;
+        char fld[80], rln[80], val[80], nwfld[80];
+        char *pred2;
+        int thislayer;
+        BOUNDS b;
+        ENTRY *e = symtab_lookup(symtab[SUE], obj_type);
+
+        /* test to see if %a.pred modifies the incoming predicate. If so, 
+         *  simplify it. If predicate was A && B && C and the predicate 
+         *  in predindx layer is B && C, then the new value of predicate 
+         *  should be A since passing through this layer satisfies B and C.
+         *  
+         * There are five cases:  
+         *  %a.pred   |  predicate     | result
+         *    A       |    A & B       |   B - use predindx layer
+         *    A       |    A||B        | A||B (go down layer)
+         *    A       |     B          | B (go down layer)
+         *   A&B      |   A&C&D        | A&C&D (go down layer)
+         *   A        |     A          | "1" - use predindx layer
+         *
+         */
+    
+        strcpy(bkuppred,predicate);
+        strcpy(basepred,%a.pred);
+        pred2 = basepred;
+        thislayer = 1;
+        while (*pred2) {
+            *fld = 0; *rln = 0; *val=0; 
+            next_clause(&pred2,0,fld,rln,val);
+            strcpy(nwfld,2+fld);
+            strcpy(litpred,fld);strcat(litpred," ");
+            strcat(litpred,rln);strcat(litpred," ");
+            strcat(litpred,val);
+            /* litpred is the current predicate to apply to predicate */
+            bi = (find_data_type(e->ident,nwfld))->bounds_impact;
+            define_bounds(te, &b, cursor,litpred,nwfld,bi);
+            simplify_predicate(predicate,&b,nwfld,TRUE,rresult);
+            if (!strcmp(predicate, rresult)) {
+                /* the pred in predindx did not change the overall 
+                 * predicate. Therefore we cannot use this layer to 
+                 * do the query 
+                 */     
+                strcpy(predicate, bkuppred);
+                thislayer = 0;
+                break;
+            } else {
+                strcpy(predicate,rresult);
+            }
+        }
+        if (thislayer) {
+            strcpy(%c.npred, predicate);
+        }
+        %c.within = thislayer;
+    }
+
+
+cursor_func link(cursor)
+{
+    char *newpred;
+
+    newpred = bind_predicate(te, cursor, obj_type, %a.pred);
+
+    %{
+    if (%v.newpred) { 
+        cursor.next = container.first;
+        cursor.prev = 0;
+        if (container.first) { 
+            container.first->prev = cursor.obj;
+        }
+        container.first = cursor.obj;
+        if (! container.last) { 
+            container.last = cursor.obj;
+        }
+    }
+    %}
+}
+
+cursor_func unlink(cursor)
+{
+    char *newpred;
+
+    newpred = bind_predicate(te, cursor, obj_type, %a.pred);
+    %{
+    if (%v.newpred) { 
+      
+            // Note record prev and next ptrs still intact for advancing.
+            if (cursor.prev) {
+                cursor.prev->next = cursor.next;
+            } else {
+                container.first = cursor.next;
+            }
+            if (cursor.next) {
+                cursor.next->prev = cursor.prev;
+            } else { 
+                container.last = cursor.prev;
+            }
+            
+      
+    }
+    %}
+}
+
+// xforms
+
+
+xform(element, container, cursor)
+{
+   add element   : struct element *next; 
+   add element   : struct element *prev; 
+   add container : struct element *first; 
+   add container : struct element *last;
+   add cursor    : int timestamp;
+
+   // Step 2:  remember additional info about annotations
+
+   %a.typeptr     = find_data_type(element, %a.ts_field);
+   %a.bi          = %a.typeptr->bounds_impact;
+
+   xform(element, container, cursor);
+}
+
+
+ddlhint(argc, argv)
+{
+    char newpred[100];
+
+    limit 4 argument;
+
+    get_ddlhint_argument(%a.ts_field, argv[1]);
+
+    // do not remove spaces from predicate argument, only double quotes.
+    sprint_ptree(%a.pred, argv[2]);
+
+    if (*(%a.pred) == '"') { 
+        /* remove beginning and trailing double quotes */
+        strcpy(newpred, (%a.pred+1));
+        newpred[strlen(newpred)-1] = 0;
+        strcpy(%a.pred, newpred);
+    }
+
+    get_ddlhint_argument(%a.e_proc, argv[3]);
+    get_ddlhint_argument(%a.n_proc, argv[4]);
+
+}
+      
+// Predicate indexing is about 10% better than normal list. My random guess (BJG)
+#define COST0   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*(9.0/10)
+#define COST1   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*(3.0/4)*(9.0/10)
+#define COST2   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*(1.0/2)*(9.0/10)
+
+optimize(cursor)
+{
+  BOUNDS b;
+
+  optimize(cursor);
+
+  call test_opt(cursor);
+  if (%c.within) { 
+
+
+      switch(use_layer(te, &b, cursor, predicate, %a.ts_field, %a.bi)) {
+
+        case 0:  // Layer won't help in processing.
+          // Use this layer if there is nothing else available.
+
+          if (cost>COST0) {
+              cost  = COST0;
+              layer = %ln;
+              if (strcmp(%a.ts_field, orderby_field) == 0)
+                retrieval_direction = 1;
+              else
+                retrieval_direction = 0;
+          }
+          break;
+
+        case 1:  // We can do a range search.
+          // Use this layer if there is nothing better.
+
+          if (cost>COST1) {
+              cost = COST1;
+              layer = %ln;
+              if (strcmp(%a.ts_field, orderby_field) == 0)
+                retrieval_direction = 1;
+              else
+                retrieval_direction = 0;
+          }
+          break;
+
+        case 2:  // Point qualification.
+          // Bingo--this is probably the best layer to use.
+          // We can do a range search.
+
+          if (cost > COST2) {
+              cost = COST2;
+              layer = %ln;
+              if (strcmp(%a.ts_field, orderby_field) == 0)
+                retrieval_direction = 1;
+              else
+                retrieval_direction = 0;
+          }
+          break;
+
+        default: error("use_layer failed");
+      }
+  }
+}
+
+// retrieval operation - query
+
+query(cursor)
+
+{
+
+  BOUNDS b;
+  char rresult[100];
+  char *p;
+
+  // query() is called only within a FOREACH construct.
+  // We have already satisfied the lower-bound (since we
+  // are advancing in a forward direction).
+  // Thus, we can simplify the predicate by eliminating
+  // the test for the lower bound.
+  // We modify the query, however only if this is the
+  // layer that is doing the retrieval.
+
+  call test_opt(cursor);
+  if (%c.within) { 
+
+      define_bounds(te, &b, cursor, %c.npred, %a.ts_field, %a.bi);
+      
+      simplify_predicate(%c.npred,&b,%a.ts_field,TRUE,rresult);
+      p = bind_predicate(te, cursor, obj_type, rresult);
+      strcpy(predicate, p);
+      %{
+          %v.p
+      %}
+      free(p);
+  } else { 
+      %{ 
+          query(cursor)
+      %}
+  }
+}
+
+
+// retrieval operations - adv, rev
+
+adv(cursor)
+%{
+    do { 
+        cursor.obj = cursor.next;
+    }
+    while(cursor.obj && (cursor.timestamp < cursor.%a.ts_field)) ;
+    if (cursor.obj) { 
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+
+%}
+
+
+rev(cursor)
+%{
+    do { 
+        cursor.obj = cursor.prev;
+    }
+    while(cursor.obj && (cursor.timestamp > cursor.%a.ts_field)) ;
+    if (cursor.obj) { 
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+
+%}
+
+// retrieval operations - end_adv
+
+end_adv(cursor)
+{
+   char   lim[100];
+   char   func[50];
+   BOUNDS b;
+
+   // See if the cursors predicate specifies a lower bound
+
+   define_bounds(te, &b, cursor, predicate, %a.ts_field, %a.bi);
+   if (b.bottom) {
+       // The cursors predicate does not specify a lower bound.
+       // We have advanced to the end of the list iff cursor.obj 
+       %{
+       (!cursor.obj)
+       %}
+   } else {
+       // The cursors predicate specifies a lower bound.
+       // We have advanced to the end of the list iff cursor.obj == 0
+       // or we have advanced to a record whose ofield is less than the lower bound.
+       strcpy(lim, b.lower);
+       if (b.inc_lower) {
+           strcpy(func,"int_LT");
+       } else {
+           strcpy(func,"int_LE");
+       }
+       %{
+           (!cursor.obj || %v.func(cursor.%a.ts_field, %v.lim))
+       %}
+   }
+}
+
+
+
+// retrieval operations - end_rev
+
+
+end_rev(cursor)
+{
+     char   lim[100];
+     char   func[50];
+     BOUNDS b;
+
+     define_bounds(te, &b, cursor, predicate, %a.ts_field, %a.bi);
+
+     // See if the cursor's predicate specifies an upper bound
+     if (b.top) {
+         %{
+         // The cursor's predicate does not specify an upper bound.
+         // We have advanced to the beginnning of the list iff cursor.obj == 0.
+         (!cursor.obj)
+         %}
+     } else {
+        // The cursor's predicate specifies an upper bound.
+        // We have advanced to the beginning of the list iff cursor.obj == 0
+        // or we have advanced to a record whose ofield exceeds the upper bound.
+        strcpy(lim,b.upper);
+        if (b.inc_upper) {
+           strcpy(func,"int_GT");
+        } else {
+           strcpy(func,"int_GE");
+        }
+        %{
+           (!cursor.obj || %v.func(cursor.%a.ts_field, %v.lim))
+        %}
+     }
+}
+
+
+// retrieval operations - reset_start
+
+reset_start(cursor)
+{
+  char   lim[100];
+  char   func[50];
+  BOUNDS b;
+  
+  define_bounds(te, &b, cursor, predicate, %a.ts_field, %a.bi);
+
+  if (!b.top) { 
+    if (b.inc_upper) {
+      strcpy(func, "int_GT");
+    } else {
+      strcpy(func, "int_GE");
+    }
+    strcpy(lim, b.upper);
+    %{
+       cursor.obj = container.first;
+       while (cursor.obj && %v.func(cursor.%a.ts_field, %v.lim)) { 
+         cursor.obj = cursor.next; 
+       } 
+    %} 
+  } else {
+      %{  
+          cursor.obj = container.first; 
+      %} 
+  }
+
+  %{
+    if (cursor.obj) {
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+  %}
+}
+
+// retrieval operations - reset_end
+
+reset_end(cursor)
+{
+  char   lim[100]; 
+  char   func[50]; 
+  BOUNDS b;
+
+  define_bounds(te, &b, cursor, predicate, %a.ts_field, %a.bi);
+  if (!b.bottom) { 
+    if (b.inc_lower) {
+      strcpy(func, "int_LT"); 
+    } else  {
+      strcpy(func, "int_LE"); 
+    }
+    strcpy(lim, b.lower); 
+    %{ 
+       cursor.obj = container.last; 
+       while (cursor.obj && %v.func(cursor.%a.ts_field, %v.lim)) { 
+         cursor.obj = cursor.prev; 
+       } 
+    %} 
+  } else {
+      %{ 
+          cursor.obj = container.last; 
+      %} 
+  }
+  %{
+    if (cursor.obj) { 
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+  %}
+}
+
+
+// non-retrieval operations - init_cont
+
+init_cont(container)
+%{
+   init_cont (container);
+
+   container.first = 0;
+   container.last  = 0;
+%}
+
+init_curs(cursor)
+{
+    // define_bounds(te, &(%c.b), cursor, predicate, %a.ts_field, %a.bi);
+    %{
+        cursor.timestamp = 0;
+        init_curs(cursor);
+    %}
+}
+
+// non-retrieval operations - insert
+
+insert(cursor, record)
+{
+    char nprocname[80];
+    sprintf(nprocname,"%c%s%c",'"',%a.n_proc,'"');
+%{
+    { int origempty;
+      origempty = (container.first == 0);
+      
+      insert(cursor, record);
+      call link(cursor);
+      if (origempty && (container.first != 0) && 
+          (strcmp(%v.nprocname,"null") != 0)) {
+          %a.n_proc();
+      }
+  }
+%}
+}
+
+// non-retrieval operations - delete
+
+delete(cursor)
+{
+    char eprocname[80];
+    sprintf(eprocname,"%c%s%c",'"',%a.e_proc,'"');
+%{
+    { int origfull;
+      origfull = (container.first != 0);
+
+      delete(cursor);
+      call unlink(cursor);
+      if (origfull && (container.first == 0) &&
+          (strcmp(%v.eprocname,"null") != 0)) {
+          %a.e_proc();
+      }
+  }
+%}
+}
+
+// non-retrieval operations - update
+
+upd(cursor, field, expr)
+{ 
+    char nprocname[80];
+    char eprocname[80];
+    sprintf(eprocname,"%c%s%c",'"',%a.e_proc,'"');
+    sprintf(nprocname,"%c%s%c",'"',%a.n_proc,'"');
+
+    if (strcmp(field, %a.ts_field)!=0) { 
+        %{
+            { int origempty;
+              origempty = (container.first == 0);
+
+              call unlink(cursor);
+              upd(cursor, field, expr); 
+              call link(cursor);
+
+              if (origempty && (container.first != 0) && 
+                  (strcmp(%v.nprocname,"null") != 0)) {
+                  %a.n_proc();
+              }
+              if (!origempty && (container.first == 0) &&
+                  (strcmp(%v.eprocname,"null") != 0)) {
+                  %a.e_proc();
+              }
+          }
+        %}
+    } else { 
+        %{
+            upd(cursor, field, expr);
+        %}
+    }
+}
+        
+// non-retrieval operations - pos
+
+pos(cursor, expr) 
+%{
+    pos(cursor, expr);
+    if (cursor.obj) {
+        cursor.timestamp = cursor.%a.ts_field;
+    }
+%}
+
+

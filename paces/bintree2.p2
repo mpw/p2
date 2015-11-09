@@ -1,0 +1,112 @@
+/* $Id: bintree2.p2,v 45.0 1997/09/19 05:42:51 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} emp_type;
+
+emp_type rawdata[] = {
+   // 9 records
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10010,42,"Biology","Akin, Monica" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10030,23,"Biology","Anderson, Gwyn" },
+   { 10040,53,"Biology","Anderson, Mary" },
+   { 10050,43,"Biology","Anderson, Suzanne" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10065,19,"Biology","Al" }, 
+   { 10070,22,"Biology","Andrews, Kay" }
+};
+
+typex {
+  t = conceptual[bintree2[bintree1[P2_DELFLAG_LAYER[P2_BOTTOM_LAYER]]]];
+}
+
+container <emp_type> stored_as t with {
+  bintree1 key is age;
+  bintree2 key is name;
+  P2_BOTTOM_ANNOTE(age, 10);
+} emp_class;
+
+cursor <emp_class> where "$.age > 40"      orderby ascending age old_employees;
+cursor <emp_class>                         orderby ascending age all_employees;
+cursor <emp_class> where "$.empno > 10050" orderby ascending age recent_employees;
+cursor <emp_class> where "$.name <= 'Al' " orderby ascending age ak_employees;
+
+int main ( void ) 
+{
+  int                  loop;
+  int                  i;
+  emp_type             *er;
+
+  open_cont( emp_class );
+  init_curs( old_employees );
+  init_curs( all_employees );
+  init_curs( recent_employees );
+  init_curs( ak_employees );
+
+  for (i=0, er = rawdata; i<9; i++, er++) 
+  {
+      insert( all_employees, *er );
+  }
+
+  printf("\nall employees are:\n"); 
+  foreach( all_employees )
+  {
+    printf( "%d %d %s\n", all_employees.empno, 
+                          all_employees.age,
+                          all_employees.name); 
+  }
+
+  printf("\nak employees are:\n");
+  foreach( ak_employees )
+  {
+    printf("%d %d %s\n", ak_employees.empno,
+                         ak_employees.age,
+                         ak_employees.name);
+  }
+
+  printf( "\nold employees are:\n"); 
+  foreach( old_employees )
+  {
+    printf("%d %d %s\n", old_employees.empno, 
+                         old_employees.age,
+                         old_employees.name); 
+	delete (old_employees ) ;
+  }
+
+/**  foreach (old_employees ) {  delete( old_employees ); } **/
+
+  printf( "\nold employees are:\n"); 
+  foreach( old_employees )
+  {
+    printf("%d %d %s\n", old_employees.empno, 
+                         old_employees.age,
+                         old_employees.name); 
+  }
+
+  printf( "\nremaining employees are:\n"); 
+  foreach( all_employees)
+  {
+    printf( "%d %d %s\n", all_employees.empno, 
+                          all_employees.age,
+                          all_employees.name); 
+  }
+
+  printf( "\nrecent (empno > 10050) employees are:\n");
+  foreach( recent_employees )
+  {
+    printf("%d %d %s\n", recent_employees.empno, 
+                         recent_employees.age,
+                         recent_employees.name); 
+  }
+  close_cont( emp_class );
+  exit( 0 );
+}

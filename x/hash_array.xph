@@ -1,0 +1,399 @@
+// $Id: hash_array.xph,v 45.3 1997/09/22 01:51:29 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// This layer provides indexable (or random access) arrays.
+// It is analogous to the composition of the hash and array layers.
+
+// This layer SUBSUMES iarray.  This layer is EQUIVALENT to iarray
+// iff hash_function is the identity function??? (JAT)
+
+!#include "qopt.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#if 0
+         assert(%a.hash_function(KEY1, %a.size)
+	   == %a.hash_function(KEY2, %a.size);
+#endif
+
+#define CHECK_HASH_CLASH(KEY1, KEY2, ERROR_PREFIX) \
+{ \
+    if (strcmp(%a.ofield_type, "str") == 0) \
+    %{ \
+       if (strcmp(KEY1, KEY2) != 0) \
+       { \
+	 P2_runtime_error(ERROR_PREFIX \
+	   ": keys %s and %s both hash to %d", \
+	   KEY1, KEY2, %a.hash_function(KEY1, %a.size)); \
+       } \
+    %} \
+    else if (strcmp(%a.ofield_type, "int") == 0) \
+    %{ \
+       if (intcmp(KEY1, KEY2) != 0) \
+       { \
+         P2_runtime_error(ERROR_PREFIX \
+           ": keys %d and %d both hash to %d", \
+	   KEY1, KEY2, %a.hash_function(KEY1, %a.size)); \
+       } \
+    %} \
+    else \
+      error("unknown key type \"%s\"", %a.ofield_type); \
+}
+
+#define END(BOTTOM, GT, LAST) \
+{ \
+  BOUNDS b; \
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi)) { \
+    case 0: \
+%{ \
+      (cursor.obj GT LAST) \
+%} \
+    break; \
+\
+    case 1: \
+%{ \
+      P2_runtime_error("hash_array can't process bounded queries") \
+%} \
+      break; \
+\
+    case 2: \
+%{ \
+      (!cursor.validflag) \
+%} \
+      break; \
+  } \
+}
+
+xform (element, container, cursor)
+{
+   add element : int validflag;
+   add container : struct element bucket[%a.size];
+
+   if (%a == NULL)
+     error("hash_array requires annotation");
+   else
+   {
+     %a.typeptr     = find_data_type(element, %a.ofield);
+     %a.ofield_type = %a.typeptr->typename;
+     %a.bi          = %a.typeptr->bounds_impact;
+     xform(element, container, cursor);
+
+     // Set default %a.hash_function, if necessary.
+     // Default is "P2_"%a.ofield_type"_hash" (i.e. P2_int_hash or P2_str_hash)
+     if (strcmp(%a.hash_function, "") == 0)
+     {
+       strcpy(%a.hash_function, "P2_");
+       strcat(%a.hash_function, %a.ofield_type);
+       strcat(%a.hash_function, "_hash");
+     }
+   }
+}
+
+ddlhint(argc, argv) 
+{
+   long e;
+
+   limit 3 argument;
+
+   get_ddlhint_argument(%a.ofield, argv[1]);
+   get_ddlhint_argument(%a.size, argv[2]);
+   get_ddlhint_argument(%a.hash_function, argv[3]);
+
+   if (!eval_expr(%a.size, &e))
+     error("cannot evaluate size annotation %s", %a.size);
+   else
+     sprintf(%a.size_minus_one, "%d", e - 1);
+}
+
+#define COST1 LINEAR_TIME_QOPT_COST*ARRAY_QOPT_FACTOR
+#define COST2 CONSTANT_TIME_QOPT_COST*ARRAY_QOPT_FACTOR
+
+optimize(cursor)
+{
+  BOUNDS b;
+
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi))
+  {
+    case 0:
+    case 1:
+      // Layer won't help in processing.
+      // Use this layer if there is nothing better.
+
+      if (cost > COST1) {
+        cost = COST1;
+        layer = %ln;
+        retrieval_direction = 0;
+      }
+      break;
+
+    case 2:
+      // Point qualification.
+      // Bingo--this is probably the best layer to use.
+
+      if (cost > COST2) {
+        cost = COST2;
+        layer = %ln;
+        retrieval_direction = 0;
+      }
+      break;
+
+    default:
+      error("use_layer failed");
+  }
+}
+
+init_curs(cursor)
+%{
+%}
+
+init_cont(container)
+{
+  char i[20];
+
+  sprintf(i, "P2_temp%d", other_id_counter++);
+  sprintf(cursor5, "(%s).bucket%d[%s]", container, %ln, i);
+
+  %{
+     init_cont (container);
+
+     // Set all the validflag's to zero.
+     {
+       int %v.i;
+       for (%v.i = 0; %v.i < %a.size; %v.i++)
+         cursor5..validflag = 0;
+     }
+  %}
+}
+
+pos(cursor, expr)
+%{
+   cursor.obj = expr;
+%}
+
+// Is query() necessary now that adv(), rev(), reset_start(),
+// reset_end() insure that cursor.validflag != 0??? (JAT)
+query(cursor)
+{
+   char *p = bind_predicate(te, cursor, obj_type, predicate);
+   %{  
+      ((cursor.validflag) && (%v.p))
+   %}
+   xfree(p);
+}
+
+insert(cursor, record)
+{
+#ifndef NDEBUG
+  char hash_value[30];
+  sprintf(hash_value, "P2_temp%d", other_id_counter++);
+  %{
+     {
+       // Use a temporary variable.
+       unsigned %v.hash_value = %a.hash_function((record).%a.ofield, %a.size);
+       cursor.obj = container.bucket + %v.hash_value;
+       if (cursor.validflag)
+       {
+#if defined(OVERWRITE)
+         // Special case: allow overwrite, but do not allow hash clash.
+	 // That is, make sure we are not inserting a new record into the
+	 // same bucket (hash_value) as an existing record AND the new
+	 // record has a different key from the existing record.
+	 // Note: this ALLOWS a new record to over-write an existing
+	 // record as long as the records have the same key--this is the
+	 // behavior we want in paces/P2_op-vec-manager.p2:put_op_vec().
+  %}
+         CHECK_HASH_CLASH((record).%a.ofield, cursor.%a.ofield,
+           "overwrite allowed, but hash clash not allowed:"
+           " hash_array tried to insert a new record into the same bucket"
+           " (hash value) as an existing record")
+  %{
+#else // OVERWRITE
+         // Normal case: do not allow overwrite.
+         P2_runtime_error("overwrite not allowed:"
+	   " hash_array tried to insert a new record into the same bucket"
+	   " (hash value) as an existing record");
+#endif // OVERWRITE
+       }
+       * (struct orig_type *) cursor.obj = record;
+       cursor.validflag = 1;
+     }
+  %}
+#else // NDEBUG
+  %{
+       // No temporary variable.
+       cursor.obj = container.bucket
+         + %a.hash_function((record).%a.ofield, %a.size);
+       * (struct orig_type *) cursor.obj = record;
+       cursor.validflag = 1;
+  %}
+#endif // NDEBUG
+}
+
+overflow(container)
+%{ 
+   0
+%}
+
+end_adv(cursor)
+{
+  END(bottom, >, &container.bucket[%a.size_minus_one])
+}
+
+end_rev(cursor)
+{
+  END(top, <, container.bucket)
+}
+
+adv(cursor)
+%{
+   do {
+     (cursor.obj)++;
+   } while ((!cursor.validflag)
+	    && (cursor.obj <= &container.bucket[%a.size_minus_one]));
+%}
+
+rev(cursor)
+%{
+   do {
+     (cursor.obj)--;
+   } while ((!cursor.validflag) && (cursor.obj >= container.bucket));
+%}
+
+delete(cursor)
+%{
+   cursor.validflag = 0;
+%}
+
+// Note: formerly, reset_start() and reset_end() were both implemented
+// using a single (multi-line) macro (specialized by the arguments
+// LOWER, FIRST, LAST, LE, and PLUSPLUS).  This macro elegantly
+// reflected the symmetry of these routines.  Unfortunately, it was
+// was difficult to add assertions and debugging code to the macro, so
+// I have re-implemented these routines separately. (JAT)
+
+reset_start(cursor)
+{
+  BOUNDS b;
+  char hash_key[MAX_IDENT_LEN];
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi))
+  {
+    case 0:
+%{
+      cursor.obj = &container.bucket[0];
+      while ((!cursor.validflag)
+	     && (cursor.obj <= &container.bucket[%a.size_minus_one]))
+        (cursor.obj)++;
+%}
+      break;
+
+    case 1:
+%{
+      P2_runtime_error("hash_array can't process bounded queries");
+%}
+      break;
+
+    case 2:
+      strcpy(hash_key, b.lower);
+%{
+      cursor.obj = container.bucket + %a.hash_function(%v.hash_key, %a.size);
+#ifndef NDEBUG
+      if (cursor.validflag)
+      {
+%}
+        CHECK_HASH_CLASH(cursor.%a.ofield, %v.hash_key,
+	  "invalid reset_start: retrieval key has the same hash value (bucket)"
+	  " as a record with a different key")
+%{
+      }
+#endif // NDEBUG
+%}
+      break;
+  }
+}
+
+reset_end(cursor)
+{
+  BOUNDS b;
+  char hash_key[MAX_IDENT_LEN];
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi))
+  {
+    case 0:
+%{
+      cursor.obj = &container.bucket[%a.size_minus_one];
+      while ((!cursor.validflag) && (cursor.obj >= &container.bucket[0]))
+        (cursor.obj)--;
+%}
+      break;
+
+    case 1:
+%{
+      P2_runtime_error("hash_array can't process bounded queries");
+%}
+      break;
+
+    case 2:
+      strcpy(hash_key, b.upper);
+%{
+      cursor.obj = container.bucket + %a.hash_function(%v.hash_key, %a.size);
+#ifndef NDEBUG
+      if (cursor.validflag)
+      {
+%}
+        CHECK_HASH_CLASH(cursor.%a.ofield, %v.hash_key,
+	  "invalid reset_end: retrieval key has the same hash value (bucket)"
+	  " as a record with a different key")
+%{
+      }
+#endif // NDEBUG
+%}
+      break;
+  }
+}
+
+swap(cursor0, cursor1)
+%{
+#if 0
+   {
+     struct obj_type r = *(cursor0.obj);
+     *(cursor0.obj) = *(cursor1.obj);
+     *(cursor1.obj) = r;
+   }
+#else
+   {
+     struct orig_type r;
+     memcpy(&r, cursor0.obj, sizeof(struct orig_type));
+     memcpy(cursor0.obj, cursor1.obj, sizeof(struct orig_type));
+     memcpy(cursor1.obj, &r, sizeof(struct orig_type));
+   }
+#endif
+%}
+
+getrec(cursor, record)
+%{
+   record = *(struct orig_type *) cursor.obj;
+%}
+
+upd(cursor, field, expr)
+{
+  if (strcmp(field, %a.ofield) != 0)
+  {
+    // cursor.field = expr.
+    char func[MAX_IDENT_LEN+10];
+    ENTRY *e = symtab_lookup(symtab[SUE], orig_type);
+    strcpy(func, find_data_type(e->ident, field)->typename);
+    strcat(func,"_CPY");
+    %{
+      %v.func(cursor.field, expr);
+    %}
+  }
+  else
+  %{
+     P2_runtime_error("halloween: cannot update key field in hash_array");
+  %}
+}
+
+// Default adhoc operations. 
+
+#include "adhoc.xph"

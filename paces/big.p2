@@ -1,0 +1,334 @@
+/* $Id: big.p2,v 45.0 1997/09/19 05:42:50 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* A contrived program designed to do as many operations in many
+   different ways as possible. (BJG) */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+  int	empno;
+  int	age;
+  char	dept_name[20];
+  char	name[22];
+} emp_type;
+
+typex {
+  big_one = conceptual[timestamp[cardinality[P2_LAYER1[
+	      P2_DELFLAG_LAYER[array[transient]]]]]]; 
+  big_two = top2ds[named_funcall[orderby_fast[
+	      inbetween[qualify[timestamp[cardinality[P2_LAYER1[
+                P2_DELFLAG_LAYER[array[transient]]]]]]],
+              top2ds[inbetween[dlist[malloc[transient]]]]]]]; 
+  big_three = top2ds[orderby_fast[
+                inbetween[qualify[timestamp[cardinality[P2_LAYER1[
+                  P2_DELFLAG_LAYER[array[transient]]]]]]],
+		top2ds[inbetween[dlist[malloc[transient]]]]]];
+}
+
+int counter1 = 1;
+
+container <emp_type> stored_as big_one with {
+  array size is 600; 
+  timestamp on counter1;
+  P2_LAYER1_ANNOTE(age);
+} emp1;
+
+container <emp_type> stored_as big_two with {
+  array size is 500; /* Will trigger the overflow operation. (BJG) */
+  timestamp on counter1;
+  P2_LAYER1_ANNOTE(age);
+} emp2;
+
+container <emp_type> stored_as big_three with {
+  array size is 600; 
+  timestamp on counter1;
+  P2_LAYER1_ANNOTE(age);
+} emp3;
+
+cursor <emp1> all_emp1;
+cursor <emp2> all_emp2;
+cursor <emp3> all_emp3;
+
+cursor <emp1> where "$.age == 35" orderby ascending empno c1;
+cursor <emp1> where "($.empno<10200||$.empno>15100)" orderby descending name c2;
+cursor <emp1> where "$.age == 35" orderby ascending name c3;
+cursor <emp1> where "$.age == 40" orderby descending name c4;
+cursor <emp2> where "$.age == 35" orderby ascending empno c5;
+cursor <emp2> where "($.empno<10300||$.empno>15000)" orderby descending name c6;
+cursor <emp2> where "$.age == 35" orderby ascending name c7;
+cursor <emp2> where "$.age == 40" orderby descending name c8;
+cursor <emp3> where "$.age == 35" orderby ascending empno c9;
+cursor <emp3> where "($.empno<10200||$.empno>15100)" orderby descending name c10;
+cursor <emp3> where "$.age == 35" orderby ascending name c11;
+cursor <emp3> where "$.age == 40" orderby descending name c12;
+
+typedef generic_cursor <emp_type> GC;
+typedef generic_container <emp_type> GK;
+
+void readinfile1(), init_all_curs1();
+void readinfile2(), init_all_curs2();
+void readinfile3(), init_all_curs3();
+void pprint();
+void skiptwo(); 
+
+void skiptwo(FILE *fp) { fscanf(fp,"%*[^\n]\n%*[^\n]\n"); }
+
+void readinfile1(GC gc)
+{
+  FILE *fp;
+  emp_type	_t1;
+  
+  if(!(fp=fopen("emp.data","r")))
+  {
+    P2_runtime_perror("Can not open emp.data file");
+    exit(1);
+  }
+  skiptwo(fp);
+  while(fscanf(fp,"%d,%d,\"%[^\"]\",\"%[^\"]\"",&(_t1.empno),&(_t1.age),_t1.dept_name,_t1.name) == 4)
+  {
+    insert(gc, _t1);
+  }
+  if (fclose(fp) < 0)
+  {
+    P2_runtime_perror("Can not close emp.data file");
+    exit(1);
+  }
+}
+
+void readinfile2()
+{
+  FILE *fp;
+  emp_type	_t1;
+  
+  if(!(fp=fopen("emp.data","r")))
+  {
+    puts("Error opening file");
+    exit(1);
+  }
+  skiptwo(fp);
+  while(fscanf(fp,"%d,%d,\"%[^\"]\",\"%[^\"]\"",&(_t1.empno),&(_t1.age),_t1.dept_name,_t1.name) == 4)
+  {
+    if (overflow(emp2))
+    { 
+      puts("Triggered overflow condition at 500 records");
+      break;
+    }
+    insert(all_emp2, _t1);
+  }
+  if (fclose(fp) < 0)
+  {
+    P2_runtime_perror("Can not close emp.data file");
+    exit(1);
+  }
+}
+
+void readinfile3()
+{
+  FILE *fp;
+  emp_type	_t1;
+  
+  if(!(fp=fopen("emp.data","r")))
+  {
+    P2_runtime_perror("Can not open emp.data file");
+    exit(1);
+  }
+  skiptwo(fp);
+  while(fscanf(fp,"%d,%d,\"%[^\"]\",\"%[^\"]\"",&(_t1.empno),&(_t1.age),_t1.dept_name,_t1.name) == 4) {
+    insert(all_emp3, _t1);
+  }
+  
+  if (fclose(fp) < 0)
+  {
+    P2_runtime_perror("Can not close emp.data file");
+    exit(1);
+  }
+}
+
+#define eqstr(A,B) (!(strcmp(A,B)))
+#if 0
+#define upd1(gc,fld,val) upd(gc,fld,val)
+#endif
+
+void init_all_curs1()
+{ init_curs(c1);init_curs(c2);init_curs(c3);init_curs(c4);init_curs(all_emp1); }
+void init_all_curs2()
+{ init_curs(c5);init_curs(c6);init_curs(c7);init_curs(c8);init_curs(all_emp2); }
+void init_all_curs3()
+{ init_curs(c9);init_curs(c10);init_curs(c11);init_curs(c12);init_curs(all_emp3); }
+
+
+void pprint (GC gc) 
+{
+  foreach(gc) {
+    printf("%d,%d,\"%s\",\"%s\"\n",gc.empno,gc.age,gc.dept_name,gc.name);
+  }
+}
+
+void print_data (GC gc, char *cursor_name)
+{
+  int tm;
+  printf("contents of %s:\n", cursor_name);
+  foreach(gc) {
+    tm = timestamp(gc);
+  }
+}
+
+main ()
+{
+  int tm, sz;
+
+  /* First container */
+
+  open_cont(emp1); /* open calls init_cont */
+  init_all_curs1();
+  readinfile1((GC) &all_emp1);
+
+  sz = cardinality(emp1);
+  printf("size of emp1 = %d\n",sz);
+  puts("## 1 ##");
+  foreach(c1) {
+    tm = timestamp(c1);
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   c1.empno,c1.age,c1.dept_name,c1.name, tm);
+  }
+  puts("## 2 ##");
+  foreach(c2) {
+    tm = timestamp(c2);
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   c2.empno,c2.age,c2.dept_name,c2.name, tm);
+  }
+  puts("## 2 - refs ##");
+  foreach(c2) {
+    tm = timestamp(c2); 
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   ref(c2,empno),ref(c2,age),ref(c2,dept_name),ref(c2,name), tm);
+  }
+  puts("## 1 - getrec ##");
+  foreach(c1) {
+    emp_type t;
+    getrec(c1, t);
+    tm = timestamp(c1);
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   t.empno,t.age,t.dept_name,t.name, tm);
+  }
+  puts("## 2 - expanded foreach ##");
+  reset_start(c2); 
+  while(!(end_adv(c2))) { 
+    tm = timestamp(c2);
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   c2.empno,c2.age,c2.dept_name,c2.name, tm);
+    adv(c2);
+  }
+  puts("## 1 - expanded rofeach ##");
+  reset_end(c1); 
+  while(!(end_rev(c1))) { 
+    tm = timestamp(c1);
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   c1.empno,c1.age,c1.dept_name,c1.name, tm);
+    rev(c1);
+  }
+  puts("## 3 - print ##");
+  pprint((GC) &c3);
+  puts("## 3 - deletions ##");
+  foreach(c3) { delete(c3); } 
+  puts("## 3 - print ##");
+  pprint((GC) &c3);
+  puts("## 4 - print ##");
+  pprint((GC) &c4);
+  puts("## 4 - update so dept_name is 'Fried Oyster Poboy' ##");
+  foreach(c4) { upd(c4,dept_name,"Fried Oyster Poboy"); } 
+  puts("## 4 - print ##");
+  pprint((GC) &c4);
+
+  /* Second container */
+
+  open_cont(emp2);
+  init_all_curs2();
+  readinfile2();
+
+  puts("--Second Container--");
+  sz = cardinality(emp2);
+  printf("size of emp2 = %d\n",sz);
+  puts("## 5 ##");
+  foreach(c5) {
+    tm = timestamp(c5);
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   c5.empno,c5.age,c5.dept_name,c5.name, tm);
+  }
+  puts("## 6 ##");
+  foreach(c6) {
+    tm = timestamp(c6);
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   c6.empno,c6.age,c6.dept_name,c6.name, tm);
+  }
+  
+  puts("## 7 - print ##");
+  foreach(c7) {
+    printf("%d,%d,\"%s\",\"%s\"\n",c7.empno,c7.age,c7.dept_name,c7.name);
+  }
+  puts("## 7 - deletions ##");
+  foreach(c7) { delete(c7); } 
+  puts("## 7 - print ##");
+  foreach(c7) {
+    printf("%d,%d,\"%s\",\"%s\"\n",c7.empno,c7.age,c7.dept_name,c7.name);
+  }
+  puts("## 8 - print ##");
+  foreach(c8) {
+    printf("%d,%d,\"%s\",\"%s\"\n",c8.empno,c8.age,c8.dept_name,c8.name);
+  }
+  puts("## 8 - update so dept_name is 'Fried Oyster Poboy' ##");
+  foreach(c8) { upd(c8,dept_name,"Fried Oyster Poboy"); } 
+  puts("## 8 - print ##");
+  foreach(c8) {
+    printf("%d,%d,\"%s\",\"%s\"\n",c8.empno,c8.age,c8.dept_name,c8.name);
+  }
+
+  /* Third container */
+
+  open_cont(emp3);
+  init_all_curs3();
+  readinfile3();
+
+  puts("--Third Container--");
+  printf("size of emp3 = %d\n",cardinality(emp3));
+  puts("## 9 ##");
+  foreach(c9) {
+    tm = timestamp(c9);
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   c9.empno,c9.age,c9.dept_name,c9.name, tm);
+  }
+  puts("## 10 ##");
+  foreach(c10) {
+    tm = timestamp(c10);
+    printf("%d,%d,\"%s\",\"%s\",%d\n",
+	   c10.empno,c10.age,c10.dept_name,c10.name, tm);
+  }
+  
+  puts("## 11 - print ##");
+  foreach(c11) {
+    printf("%d,%d,\"%s\",\"%s\"\n",c11.empno,c11.age,c11.dept_name,c11.name);
+  }
+  puts("## 11 - deletions ##");
+  foreach(c11) { delete(c11); } 
+  puts("## 11 - print ##");
+  foreach(c11) {
+    printf("%d,%d,\"%s\",\"%s\"\n",c11.empno,c11.age,c11.dept_name,c11.name);
+  }
+  puts("## 12 - print ##");
+  foreach(c12) {
+    printf("%d,%d,\"%s\",\"%s\"\n",c12.empno,c12.age,c12.dept_name,c12.name);
+  }
+  puts("## 12 - update so dept_name is 'Macy's' ##");
+  foreach(c12) { upd(c12,dept_name,"Macy's"); } 
+  puts("## 12 - print ##");
+  foreach(c12) {
+    printf("%d,%d,\"%s\",\"%s\"\n",c12.empno,c12.age,c12.dept_name,c12.name);
+  }
+
+  close_cont(emp1);
+  close_cont(emp2); 
+  close_cont(emp3);
+  exit(0);
+}

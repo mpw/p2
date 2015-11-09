@@ -1,0 +1,106 @@
+// $Id: named_funcall.xp,v 45.0 1997/09/19 05:46:39 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds named_funcall[ ds ] stable curs_state no annotation retrieval_always
+
+!#include <assert.h> /* assert() */
+!#include "qopt.h"
+!#include "named_funcall.h"
+
+#define COMMENT "proceduralized by named_funcall"
+
+optimize(cursor)
+{
+  optimize(cursor);
+  %c.retrieval_layer = layer;
+  layer = %ln;
+}
+
+ref(cursor, field)
+%{ 
+    ref(cursor, field)
+%} 
+
+iref(cursor, field)
+%{ 
+    iref(cursor, field)
+%} 
+
+pos(cursor, expr)
+%{ 
+    pos(cursor, expr)
+%} 
+
+swap(cursor0, cursor1)
+%{ 
+    swap(cursor0, cursor1);
+%} 
+
+upd(cursor, field, expr)
+{
+  if (cursor_id == GENERIC_CURS_ID
+       || funbody == MACRO_EXPAND_FUNBODY || funbody == UPD_OP)
+  { 
+    layer = %c.retrieval_layer; 
+    %{
+       upd(cursor, field, expr);
+    %} 
+    layer = %ln; 
+  }
+  else
+  { 
+    char func[MAX_IDENT_LEN*2+30]; 
+    assert(cursor_id >= 0);
+    assert(strlen(field) < MAX_IDENT_LEN);
+    sprintf(func, "/* upd %s */ P2_upd_%s_id%d", COMMENT, field, cursor_id); 
+    %{
+       %v.func(cursor, expr);
+    %} 
+  }
+}
+
+def_cursor_func : 
+$HEADER
+{ 
+    if (cursor_id == GENERIC_CURS_ID
+        || funbody == MACRO_EXPAND_FUNBODY || funbody == $OP)
+    {
+      layer = %c.retrieval_layer; 
+      $CALLDOWN; 
+      layer = %ln; 
+    } 
+    else
+    { 
+      char func[MAX_IDENT_LEN*3+30]; 
+      assert(cursor_id >= 0);
+      assert(strlen($STRNAME) < MAX_IDENT_LEN);
+      sprintf(func, "/* %s %s */ P2_%s_id%d", COMMENT, 
+              $STRNAME, $STRNAME, cursor_id); 
+      %{ 
+          %v.func $GENERICARGS 
+      %} 
+    }
+    $GENSEMI; 
+}
+
+def_container_func : 
+$HEADER
+{ 
+    if (container_id == GENERIC_CURS_ID
+        || funbody == MACRO_EXPAND_FUNBODY || funbody == $OP)
+    { 
+      $CALLDOWN; 
+    } 
+    else
+    { 
+      char func[MAX_IDENT_LEN*3+30]; 
+      assert(container_id >= 0);
+      assert(strlen($STRNAME) < MAX_IDENT_LEN);
+      sprintf(func, "/* %s %s */ P2_%s_id%d", COMMENT, 
+              $STRNAME, $STRNAME, container_id); 
+      %{ 
+          %v.func $GENERICARGS 
+      %} 
+    }
+    $GENSEMI; 
+}

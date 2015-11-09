@@ -1,0 +1,7 @@
+after insert:
+10000 60 Biology Akers, Mark
+10020 21 Biology Alexander, Joe
+after swap:
+10000 60 Updated Akers, Mark
+10020 21 Updated Alexander, Joe
+after abort:

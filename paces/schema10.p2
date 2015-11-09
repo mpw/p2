@@ -1,0 +1,140 @@
+/* $Id: schema10.p2,v 45.0 1997/09/19 05:44:15 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Schema Regression Test. */
+/* Schema with containers and composite cursors. */
+
+/* Analogous to paces/schema04.p2, but with typex hard-coded as:
+     t = ... hash[array[transient]]] ...
+   rather than equal to the macro:
+     t = P2_COMPCURS_TYPEX;
+*/
+
+#include <stdio.h> /* printf() */
+#include "P2_paces.h"
+
+/* Use the hard-coded type expression that causes the bug. */
+#if 1
+#if !defined(BUG)
+#define BUG
+#endif /* BUG */
+#endif
+
+typedef struct {
+  int  empno;
+  int  age;
+  int  deptno;
+  char *dept_name;
+  char *name;
+} EMPLOYEE;
+
+typedef struct {
+  int  deptno;
+  char *name;
+} DEPARTMENT;
+
+typex {
+#if defined(BUG)
+  /* Broken. */
+  t = top2link[nloops[linkterm[
+	top2ds[orderby_fast[inbetween[qualify[hash[array[transient]]],
+			    slist[malloc[transient]]]]]]]];
+#else
+  /* Works for some type equations. */
+  t = P2_COMPCURS_TYPEX;
+#endif /* BUG */
+}
+
+/* Schema with containers. */
+
+schema {
+  container <EMPLOYEE> employee;
+  container <DEPARTMENT> department;
+}
+stored_as t with {
+#if defined(BUG)
+  array size of employee is 1000;
+  array size of department is 100;
+  hash key of employee is empno with size 1000;
+  hash key of department is deptno with size 100;
+#else
+  P2_COMPCURS_SCHEMA_ANNOTE(employee, empno, 1000);
+  P2_COMPCURS_SCHEMA_ANNOTE(department, deptno, 100);
+#endif /* BUG */
+} s;
+
+compcurs < ee s.employee, dd s.department >
+  where "$ee.deptno == $dd.deptno && $ee.dept_name == 'Biology'"
+  orderby $ee.empno
+xx;
+
+cursor < s.employee > orderby empno eee;
+cursor < s.department > ddd;
+
+void
+read_data (void)
+{
+  EMPLOYEE employee_data[] = {
+   { 10000,60,1,"Biology","Akers, Mark" },
+   { 10070,22,1,"Biology","Andrews, Kay" },
+   { 10020,21,1,"Biology","Alexander, Joe" },
+   { 10010,40,2,"History","Akin, Monica" },
+   { 10050,42,1,"Biology","Akerson, Suzanne" },
+   { 10040,53,3,"Physics","Akerson, Mary" },
+   { 10060,61,1,"Biology","Andrews, John" },
+   { 10030,23,1,"Biology","Akerson, Gwyn" },
+   { -1 }
+  };
+
+  DEPARTMENT department_data[] = {
+   { 1,"Biology" },
+   { 2,"History" },
+   { 3,"Physics" },
+   { -1 }
+  };
+
+  {
+    EMPLOYEE *p;
+    for (p = employee_data; p->empno != -1; p++) {
+      insert(eee, *p);
+    }
+  }
+  {
+    DEPARTMENT *p;
+    for (p = department_data; p->deptno != -1; p++) {
+      insert(ddd, *p);
+    }
+  }
+}
+
+int
+main ()
+{
+  open_cont(s.employee);
+  open_cont(s.department);
+
+  init_curs(eee);
+  init_curs(ddd);
+
+  read_data();
+
+  printf("Join obtained by hand:\n");
+  foreach(eee) {
+    foreach(ddd) {
+      if ((eee.deptno == ddd.deptno)
+	  && (strcmp(eee.dept_name, "Biology") == 0))
+	printf("%d %20s %6s\n", eee.empno, eee.name, ddd.name);
+    }
+  }
+
+  printf("Join obtained using a composite cursor:\n");
+  initk(xx);
+  foreachk(xx) {
+    printf("%d %20s %6s\n", (xx.ee).empno, (xx.ee).name, (xx.dd).name);
+  }
+
+  close_cont(s.employee);
+  close_cont(s.department);
+
+  return(0);
+}

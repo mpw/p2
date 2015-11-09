@@ -1,0 +1,86 @@
+// $Id: smsk02.p2,v 45.0 1997/09/19 05:44:19 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+/* Bug in orderby_smart. */
+/* Adapted from paces/smsk01.p2 */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define N 50
+
+// Transaction element
+
+typedef struct {
+  int cust_acc_no;
+} TBASE_REC;
+
+// Global variables
+
+TBASE_REC del_rec;
+
+// Type expressions.
+
+typex {
+#if 0
+  t  = conceptual[array[transient]];
+#else
+  t = top2ds[orderby_smart[
+        array[transient],
+	top2ds[dlist[malloc[transient]]]]];
+#endif
+}
+
+// Container.
+
+container <TBASE_REC> stored_as t with {
+  array size is N;
+} tbase;
+
+// Cursor.
+
+cursor <tbase>
+  orderby ascending cust_acc_no
+tbase_cursor;
+
+TBASE_REC tbase_data[] = {
+{ 1 },
+{ 3 },
+{ 2 },
+{ -1 }
+};
+
+void create_tbase( void )
+{
+  TBASE_REC *t;
+
+  for (t = tbase_data; t->cust_acc_no != -1; t++)
+  {
+    insert( tbase_cursor, *t );
+  }
+}
+
+void traverse_tbase( void )
+{
+  TBASE_REC t;
+
+  reset_start(tbase_cursor);
+  foreach (tbase_cursor)
+  {
+    getrec(tbase_cursor, t);
+    printf("%d\n", t.cust_acc_no);
+  }
+}
+
+main( void )
+{
+  open_cont(tbase);
+  init_curs(tbase_cursor);
+
+  create_tbase();
+  traverse_tbase();
+
+  close_cont(tbase);
+  exit(0);
+}
+

@@ -1,0 +1,114 @@
+/* $Id: free01.p2,v 45.0 1997/09/19 05:43:21 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+EMP_TYPE rawdata[] = {
+   // 8 records
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10010,42,"Biology","Akin, Monica" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10030,23,"Biology","Anderson, Gwyn" },
+   { 10040,53,"Biology","Anderson, Mary" },
+   { 10050,42,"Biology","Anderson, Suzanne" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10070,22,"Biology","Andrews, Kay" },
+   { -1 }
+};
+
+typex {
+#if 0
+  /* This will not work if P2_DELFLAG_LAYER is avail, because free
+     will free the elements on the avail list. */
+  t = top2ds[inbetween[qualify[odlist[free[P2_DELFLAG_LAYER[
+        malloc[transient]]]]]]];
+#else
+  t = top2ds[inbetween[qualify[odlist[free[delflag[
+        malloc[transient]]]]]]];
+#endif
+}
+
+container <EMP_TYPE> stored_as t with {
+  odlist key is empno;
+} emp_class;
+
+cursor <emp_class> where "$.age > 40"         old_employees;
+cursor <emp_class>                            all_employees;
+cursor <emp_class> where "$.empno > 10050"    recent_employees;
+cursor <emp_class> where "$.name <= 'Al' "    ak_employees;
+
+int main (void) 
+{
+  EMP_TYPE *p;
+
+  open_cont(emp_class);
+  init_curs(old_employees);
+  init_curs(all_employees);
+  init_curs(recent_employees);
+  init_curs(ak_employees);
+
+  for (p = rawdata; p->empno != -1; p++)
+  {
+    insert(all_employees, *p);
+  }
+
+  printf("\nall employees are:\n"); 
+  foreach(all_employees)
+  {
+    printf("%d %d %s\n", all_employees.empno, 
+                         all_employees.age,
+                         all_employees.name); 
+  }
+
+  printf("\nak employees are:\n");
+  foreach(ak_employees)
+  {
+    printf("%d %d %s\n", ak_employees.empno,
+                         ak_employees.age,
+                         ak_employees.name);
+  }
+
+  printf("\nold employees are:\n"); 
+  foreach(old_employees)
+  {
+    printf("%d %d %s\n", old_employees.empno, 
+                         old_employees.age,
+                         old_employees.name); 
+    delete(old_employees);
+  }
+
+  printf("\nold employees are:\n"); 
+  foreach(old_employees)
+  {
+    printf("%d %d %s\n", old_employees.empno, 
+                         old_employees.age,
+                         old_employees.name); 
+  }
+
+  printf("\nremaining employees are:\n"); 
+  foreach(all_employees)
+  {
+    printf("%d %d %s\n", all_employees.empno, 
+                         all_employees.age,
+                         all_employees.name); 
+  }
+
+  printf("\nrecent (empno > 10050) employees are:\n");
+  foreach(recent_employees)
+  {
+    printf("%d %d %s\n", recent_employees.empno, 
+                         recent_employees.age,
+                         recent_employees.name); 
+  }
+  close_cont(emp_class);
+  exit(0);
+}

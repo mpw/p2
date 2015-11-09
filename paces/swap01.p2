@@ -1,0 +1,74 @@
+/* $Id: swap01.p2,v 45.0 1997/09/19 05:44:20 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* swap top2ds (inlined) */
+
+/* See explanation of bug in swap00.p2 (JAT) */
+
+#include <assert.h>
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define MAX 10
+
+typedef struct {
+  int i;
+} E;
+
+typex {
+#if 0
+  t = conceptual[array[transient]];
+#else
+  t = top2ds[array[transient]];
+#endif
+}
+
+container <E> stored_as t with {
+  array size is MAX;
+} k;
+
+typedef cursor <k> C;
+C c0, c1;
+
+void print(C c)
+{
+  int i;
+  reset_start(c);
+  for (i = 0; i < MAX; i++)
+  {
+    assert(!end_adv(c));
+    printf("e[%d] = %d\n", i, c.i);
+    adv(c);
+  }
+}
+
+int main ()
+{
+  E e;
+  int i;
+  open_cont(k);
+  init_curs(c0);
+
+  for (i = 0; i < MAX; i++) {
+    e.i = i;
+    insert(c0, e);
+  }
+  printf("Forward:\n");
+  print(c0);
+
+  init_curs(c1);
+  reset_start(c0);
+  reset_end(c1);
+  for (i = 0; i < MAX / 2; i++) {
+    assert(!end_adv(c0));
+    assert(!end_rev(c1));
+    swap(c0, c1);
+    adv(c0);
+    rev(c1);
+  }
+  printf("Backward:\n");
+  print(c1);
+
+  close_cont(k);
+  return 0;
+}

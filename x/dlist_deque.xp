@@ -1,0 +1,24 @@
+// $Id: dlist_deque.xp,v 45.0 1997/09/19 05:46:21 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds dlist_deque[ ds ] stable no annotation retrieval_sometimes
+
+// Stable dlist deque.
+
+// dlist_deque is an ugly hack of dlist[]; it assumes a global int
+// variable "P2_insert_last", which has the values zero and nonzero.
+// A zero value means that records are inserted at the head of the
+// dlist.  A nonzero value means that records are inserted at the tail
+// of the dlist.  Note: "P2_insert_last" is reset to zero upon every
+// insertion. (DSB)
+
+// This layer is (only?) used by rl. (JAT)
+
+// Force this layer to be used, in order to preserve queue semantics.
+// Why not use the retrieval_always layer option??? (JAT)
+#define COST MIN_QOPT_COST
+
+#define STABLE
+#define DEQUE
+
+#include "dlist.xph"

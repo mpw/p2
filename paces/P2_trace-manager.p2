@@ -1,0 +1,318 @@
+/* $Id: P2_trace-manager.p2,v 45.2 1997/09/19 22:14:04 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Tracing routines. */
+
+/* Originally part of and specific to P2_lock-manager.p2,
+   now intended to be generally useful. (JAT) */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>      /* assert() */
+#include <stdarg.h>      /* va_list, va_start(), va_end() */
+#include <stdio.h>       /* stderr */
+#include <string.h>      /* strlen() */
+#include <time.h>        /* time(), difftime() */
+
+typedef struct {
+  P2_PROCESS_ID pid;
+  char          label[P2_PROCESS_ID_LABEL_SIZE];
+} PROCESS_ID_LABEL;
+
+/*****************************************************************************/
+/*                  Type Expressions.                                        */
+/*****************************************************************************/
+
+typex {
+#if 1
+  process_id_label_typex = top2ds_qualify[hash[array[mmap_shared]]];
+#else
+  process_id_label_typex = top2ds_qualify[array[transient]];
+#endif
+}
+
+/*****************************************************************************/
+/*                  Global Variables.                                        */
+/*****************************************************************************/
+
+#define MAX_LABEL 1000
+
+/* Process id label container. */
+container <PROCESS_ID_LABEL> stored_as process_id_label_typex with {
+  hash key is pid with size MAX_LABEL;
+  mmap_shared file is "/tmp/P2_trace-manager-data" with size
+  (
+    /* Size of miscelaneous container struct fields: initialized
+       flag, operation vector, and next pointer */
+    (sizeof(int) + 2 * sizeof(void *))
+    /* Number of elements times size of each transformed element. */
+    + (MAX_LABEL * (sizeof(PROCESS_ID_LABEL) + sizeof(void *)))
+    /* Number of elements times size of hash bucket (a pointer). */
+    + (MAX_LABEL * (sizeof(void *)))
+  );
+  array size is MAX_LABEL;
+} process_id_label_cont;
+
+/* Initial time (i.e. time0). */
+time_t P2_trace_init_time;
+
+/* Trace mutex semaphore. */
+P2_SEMAPHORE_ID P2_trace_semaphore;
+
+/*****************************************************************************/
+/*                  Process id labels.                                       */
+/*****************************************************************************/
+
+char *
+P2_process_id_label (P2_PROCESS_ID pid)
+{
+  cursor <process_id_label_cont> where "$.pid == pid" process_id_label_curs;
+  init_curs(process_id_label_curs);
+
+  /* Q: Is mutex necessary here?
+     A: No, because we not writing the container
+        (even though we are writing the cursor)???
+     Besides, if we put mutex here we get deadlock when this
+        procedure is called by P2_trace, which already locks the mutex
+        semaphore. (JAT) */
+
+  assert(P2_PROCESS_ID_VALID(pid));
+
+  reset_start(process_id_label_curs);
+  if (end_adv(process_id_label_curs))
+    return("???");
+  else
+    return(process_id_label_curs.label);
+}
+
+void
+P2_label_process_id (const char *label)
+{
+  cursor <process_id_label_cont> process_id_label_curs;
+  PROCESS_ID_LABEL p;
+
+  /* Q: Is mutex necessary here?
+     A: Yes, because we are writing the container??? (JAT) */
+
+  if (P2_lock_semaphore(&P2_trace_semaphore) < 0)
+    P2_runtime_perror("Could not lock trace semaphore");
+
+  assert(P2_my_process_id == P2_get_process_id());
+  assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+  assert(strlen(label) > 0 && strlen(label) < P2_PROCESS_ID_LABEL_SIZE);
+
+  init_curs(process_id_label_curs);
+  p.pid = P2_my_process_id;
+  strcpy(p.label, label);
+  assert(!overflow(process_id_label_cont));
+  insert(process_id_label_curs, p);
+
+  if (P2_unlock_semaphore(&P2_trace_semaphore) < 0)
+    P2_runtime_perror("Could not unlock trace semaphore");
+}
+
+/*****************************************************************************/
+/*                  Tracing Routines.                                        */
+/*****************************************************************************/
+
+static void
+print_trace_header (void)
+{
+  P2_XACT_ID xact_id;
+
+#if defined(TRACE)
+  /* Time. */
+  fprintf(stderr, "t=%.0f ", difftime(time(NULL), P2_trace_init_time));
+  /* Process identifier. */
+  fprintf(stderr, "pid=%d (%s) ", P2_my_process_id,
+	  P2_process_id_label(P2_my_process_id));
+  /* Transaction identifier. */
+  xact_id = P2_get_xact_id();
+  if (xact_id != P2_my_process_id)
+    fprintf(stderr, "xact_id=%d ", xact_id);
+#endif /* TRACE */
+}
+
+/* Do not lock trace semaphore. */
+
+void
+P2_trace1 (const char *format, ...)
+{
+  va_list args;
+
+  print_trace_header();
+
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fprintf(stderr, "\n");
+  fflush(stderr);
+}
+
+/* Lock trace semaphore. */
+
+void
+P2_trace (const char *format, ...)
+{
+  va_list args;
+
+  if (P2_lock_semaphore(&P2_trace_semaphore) < 0)
+    P2_runtime_perror("Could not lock trace semaphore");
+
+  print_trace_header();
+
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fprintf(stderr, "\n");
+  fflush(stderr);
+
+  if (P2_unlock_semaphore(&P2_trace_semaphore) < 0)
+    P2_runtime_perror("Could not unlock trace semaphore");
+}
+
+/*****************************************************************************/
+/*                  Routines to convert enums to strings.                    */
+/*****************************************************************************/
+
+char *
+P2_boolean_string (int x)
+{
+  if (x)
+    return("TRUE");
+  else
+    return("FALSE");
+}
+
+char *
+P2_lock_status_string (P2_LOCK_STATUS status)
+{
+  assert(status >= P2_MIN_LOCK_STATUS && status <= P2_MAX_LOCK_STATUS);
+
+  switch (status)
+  {
+  case P2_LOCK_GRANTED:
+    return("P2_LOCK_GRANTED");
+  case P2_LOCK_CONVERTING:
+    return("P2_LOCK_CONVERTING");
+  case P2_LOCK_WAITING:
+    return("P2_LOCK_WAITING");
+  case P2_LOCK_DENIED:
+    return("P2_LOCK_DENIED");
+#ifndef NDEBUG
+  default:
+    P2_runtime_error("illegal P2_LOCK_STATUS");
+    return("???");
+#endif /* NDEBUG */ 
+  }
+}
+
+char *
+P2_lock_mode_string (P2_LOCK_MODE mode)
+{
+  assert(mode >= P2_MIN_LOCK_MODE && mode <= P2_MAX_LOCK_MODE);
+
+  switch (mode)
+  {
+  case P2_LOCK_FREE:
+    return("P2_LOCK_FREE");
+  case P2_LOCK_S:
+    return("P2_LOCK_S");
+  case P2_LOCK_X:
+    return("P2_LOCK_X");
+  case P2_LOCK_U:
+    return("P2_LOCK_U");
+  case P2_LOCK_IS:
+    return("P2_LOCK_IS");
+  case P2_LOCK_IX:
+    return("P2_LOCK_IX");
+  case P2_LOCK_SIX:
+    return("P2_LOCK_SIX");
+  case P2_LOCK_WAIT:
+    return("P2_LOCK_WAIT");
+#ifndef NDEBUG
+  default:
+    P2_runtime_error("illegal P2_LOCK_MODE");
+    return("???");
+#endif /* NDEBUG */    
+  }
+}
+
+char *
+P2_lock_class_string (P2_LOCK_CLASS class)
+{
+  assert(class >= P2_MIN_LOCK_CLASS && class <= P2_MAX_LOCK_CLASS);
+
+  switch (class)
+  {
+  case P2_LOCK_INSTANT:
+    return("P2_LOCK_INSTANT");
+  case P2_LOCK_SHORT:
+    return("P2_LOCK_SHORT");
+  case P2_LOCK_MEDIUM:
+    return("P2_LOCK_MEDIUM");
+  case P2_LOCK_LONG:
+    return("P2_LOCK_LONG");
+  case P2_LOCK_VERY_LONG:
+    return("P2_LOCK_VERY_LONG");
+#ifndef NDEBUG
+  default:
+    P2_runtime_error("illegal P2_LOCK_CLASS");
+    return("???");
+#endif /* NDEBUG */
+  }
+}
+
+char *
+P2_lock_reply_string (P2_LOCK_REPLY reply)
+{
+  assert(reply >= P2_MIN_LOCK_REPLY && reply <= P2_MAX_LOCK_REPLY);
+
+  switch (reply)
+  {
+  case P2_LOCK_OK:
+    return("P2_LOCK_OK");
+  case P2_LOCK_TIMEOUT:
+    return("P2_LOCK_TIMEOUT");
+  case P2_LOCK_DEADLOCK:
+    return("P2_LOCK_DEADLOCK");
+  case P2_LOCK_NOT_LOCKED:
+    return("P2_LOCK_NOT_LOCKED");
+  case P2_LOCK_REQUEST_OVERFLOW:
+    return("P2_LOCK_REQUEST_OVERFLOW");
+  case P2_LOCK_HEAD_OVERFLOW:
+    return("P2_LOCK_HEAD_OVERFLOW");
+#ifndef NDEBUG
+  default:
+    P2_runtime_error("illegal P2_LOCK_REPLY");
+    return("???");
+#endif /* NDEBUG */
+  }
+}
+
+/*****************************************************************************/
+/*                  Init and delete.                                         */
+/*****************************************************************************/
+
+void
+P2_init_trace_manager (void)
+{
+  open_cont(process_id_label_cont);
+  if (P2_init_semaphore(&P2_trace_semaphore, 1) < 0)
+    P2_runtime_perror("Can not init trace mutex semaphore");
+  P2_trace_init_time = time(NULL);
+}
+
+void
+P2_delete_trace_manager (void)
+{
+  if (P2_delete_semaphore(&P2_trace_semaphore) < 0)
+    P2_runtime_perror("Can not delete trace mutex semaphore");
+  close_cont(process_id_label_cont);
+}

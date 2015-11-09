@@ -1,0 +1,30 @@
+/* $Id: const05.p2,v 45.0 1997/09/19 05:43:01 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* extern const typedef. */
+/* Analogous to pb/const06.p2 */
+
+typedef int T;
+
+#if 0
+/* Okay--pb unparsed this correctly. */
+extern const int foo;
+const int foo;
+#else
+/* Bug--pb unparsed this incorrectly as:
+     extern T foo;
+     const T foo;
+   This resulted in a an error:
+     const declaration for `foo' follows non-const
+   The problem was that some of the rules in pb/pb-gram.y were
+   assigning decl->btype directly, instead of calling set_btype, which
+   sets qclass properly. (JAT)
+*/
+extern const T foo;
+const T foo;
+#endif
+
+int main()
+{
+  return(0);
+}

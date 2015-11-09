@@ -1,0 +1,32 @@
+// $Id: refcount.xp,v 45.0 1997/09/19 05:46:48 jthomas Exp $
+// Copyright (C) 1997 The University of Texas at Austin.
+
+layer ds refcount[ ds ] stable retrieval_always no annotation
+
+#ifndef REFCOUNT_XFORM
+#define REFCOUNT_XFORM
+#endif
+
+/* This action is performed before the cursor is moved off of the
+   (old) current element. */
+
+#ifndef REFCOUNT_PRE_ACTION
+#define REFCOUNT_PRE_ACTION \
+  if (cursor.obj) \
+  { \
+    (cursor.refcount)--; \
+  }
+#endif
+
+/* This action is performed after the cursor is moved onto the
+   (new) current element). */
+
+#ifndef REFCOUNT_POST_ACTION
+#define REFCOUNT_POST_ACTION \
+  if (cursor.obj) \
+  { \
+    (cursor.refcount)++; \
+  }
+#endif
+
+#include "refcount.xph"

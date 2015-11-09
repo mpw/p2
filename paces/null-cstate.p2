@@ -1,0 +1,96 @@
+/* $Id: null-cstate.p2,v 45.0 1997/09/19 05:43:53 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+#include <stdio.h> /* printf() */
+#include "P2_paces.h"
+
+/* This file tests for the presence of a specific (and now fixed) bug
+   in P2, that resulted set_kc_state_pointer being unable to find a
+   kc_state record, because the link special operation was only passed
+   a single te (in this case, the te of the parent, but not the child
+   cursor).  DSB fixed this bug by adding the ccbus layer.
+   I have saved this file as a regression test. (JAT) */
+
+typedef struct {
+  int  empno;
+  int  age;
+  int  deptno;
+  int  jobno;
+  char *dept_name;
+  char *name;
+} EMPLOYEE;
+
+typedef struct {
+  int  deptno;
+  char *name;
+} DEPARTMENT;
+
+typex {
+  t = P2_COMPCURS_TYPEX;
+}
+
+container <EMPLOYEE> stored_as t with {
+  P2_COMPCURS_ANNOTE(name, 10);
+} employee;
+
+container <DEPARTMENT> stored_as t with {
+  P2_COMPCURS_ANNOTE(name, 10);
+} department;
+
+compcurs < ee employee, dd department >
+  where "$ee.name == 'Akin, Monica'"
+xx;
+
+cursor < employee > eee;
+cursor < department > ddd;
+
+void read_data(void)
+{
+  EMPLOYEE employee_data[] = {
+   { 10020,21,1,102,"Biology","Alexander, Joe" },
+   { 10010,40,2,102,"History","Akin, Monica" },
+   { 10050,42,1,101,"Biology","Akerson, Suzanne" },
+   { -1 }
+  };
+
+  DEPARTMENT department_data[] = {
+   { 1,"Biology" },
+   { 2,"History" },
+   { 3,"Physics" },
+   { -1 }
+  };
+
+  {
+    EMPLOYEE *p;
+    for (p = employee_data; p->empno != -1; p++) {
+      insert(eee, *p);
+    }
+  }
+  {
+    DEPARTMENT *p;
+    for (p = department_data; p->deptno != -1; p++) {
+      insert(ddd, *p);
+    }
+  }
+}
+
+main()
+{
+  open_cont(employee);
+  open_cont(department);
+
+  init_curs(eee);
+  init_curs(ddd);
+
+  read_data();
+
+  initk(xx);
+  foreachk(xx) {
+    printf("%20s %10s\n", (xx.ee).name, (xx.dd).name);
+  }
+
+  close_cont(employee);
+  close_cont(department);
+
+  return(0);
+}

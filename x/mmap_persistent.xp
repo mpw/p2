@@ -1,0 +1,10 @@
+// $Id: mmap_persistent.xp,v 45.0 1997/09/19 05:46:38 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer mem mmap_persistent[] stable annotation indirect_only
+
+// mmap persistent storage layer 
+
+#define PERSISTENT 1
+!#include "mmap_persistent.h"
+#include "mmap.xph"

@@ -1,0 +1,236 @@
+/* $Id: xact-lock15.p2,v 45.0 1997/09/19 05:45:22 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* xact, lock, and mmap_shared. */
+
+/* Analogous to paces/xact-lock06.p2 */
+/* Analogous to paces/xact-lock14.p2 */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <stdio.h>    /* fprintf() */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+/* Print debugging output. */
+#if 0
+#if !defined(DEBUG)
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* Trace and label processes. */
+#if 0
+#if !defined(TRACE)
+#define TRACE
+#endif /* TRACE */
+#endif
+
+#if 1
+/* If P2_FORK_PROCESS is defined, then we will fork the children. */
+#if !defined(P2_FORK_PROCESS)
+#define P2_FORK_PROCESS
+#endif /* P2_FORK_PROCESS */
+#endif
+
+/* Transactions. */
+#if 1
+#if !defined(XACT)
+#define XACT
+#endif /* XACT */
+#endif
+
+/* Total number of children to fork() */
+#define N 100
+
+/* Maxium number of live children */
+#define M 10
+
+/*****************************************************************************/
+/*                  Declare typex, schema, and cursor.                       */
+/*****************************************************************************/
+
+typex {
+  t = conceptual[P2_LOG_LAYER[
+	xact[P2_PROTOCOL_LAYER[lock[process[avail[array[transient]]]]]]]];
+}
+
+typedef struct {
+  int i;
+} E;
+
+schema {
+  container <E> k;
+} stored_as t with {
+  array size of k is N;
+} s;
+
+cursor <s.k> c;
+
+/*****************************************************************************/
+/*                  Print errors.                                            */
+/*****************************************************************************/
+
+static void
+parent_error (const char *s, int i)
+{
+  fprintf(stderr, "Parent");
+  if (i == -1)
+    fprintf(stderr, ": ");
+  else
+    fprintf(stderr, " i = %d: ", i);
+  perror(s);
+  fflush(stderr);
+  exit(1);
+}
+
+static void
+child_error (const char *s, int i)
+{
+  fprintf(stderr, "Child i = %d: ", i);
+  perror(s);
+  fflush(stderr);
+  exit(1);
+}
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+E e;
+
+int
+main()
+{
+  P2_PROCESS_ID child_pid[N];
+
+#if defined(TRACE)
+  /* Process label. */
+  char label[P2_PROCESS_ID_LABEL_SIZE];
+#endif /* TRACE */
+
+  /* Open schema. */
+  open_schema(s);
+  /* Open container. */
+  open_cont(s.k);
+  /* Init cursor. */
+  init_curs(c);
+
+#if defined(TRACE)
+  /* Label the parent process. */
+  P2_label_process_id("Parent");
+#endif /* TRACE */
+
+  for (e.i = 0; (e.i) < N; (e.i)++)
+  {
+#if defined(P2_FORK_PROCESS)
+    /* Fork child. */
+    child_pid[e.i] = P2_fork_process();
+#else
+    child_pid[e.i] = 0;
+#endif /* P2_FORK_PROCESS */
+    if (child_pid[e.i] == -1)
+    {
+      /*** This is an error. ***/
+
+      parent_error("P2_fork_process() failed", e.i);
+    }
+    else if (child_pid[e.i] == 0)
+    {
+      /*** This is the child. ***/
+
+#if defined(TRACE)
+      /* Label the child process. */
+      sprintf(label, "child %d", e.i);
+      P2_label_process_id(label);
+#endif /* TRACE */
+
+#if defined(XACT)
+      /* Begin transaction. */
+      begin_xact(s);
+#endif /* XACT */
+
+#if 1
+      /* Print "Hello World" */
+#if defined(DEBUG) || defined(TRACE)
+      printf("%d. Hello World!\n", e.i);
+#else
+      printf("Hello World!\n");
+#endif /* DEBUG */
+      /* Flush stdout. */
+      fflush(stdout);
+#endif
+
+#if 1
+      /* Insert an element. */
+      insert(c, e);
+#endif
+
+#if 0
+      /* Sleep in the middle of transaction in order to give other
+         processes a chance to fill up the current log file. */
+      P2_sleep_process(1);
+#endif
+
+#if defined(XACT)
+#if 1
+      /* Abort transaction. */
+      abort_xact(s);
+#else
+      /* Commit transaction. */
+      commit_xact(s);
+#endif
+#endif /* XACT */
+
+#if defined(P2_FORK_PROCESS)
+      /* Exit success. */
+      exit(0);
+#endif /* P2_FORK_PROCESS */
+    }
+    else
+    {
+      /*** This is the parent. ***/
+
+      /* Wait for child i-(M-1) to finish before forking child i.
+	 That is, limit the number of live children to M. */
+      if ((e.i) >= (M-1))
+        if (P2_join_process(child_pid[(e.i)-(M-1)]) != 0)
+          parent_error("P2_join_process() != 0", e.i);
+    }
+  }
+
+#if defined(P2_FORK_PROCESS)
+  /* Barrier: wait for all N children to exit. */
+  for (e.i = N-(M-1); (e.i) < N; (e.i)++)
+    if (P2_join_process(child_pid[e.i]) != 0)
+      parent_error("P2_join_process() != 0", e.i);
+#endif /* P2_FORK_PROCESS */
+
+#if 1
+  /* Print container. */
+  /* Will always be empty unless we use a shared memory layer,
+     e.g. mmap_shared. */
+  foreach(c)
+  {
+    printf("%d", c.i);
+  }
+#endif
+
+  /* Close container. */
+  close_cont(s.k);
+  /* Close schema. */
+  close_schema(s);
+
+  printf("Parent Exits\n");
+  /* Flush stdout. */
+  fflush(stdout);
+
+  /* Exit. */
+  exit(0);
+}

@@ -1,0 +1,14 @@
+/* $Id: default-bug1.p2,v 45.0 1997/09/19 05:43:16 jthomas Exp $ */
+
+/* Formerly, pb would incorrectly handle the default (ie implicit)
+   declaration of exit() in main() below.  Specificially, pb printed a
+   prototype for exit() before it printed the declaration of c.  This
+   bug would not appear, if there was no variable declaration
+   (ie c) following main(). (JAT) */
+
+int main()
+{
+  exit(0);
+}
+
+int c = 1;

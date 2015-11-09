@@ -1,0 +1,212 @@
+// $Id: dlist.xp,v 45.0 1997/09/19 05:46:20 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds dlist[ ds ] stable no annotation retrieval_sometimes
+
+!#include "qopt.h"
+
+// like dlist, but stable.
+
+
+// dlist adds prev, next to elements
+// dlist adds first, last to container
+//
+// dlist maintains a doubly-linked list of chronologically-insert-ordered
+// elements stability
+
+/**************
+
+   When we do a deletion, we leave the pointers of the current cursor alone and 
+    mark it as deleted. Then we change the pointers on both sides of the deleted 
+    element. So it's a combination of delflag and odlist.
+
+   Here are the advantages: 
+    If we are simply traversing through the list, the list gets shorter and
+    shorter, so traversals are faster. If, however, we are starting at a deleted
+    node, then we have to follow that for adv() until we reach a non-deleted node
+    or the end of the list. But it's not as bad as it may seem. Look:
+
+
+    A              G            M
+      B C D E F       H I J K L
+
+   In this example, the top line is the current list and the bottom line is the 
+    list of deleted nodes, but all maintained in the same order as they were 
+    originally. If G gets deleted, then A and M points to each other, but G is 
+    marked and still points to A and M. If at the end of a loop, we want to do 
+    an adv(), then G doesn't have to go through H I J K L to find M, G will go 
+    straight to M. If M is deleted next, then G would have an adv() to get to M 
+    and another adv() to get to the new node.
+
+   Disadvantages: adv & rev are more complex. 
+   Better Advantages: NO INBETWEEN LAYER! NO DELFLAG LAYER! IT'S STABLE! YOW!
+
+   Actually, the delflag is separated out of dlist.
+
+***********/
+
+// link cursor function
+
+cursor_func link(cursor)
+%{
+   if (!container.first)
+   {
+      // EMPTY list.
+      container.first = cursor.obj;
+      container.last  = cursor.obj;
+      cursor.next     = 0;
+      cursor.prev     = 0;
+   }
+   else
+   {
+      // NON-empty list.
+      // Add record to beginning of list. 
+      cursor.next       = container.first;
+      cursor.prev       = 0;
+      cursor.next->prev = cursor.obj;
+      container.first   = cursor.obj;
+   }
+%}
+
+// xform - dlist adds next, prev, mark to elements; first, last to container
+
+xform(element, container, cursor)
+{
+   add element   : struct element *next; 
+   add element   : struct element *prev; 
+   add container : struct element *first; 
+   add container : struct element *last;
+   xform(element, container, cursor);
+}
+
+// optimize
+
+#define COST    LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+
+optimize(cursor)
+{
+   optimize(cursor);
+   if (cost>COST) {
+      cost  = COST;
+      layer = %ln;
+      retrieval_direction = 0;
+   }
+}
+
+// retrieval operations
+
+query(cursor)
+{
+   char *p = bind_predicate(te, cursor, obj_type, predicate);
+   %{
+      %v.p
+   %}
+   xfree(p);
+}
+
+// retrieval operations - adv, rev
+
+adv(cursor)
+%{
+        cursor.obj = cursor.next;
+%}
+
+rev(cursor)
+%{
+        cursor.obj = cursor.prev;
+%}
+
+// retrieval operations - end_adv, end_rev
+
+end_adv(cursor)
+%{
+   (cursor.obj == 0)
+%}
+
+
+end_rev(cursor)
+%{
+   (cursor.obj == 0)
+%}
+
+
+// retrieval operations - reset_start, reset_end
+
+reset_start(cursor)
+%{
+   cursor.obj = container.first;
+%}
+
+
+reset_end(cursor)
+%{
+   cursor.obj = container.last;
+%}
+
+// non-retrieval operations - init_cont
+
+init_cont(container)
+%{
+   init_cont(container);
+
+   container.first = 0;
+   container.last  = 0;
+%}
+
+#if 0
+// non-retrieval operations - init_curs
+
+init_curs(cursor)
+%{
+   init_curs(cursor);
+   cursor.obj = 0;
+%}
+#endif
+
+// non-retrieval operations - insert
+
+insert(cursor, record)
+%{
+   insert(cursor, record);
+   call link(cursor);
+%}
+
+
+// non-retrieval operations - varinsert
+
+varinsert(cursor, record, expr)
+%{
+   varinsert(cursor, record, expr);
+#if 1
+   call link(cursor);
+#endif
+%}
+
+// non-retrieval operations - delete
+
+delete(cursor)
+%{
+
+    // now we have to do the deletion
+
+    if (cursor.next)
+    { 
+        cursor.next->prev = cursor.prev;
+    }
+    else
+    { 
+        container.last = cursor.prev;
+    }
+    if (cursor.prev)
+    { 
+        cursor.prev->next = cursor.next;
+    }
+    else
+    { 
+        container.first = cursor.next;
+    }
+
+    delete(cursor);
+
+%}
+

@@ -1,0 +1,8 @@
+// $Id: dlist_unstable.xp,v 45.0 1997/09/19 05:46:21 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds dlist_unstable[ ds ] unstable no annotation retrieval_sometimes
+
+// UNSTABLE doubly-linked list layer.
+
+#include "dlist.xph"

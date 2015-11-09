@@ -1,0 +1,87 @@
+@c $Id: installation.texi,v 45.0 1997/09/19 05:42:03 jthomas Exp $
+@c Copyright (C) 1996, The University of Texas at Austin.
+
+@node    Installation, Introduction, Distribution, Top
+@chapter Installation
+@cindex P2, installation
+@cindex installation
+
+@include version.texi
+
+The P2 distribution consists of two compressed tar files available
+via anonymous ftp.  One tar file contains the P2 system code,
+the other contains the P2 system manuals.
+
+As a rule, we have tried to make P2 as portable as possible.
+One exception to this rule is that P2 requires GNU @code{make}.
+
+@emph{Standard UNIX @code{make} will not work.}
+
+Besides GNU @code{make}, the code distribution
+requires an @code{ANSI C} compiler,
+@code{lex} and @code{yacc} (or their GNU equivalents).
+The manuals distribution includes PostScript and dvi
+versions of the manual, and thus requires only a
+PostScript or dvi viewer.
+
+To install the code distribution, you should get the file via
+ftp, uncompress it, un-tar it, cd into it, run configure, and make.
+This distribution should install without modification ("out of the box")
+on at least the following systems:
+
+@example
+@group
+  AIX 3.2
+  Solaris 2.4
+  SunOS 4.1
+  ULTRIX 4.2
+@end group
+@end example
+
+Here is a step-by-step example of how to get the code
+distribution and make it on your system.
+This example assumes your login is @code{dsb@@cs.utexas.edu},
+and you wish to install P2 in the directory @code{/u/dsb/foo/p2}.
+
+@example
+@group
+  % ftp ftp.cs.utexas.edu
+  Name (ftp.cs.utexas.edu:dsb): anonymous
+  Password: dsb@@cs.utexas.edu
+  ftp> binary
+  ftp> cd pub/predator
+  ftp> get p2-@value{VERSION}.tar.Z
+  ftp> bye
+  % uncompress p2-@value{VERSION}.tar.Z
+  % tar xf p2-@value{VERSION}.tar
+  % cd p2-@value{VERSION}
+  % ./configure --prefix=/u/dsb/foo/p2
+  % make
+  % make install  
+@end group
+@end example
+
+Once compiled, the code distribution (source plus object files) requires
+about 35 megabytes of disk space.
+
+To install the manuals distribution, you should get the file via
+ftp, uncompress it, and un-tar it.
+
+Here is a step-by-step example of how to get the manuals distribution.
+This example assumes your login is @code{dsb@@cs.utexas.edu}.
+
+@example
+@group
+  % ftp ftp.cs.utexas.edu
+  Name (ftp.cs.utexas.edu:dsb): anonymous
+  Password: dsb@@cs.utexas.edu
+  ftp> binary
+  ftp> cd pub/predator
+  ftp> get p2-manuals-@value{VERSION}.tar.Z
+  ftp> bye
+  % uncompress p2-manuals-@value{VERSION}.tar.Z
+  % tar xf p2-manuals-@value{VERSION}.tar
+@end group
+@end example
+
+The manuals distribution requires about 1 megabyte of disk space.

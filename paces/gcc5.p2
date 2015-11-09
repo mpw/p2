@@ -1,0 +1,20 @@
+/* $Id: gcc5.p2,v 45.0 1997/09/19 05:43:23 jthomas Exp $ */
+/* Copyright (C) 1995, The University of Texas at Austin. */
+
+/* gcc-specific extensions: labels as values */
+
+typedef void t;
+
+int
+main()
+{
+      void *ptr;
+      static void *array[] = { &&foo, &&bar, &&hack };
+
+      goto t;
+t:    goto l;
+l:    ptr = &&bar;
+foo:  goto *ptr;
+bar:  goto *array[2];
+hack: return 0;
+}

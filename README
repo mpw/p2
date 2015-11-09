@@ -1,0 +1,104 @@
+P2: A Lightweight Database Management System Generator
+******************************************************
+
+Abstract
+********
+
+   A "lightweight database management system" ("LWDB") is a
+high-performance, application-specific DBMS.  It differs from a general
+purpose (heavyweight) DBMS in that it omits one or more features and
+specializes the implementation of the remaining features to meet the
+needs of individual applications.  Existing LWDBs are hand-coded
+monolithic systems which are expensive to build and tune.  P2 is an
+extensible LWDB based on GenVoca software system generation technology.
+P2 provides a library of interchangeable, plug-compatible components
+and an optimizing compiler that automatically constructs LWDBs that are
+customized to the needs of target applications.
+
+   P2 currently provides only a subset of its potential features, but
+preliminary experiments indicate that P2 offers substantial programmer
+productivity and generated code performance advantages over hand coding.
+
+Distribution
+************
+
+   The P2 program and manuals can be retrieved via anonymous ftp.
+*Note Installation::.
+
+   CONTACT INFORMATION:
+
+     Don Batory
+     University of Texas at Austin
+     Department of Computer Science
+     Taylor Hall 2.124
+     Austin TX 78712.
+     
+     `dsb@cs.utexas.edu'
+
+Installation
+************
+
+   The P2 distribution consists of two compressed tar files available
+via anonymous ftp.  One tar file contains the P2 system code, the other
+contains the P2 system manuals.
+
+   As a rule, we have tried to make P2 as portable as possible.  One
+exception to this rule is that P2 requires GNU `make'.
+
+   *Standard UNIX `make' will not work.*
+
+   Besides GNU `make', the code distribution requires an `ANSI C'
+compiler, `lex' and `yacc' (or their GNU equivalents).  The manuals
+distribution includes PostScript and dvi versions of the manual, and
+thus requires only a PostScript or dvi viewer.
+
+   To install the code distribution, you should get the file via ftp,
+uncompress it, un-tar it, cd into it, run configure, and make.  This
+distribution should install without modification ("out of the box") on
+at least the following systems:
+
+       AIX 3.2
+       Solaris 2.4
+       SunOS 4.1
+       ULTRIX 4.2
+
+   Here is a step-by-step example of how to get the code distribution
+and make it on your system.  This example assumes your login is
+`dsb@cs.utexas.edu', and you wish to install P2 in the directory
+`/u/dsb/foo/p2'.
+
+       % ftp ftp.cs.utexas.edu
+       Name (ftp.cs.utexas.edu:dsb): anonymous
+       Password: dsb@cs.utexas.edu
+       ftp> binary
+       ftp> cd pub/predator
+       ftp> get p2-0.9.9.tar.Z
+       ftp> bye
+       % uncompress p2-0.9.9.tar.Z
+       % tar xf p2-0.9.9.tar
+       % cd p2-0.9.9
+       % ./configure --prefix=/u/dsb/foo/p2
+       % make
+       % make install
+
+   Once compiled, the code distribution (source plus object files)
+requires about 35 megabytes of disk space.
+
+   To install the manuals distribution, you should get the file via
+ftp, uncompress it, and un-tar it.
+
+   Here is a step-by-step example of how to get the manuals
+distribution.  This example assumes your login is `dsb@cs.utexas.edu'.
+
+       % ftp ftp.cs.utexas.edu
+       Name (ftp.cs.utexas.edu:dsb): anonymous
+       Password: dsb@cs.utexas.edu
+       ftp> binary
+       ftp> cd pub/predator
+       ftp> get p2-manuals-0.9.9.tar.Z
+       ftp> bye
+       % uncompress p2-manuals-0.9.9.tar.Z
+       % tar xf p2-manuals-0.9.9.tar
+
+   The manuals distribution requires about 1 megabyte of disk space.
+

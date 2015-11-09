@@ -1,0 +1,292 @@
+/* $Id: taowang02.p2,v 45.0 1997/09/19 05:44:23 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Bug in AVL layer, x/avl.xp, found by taowang. */
+
+#include <stdio.h>
+#include <sys/times.h>
+#include <limits.h>
+
+/* Use the AVL layer (which is broken), rather than the bintree layer
+   which isn't. */
+#if 0
+#if !defined(AVL)
+#define AVL
+#endif /* AVL */
+#endif
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+char *dept_names[] = { "Accounting", "Architecture", "Biology",
+"Business", "Chemistry", "Computer Sciences", "Communication",
+"Economy", "Fiance", "Government", "History", "Music", "Politics",
+"Statistics", "Zoology"};
+
+char *title_names[] = { "Professor", "Assoc. Prof", "Assist. Prof",
+"Lecturer", "Staff"};
+
+char *first_names[] = {"Al", "Bobby", "Candy", "Dandy", "Elvis",
+"Floria", "Gloria", "Hud", "Io", "Jack", "Knap", "Loop", "Mike",
+"Nanny", "Oops", "Pop", "Quota", "Risto", "Susan", "Tom", "Ulman",
+"Verb", "Wan", "Xin", "Yan", "Zan"};
+
+char *last_names[] = {"Albert", "Blumoff", "Clare", "Donald", "Evan",
+"Fluid", "Glammer", "Hudson", "Imminent", "Jane", "Kluth", "Lubbock",
+"Minnesota", "Nuces", "Object", "Plaxton", "Quantum", "Rombergh",
+"Slim", "Thomas", "Uer", "Verdict", "Wang", "Xuan ", "Yu", "Zhang"};
+
+int SSN_var;
+
+typedef struct {
+  char name[20];
+  char dept[20];
+  char title[20];
+  int SSN;
+  int birthday;
+  int phone;
+  char *address;
+  int salary;
+  char *photo;
+  char *notes;
+} E;
+
+typex {
+#if defined(AVL)
+  t = conceptual[inbetween[avl[malloc[transient]]]];
+#else
+  t = conceptual[inbetween[bintree[malloc[transient]]]];
+#endif
+}
+
+container <E> stored_as t with {
+#if defined(AVL)
+  avl key is SSN;
+#else
+  bintree key is SSN;
+#endif
+} k;
+cursor <k> scan;
+cursor <k> orderby SSN scan1;
+cursor <k> where "$.SSN == SSN_var" ret1;
+cursor <k> where "$.SSN == 500" ret2;
+cursor <k> where "$.SSN > 500" ret3;
+cursor <k> where "$.SSN > SSN_var" ret4;
+
+int my_rand(int m, int n)
+{
+  return (rand() % (n-m+1)) + m;
+
+}
+
+E *generate_data()
+{
+  E *temp=(E *)malloc(sizeof(E));
+
+  strcpy(temp->name, first_names[my_rand(0, 25)]);
+  strcat(temp->name, " ");
+  strcat(temp->name, last_names[my_rand(0, 25)]);
+  
+  strcpy(temp->dept, dept_names[my_rand(0, 14)]);
+
+  strcpy(temp->title, title_names[my_rand(0, 4)]);
+
+  temp->SSN = my_rand(1, 1000);
+
+  temp->birthday = my_rand(1930, 1975);
+
+  temp->phone = my_rand(4710000, 4799999);
+
+  temp->salary = my_rand(15000, 250000);
+
+  return temp;
+
+}
+
+void print_subtotal(struct tms *start, struct tms *end)
+{
+#if defined(DEBUG)
+  printf("u:%ld, s:%ld\n", end->tms_utime - start->tms_utime, end->tms_stime - start->tms_stime);
+#else
+  printf("\n");
+#endif
+}
+
+void gettotal(struct tms *total, struct tms *start, struct tms *end)
+{
+  total->tms_utime += end->tms_utime - start->tms_utime;
+  total->tms_stime += end->tms_stime - start->tms_stime;
+}
+
+main()
+{
+  int i;
+  E *e;
+  clock_t starta, enda, totala;
+  struct tms start, end, total;
+
+  memset(&total, 0, sizeof(struct tms));
+
+  srand(time(NULL));
+  open_cont( k );
+  init_curs(scan);
+
+  for (i=0; i<1000; i++) {
+    e = generate_data();
+    insert(scan, *e);
+  }
+
+  /* insertion: (100)  */
+
+  starta = times(&start);
+  for (i=0; i<100; i++) {
+    e = generate_data();
+    insert(scan, *e);
+  }
+  enda = times(&end);
+  
+  printf("Insertion (100) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala = enda-starta;
+
+  /* deletion: 100  */
+  starta = times(&start);
+  reset_start(scan);
+  for (i=0; i<100; i++) {
+    delete(scan);
+    adv(scan);
+  }
+  enda = times(&end);
+
+  printf("Deletion (100) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* update: 100 (implemented by deletion + insertion) */
+#if 0
+  starta = times(&start);
+  reset_start(scan);
+  for (i=0; i<1000; i++) {
+    delete(scan);
+    adv(scan); 
+    e = generate_data();
+    insert(scan, *e);
+  }
+  enda = times(&end);
+
+  printf("Update (100) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+#endif
+
+  /* scan: 100 */
+  starta = times(&start);
+  for (i=0; i<100; i++) {
+    foreach( scan) {
+    }
+  }
+  enda = times(&end);
+  printf("Scan (100) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* scan orderby SSN: 100 */
+  starta = times(&start);
+  init_curs(scan1);
+  for (i=0; i<100; i++) {
+    foreach( scan1) {
+    }
+  }
+  enda = times(&end);
+  printf("Scan orderby SSN(100) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* ret (SSN = var): 100  */
+
+  starta = times(&start);
+  for (i=0; i<100; i++) {
+    SSN_var = my_rand(1, 1000);
+    init_curs( ret1 );
+    foreach( ret1 ) {
+#if 0
+      printf("%s, %d, %s, %s, %d, %d\n", 
+	     ret1.name, ret1.SSN, ret1.dept, ret1.title, ret1.birthday, ret1.salary );
+#endif
+    }
+  }
+  enda = times(&end);
+  printf("Ret (SSN = var) (100) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* ret (SSN = 500) : 100 */
+  starta = times(&start);
+  init_curs( ret2 );
+  for (i=0; i<100; i++) {
+    foreach( ret2 ) {
+#if 0
+      printf("%s, %d, %s, %s, %d, %d\n", 
+	     ret2.name, ret2.SSN, ret2.dept, ret2.title, ret2.birthday, ret2.salary );
+#endif
+    }
+  }
+  enda = times(&end);
+  printf("Ret (SSN = 500) (100) : "); 
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* ret (SSN > 500) : 100 */
+  starta = times(&start);
+  init_curs( ret3 );
+  for (i=0; i<100; i++) {
+    foreach( ret3 ) {
+#if 0
+      printf("%s, %d, %s, %s, %d, %d\n", 
+	     ret2.name, ret2.SSN, ret2.dept, ret2.title, ret2.birthday, ret2.salary );
+#endif
+    }
+  }
+  enda = times(&end);
+  printf("Ret (SSN > 500) (100) : "); 
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* ret (SSN > var) : 100 */
+  starta = times(&start);
+  for (i=0; i<100; i++) {
+    SSN_var = my_rand(1, 1000);
+    init_curs (ret4);
+    foreach( ret4 ) {
+#if 0
+      printf("%s, %d, %s, %s, %d, %d\n", 
+	     ret2.name, ret2.SSN, ret2.dept, ret2.title, ret2.birthday, ret2.salary );
+#endif
+    }
+  }
+  enda = times(&end);
+  printf("Ret (SSN > var) (100) : "); 
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+#if defined(DEBUG)
+  printf("Total time: c:%ld s:%ld all:%ld\n", total.tms_utime, total.tms_stime, totala);
+#endif
+
+  close_cont( k );
+
+  exit(0);
+}

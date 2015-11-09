@@ -1,0 +1,8 @@
+// $Id: hash_array.xp,v 45.0 1997/09/19 05:46:24 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds hash_array[ mem ] stable annotation retrieval_sometimes
+
+!#include "hash_array.h"
+
+#include "hash_array.xph"

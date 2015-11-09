@@ -1,0 +1,70 @@
+/* $Id: pb-test02.p2,v 45.0 1997/09/19 05:43:58 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* This file tests complex cursors and containers
+   (ie, involving indirection, arrays, and functions) (JAT) */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+	int age;
+} S;
+
+typex {
+  T = P2_PACES_TYPEX;
+}
+
+container < S > stored_as T with {
+  P2_PACES_ANNOTE(age, 10);
+} k0, *k1, k2[10], *(*f)(), k4, k5, ****k6, ***k7, **k8;
+
+cursor < k0 > where "$.age > 40" x, y, z;
+cursor < k0 > x0, *y0, **z0;
+cursor < *k1 > x1, *y1, **z1;
+cursor < k2[2] > where "1 == 1" orderby age x2, *y2, **z2;
+cursor < k4 > where "0 == 1" x4, *y4, **z4;
+cursor < ****k6 > where "1 == 1" orderby age x6, *y6, **z6;
+
+int main ( int argc, char *argv[] )
+{
+  S s;
+  
+  init_curs( x );
+  reset_start( x );
+  if (!end_adv( x ))
+    adv( x );
+
+  open_cont( k2[2] );
+  init_curs( x2 );
+  k1 = &k0;
+  k8 = &k1;
+  k7 = &k8;
+  k6 = &k7;
+  open_cont( ****k6 );
+  init_curs( x6 );
+  reset_start( x2 );
+  foreach( x2 ) {
+    printf( "%d\n", x2.age );
+  }
+  reset_end( x2 );
+  s.age = 1;
+  insert( x2, s );
+  s.age = 2;
+  insert( x2, s );
+  s.age = 3;
+  insert( x2, s );
+  reset_start( x2 );
+  foreach( x2 ) {
+    printf( "%d\n", x2.age );
+  }
+  x6 = x2;
+  reset_start( x6 );
+  foreach( x6 ) {
+    printf( "%d\n", x6.age );
+  }
+  close_cont( ****k6 );
+  close_cont( k2[2] );
+
+  exit( 0 );
+}

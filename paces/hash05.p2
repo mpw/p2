@@ -1,0 +1,122 @@
+/* $Id: hash05.p2,v 45.0 1997/09/19 05:43:29 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Check for hash collisions between memory mapped file names. */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>         /* assert() */
+#include <stdio.h>          /* printf() */
+
+#include "P2.h"             /* P2_str_hash() */
+#include "../common/mmap.h" /* MAX_MMAP_FILE */
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* Maximum number of file names (including terminating 0) */
+#define N 100
+
+main()
+{
+  int i, j;
+  int result = 0;
+  unsigned hash1[N], hash2[N];
+  /* mmap files in library files: paces/P2_*.p2 */
+  /* There must be no hash collisions between any of these,
+     or one of these and one of s2. */
+  char *s1[N] =
+  {
+    "/tmp/P2_lock-manager-data",
+    "/tmp/P2_log-manager-data",
+    "/tmp/P2_log-data",
+    "/tmp/P2_trace-manager-data",
+    "/tmp/P2_sample-data",
+    "/tmp/P2_xact-manager-data",
+    0
+  };
+  /* mmap files in paces files: paces/*.p2 */
+  /* These may clash with each other, but not with s1. */
+  char *s2[N] =
+  {
+    "/tmp/P2_lock06-data",
+    "/tmp/P2_lock07-data",
+    "/tmp/P2_mmap-persistent-data",
+    "/tmp/P2_mmap_shared01-data",
+    "/tmp/P2_mmap_shared01-data",
+    "/tmp/P2_mmap_shared02-data",
+    "/tmp/P2_mmap_shared02-data",
+    "/tmp/P2_mmap_shared03-data",
+    "/tmp/P2_mmap_shared03-data",
+    "/tmp/P2_mmap_shared04-1-data",
+    "/tmp/P2_mmap_shared04-2-data",
+    "/tmp/P2_mmap_shared04-3-data",
+    "/tmp/P2_process02-data",
+    "/tmp/P2_process03-data",
+    "/tmp/P2_process04-data",
+    "/tmp/P2_process06-data",
+    "/tmp/P2_process07-data",
+    "/tmp/P2_process04-data",
+    0
+  };
+
+#ifdef DEBUG
+  printf("MAX_MMAP_FILE = %d\n", MAX_MMAP_FILE);
+#endif /* DEBUG */
+
+  /* Hash. */
+  for (i = 0; s1[i] != 0; i++)
+  {
+    hash1[i] = P2_str_hash(s1[i], MAX_MMAP_FILE);
+#ifdef DEBUG
+    printf("%d. P2_str_hash(\"%s\", %d) = %d\n",
+	   i, s1[i], MAX_MMAP_FILE, hash1[i]);
+#endif /* DEBUG */
+  }
+  for (i = 0; s2[i] != 0; i++)
+  {
+    hash2[i] = P2_str_hash(s2[i], MAX_MMAP_FILE);
+#ifdef DEBUG
+    printf("%d. P2_str_hash(\"%s\", %d) = %d\n",
+	   i, s2[i], MAX_MMAP_FILE, hash2[i]);
+#endif /* DEBUG */
+  }
+
+  /* Check for hash collisions in array s1. */
+  for (i = 0; s1[i+1] != 0; i++)
+    for (j = i+1; s1[j] != 0; j++)
+    {
+      assert(i != j);
+      assert(hash1[i] == P2_str_hash(s1[i], MAX_MMAP_FILE));
+      assert(hash1[j] == P2_str_hash(s1[j], MAX_MMAP_FILE));
+      if (hash1[i] == hash1[j])
+      {
+	printf("Both \"%s\" and \"%s\" hash to %d\n",
+	       s1[i], s1[j], hash1[i]);
+	result = 1;
+      }
+    }
+
+  /* Check for hash collisions between arrays s1 and s2. */
+  for (i = 0; s1[i] != 0; i++)
+    for (j = 0; s2[j] != 0; j++)
+    {
+      assert(hash1[i] == P2_str_hash(s1[i], MAX_MMAP_FILE));
+      assert(hash2[j] == P2_str_hash(s2[j], MAX_MMAP_FILE));
+      if (hash1[i] == hash2[j])
+      {
+	printf("Both \"%s\" and \"%s\" hash to %d\n",
+	       s1[i], s2[j], hash1[i]);
+	result = 1;
+      }
+    }
+
+  /* Return result. */
+  exit(result);
+}

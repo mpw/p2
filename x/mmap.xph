@@ -1,0 +1,171 @@
+// $Id: mmap.xph,v 45.4 1997/09/29 03:50:48 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// mmap() storage layer implementation included by both the shared
+// (mmap_shared.xp) and persistent (mmap_persistent.xp) layers.
+
+// mmap has utility file "paces/P2_mmap.c"
+
+// Note that the parameter f to all mmap procedures is the file number
+// (the hash of the mmap_file name).  By making all the mmap static
+// variables arrays indexed by f, we are able to have up to
+// MAX_MMAP_FILE mmap files open concurrently (assuming no hash
+// clash).  f is computed statically by ddlhint in x/mmap.xph and used
+// in paces/P2_mmap.c (JAT)
+
+!#include "layer-util.h" // first_identifier_in_string()
+!#include "mmap.h"       // MAX_MMAP_FILE
+!#include "qopt.h"
+
+// Generate contname and varname.
+
+#define CONTNAME_AND_VARNAME \
+{ \
+  BOOLEAN proceduralized = (strncmp(container, "(**P2_cont", 10) == 0); \
+  if (proceduralized || schema[0] == '\0') \
+  { \
+    strcpy(contname, container); \
+    if (replace_string_inplace1(contname, "*", "", 1) != 1) \
+      error("could not delete \"*\" from container \"%s\"", contname); \
+  } \
+  else \
+  { \
+    strcpy(contname, container); \
+    if (replace_string_inplace1(contname, "*", "", 1) != 1) \
+      error("could not delete \"*\" from container \"%s\"", contname); \
+  } \
+  if (proceduralized) \
+    sprintf(varname, "\"P2_cont_id%d\"", container_id); \
+  else \
+    sprintf(varname, "\"%s\"", container); \
+}
+
+xform (element, container, cursor)
+{
+  // Do not call down.
+}
+
+ddlhint (argc, argv)
+{
+   limit 2 arguments;
+
+   get_ddlhint_argument(%a.filename, argv[1]);
+   get_ddlhint_argument(%a.size,     argv[2]);
+
+   // f is known statically, so compute it now and store it in %a.f
+   sprintf(%a.f, "%d", str_hash(%a.filename, MAX_MMAP_FILE));
+}
+
+open_cont (container)
+{
+  char filename[MAX_IDENT_LEN+2];
+  char contname[MAX_IDENT_LEN];
+  char varname[MAX_IDENT_LEN+2];
+  char i[20];
+
+  CONTNAME_AND_VARNAME
+
+  sprintf(filename, "\"%s\"", %a.filename);
+  sprintf(i, "P2_temp%d", other_id_counter++);
+
+  // Filename, %v.filename, is the ddlhint file name, e.g. "/tmp/P2_foo"
+
+  %{
+      {
+        int %v.i;
+        P2_open_mmap_memory(%v.filename, %a.size, PERSISTENT, %a.f);
+        %v.contname = (struct container_type *) 
+           P2_open_mmap_var(%v.varname, sizeof(struct container_type),
+	     &%v.i, %a.f);
+	  container.initialized = !%v.i;
+      }
+  %}
+}
+
+// It is really ugly to have to add this new function, but I couldn't
+// think of a better way to pass the number expr to open_cont.
+// Consider: (1) the number isn't known until runtime--thus we can't
+// specify the number directly, as an annotation or constant, and (2)
+// the number is not stored in an particular variable--thus we can't
+// specify the number indirectly, as an annotation to the layer
+// specifying a variable or expression that evaluates to the number.
+
+open_cont_number (container, expr)
+{
+  char filename[MAX_IDENT_LEN+2];
+  char contname[MAX_IDENT_LEN];
+  char varname[MAX_IDENT_LEN+2];
+  char i[20], s[20];
+
+  CONTNAME_AND_VARNAME
+
+  sprintf(varname, "\"%s\"", container);
+  sprintf(filename, "\"%s\"", %a.filename);
+  sprintf(i, "P2_temp%d", other_id_counter++);
+  sprintf(s, "P2_temp%d", other_id_counter++);
+
+  // Filename, %v.s, is the ddlhint file name with the zero ("0")
+  // padded decimal number expr appended to it, e.g. "/tmp/P2_foo00000001"
+
+  %{
+      {
+        int %v.i;
+	char %v.s[100];
+	sprintf(%v.s, "%s%08d", %v.filename, expr);
+        P2_open_mmap_memory(%v.s, %a.size, PERSISTENT, %a.f);
+        %v.contname = (struct container_type *) 
+           P2_open_mmap_var(%v.varname, sizeof(struct container_type),
+	     &%v.i, %a.f);
+	  container.initialized = !%v.i;
+      }
+  %}
+}
+
+init_cont (container)
+{
+  // Do not call down.
+}
+
+close_cont (container)
+%{
+   P2_close_mmap_memory(PERSISTENT, %a.f);
+%}
+
+checkpoint_cont (container)
+{
+  // Do not call down.
+}
+
+sync_cont (container, expr0, expr1, expr2)
+%{
+   P2_sync_mmap_memory(expr0, expr1, expr2, %a.f);
+%}
+
+alloc (cursor)
+%{
+   P2_mmap_alloc(sizeof(struct obj_type), %a.f)
+%}
+
+varalloc (cursor, expr)
+%{
+   // cast expr to int, since, by default, expr has type void *
+   P2_mmap_alloc((sizeof(struct obj_type) + ((int) expr)), %a.f)
+%}
+
+overflow (container)
+%{ 
+   P2_mmap_overflow(%a.f)
+%}
+
+varoverflow (container, expr)
+%{ 
+   P2_mmap_varoverflow((sizeof(struct obj_type) + ((int) expr)), %a.f)
+%}
+
+// Provide null xact operations.
+
+#include "xact.xph"
+
+// Provide null verbatim operations.
+
+#include "verbatim.xph"

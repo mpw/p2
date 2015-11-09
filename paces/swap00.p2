@@ -1,0 +1,57 @@
+/* $Id: swap00.p2,v 45.0 1997/09/19 05:44:20 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* swap toy program */
+
+/* Formerly, there was a bug that appeared when two cursors, c0 and
+   c1, were declared in the same declaration, and then used in a swap
+   operation, swap(c0, c1).  The bug is the result of the fact that
+   (CURS_ARG *) cctye->arg is allocated in
+   pre_opt_cursor_declaration(), and thus both cursors share the same
+   cctype->arg.  This cctype->arg is over-written in
+   special_op_nonterm_arg(). */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+  int i;
+} E;
+
+typex {
+#if 1
+  t = conceptual[array[transient]];
+#else
+  t = top2ds[array[transient]];
+#endif
+}
+
+container <E> stored_as t with {
+  array size is 10;
+} k;
+
+#if 1
+
+/* Bug: same declaration. */
+cursor <k> c0, c1;
+
+#else
+
+/* No bug: separate declarations. */
+cursor <k> c0;
+cursor <k> c1;
+
+#endif
+
+int main ()
+{
+  if (0) {
+    /* This is a toy program: stripped down for simplicity.
+       Correctness of the expansion of swap(c0, c1) cannot be
+       determined from runtime behavior--in fact, the expanded code
+       should never be executed.  Correctness can only be determined
+       by looking looking at the expanded code. */
+    swap(c0, c1);
+  }
+  return 0;
+}

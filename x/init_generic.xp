@@ -1,0 +1,95 @@
+// $Id: init_generic.xp,v 45.1 1997/09/24 05:12:10 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds init_generic[ ds ] stable no annotation retrieval_never
+
+!#include <assert.h>   // assert()
+!#include "qopt.h"
+
+#include "op-vec.h"    // P2_OP_NAME_VEC_INITIALIZER, P2_PUT_OP_VEC
+
+//*****************************************************************************
+//                  Put operation vector.
+//*****************************************************************************
+
+// Analogous to x/{init_generic,log}.xp:init_curs()
+c_put_op_vec(cursor)
+{
+  char op_vec[20]; 
+
+  P2_OP_NAME_VEC_INITIALIZER
+  
+  assert(cursor_id >= 0);
+  sprintf(op_vec, "P2_op_vec_id%d", cursor_id);
+
+  %{
+    // Put operation vector.
+    P2_PUT_OP_VEC(cursor_id, %v.op_vec)
+  %}
+}
+
+// Analogous to x/{init_generic,log}.xp:init_cont()
+k_put_op_vec(container)
+{
+  char op_vec[20]; 
+
+  P2_OP_NAME_VEC_INITIALIZER
+
+  assert(container_id >= 0);
+  sprintf(op_vec, "P2_op_vec_id%d", container_id);
+
+  %{  
+    // Put operation vector.
+    P2_PUT_OP_VEC(container_id, %v.op_vec)
+  %}
+}
+
+//*****************************************************************************
+//                  Set operation vector.
+//*****************************************************************************
+
+init_curs(cursor)
+{
+  if (cursor_id != GENERIC_CURS_ID &&
+#if 1
+      funbody != MACRO_EXPAND_FUNBODY
+#else
+      cursor_id != UNKNOWN_CURS_ID
+#endif
+  )
+  {
+    char op_vec[20]; 
+    assert(cursor_id >= 0);
+    sprintf(op_vec, "P2_op_vec_id%d", cursor_id);
+    %{
+      cursor.con = &(container);
+      cursor.op_vec = %v.op_vec;
+    %}
+  }
+  %{
+    init_curs(cursor);
+  %}
+}
+
+init_cont(container)
+{
+  if (container_id != GENERIC_CONT_ID &&
+#if 1
+      funbody != MACRO_EXPAND_FUNBODY
+#else
+      container_id != UNKNOWN_CONT_ID
+#endif
+  )
+  {
+    char op_vec[20];
+    assert(container_id >= 0);
+    sprintf(op_vec, "P2_op_vec_id%d", container_id);
+    %{  
+       container.op_vec = %v.op_vec;
+    %}
+  }
+  %{
+    init_cont(container);
+  %}
+}
+

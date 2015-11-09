@@ -1,0 +1,771 @@
+// $Id: orderby.xph,v 45.1 1997/09/28 11:39:10 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Orderby layer implementation.
+// Included by x/orderby_fast.xp and x/orderby_smart.xp
+
+// Cases:
+// * orderby_direction == 0
+//     Unordered retrieval requested.
+//     Do nothing.
+// * orderby_direction != 0 && orderby_direction == retrieval_direction
+//     Ordered retrieval requested.
+//     Orderby direction requested is same as retrieval direction provided
+//       (i.e. elements are already retrieved in the proper order).
+//     Do nothing.
+// * orderby_direction != 0 && orderby_direction + retrieval_direction == 0
+//     Ordered retrieval requested.
+//     Orderby direction requested is opposite of retrieval direction provided
+//       (i.e. elements are already retrieved in the proper order)
+//     Translate adv to rev.
+// * orderby_direction != 0 && orderby_direction + retrieval_direction != 0
+//       (i.e. orderby_direction != 0 && retrieval_direction == 0)
+//     Ordered retrieval requested.
+//     Unordered retrieval provided.
+//     Use orderby container.  
+
+!#include "orderby.h"
+
+#define QUICKSORT 0
+
+#define COMP(X, OP, Y, CURSOR, DIRECTION, FUNC) \
+    (((DIRECTION == -1) && (0 OP (*FUNC)(CURSOR, X, Y))) \
+  || ((DIRECTION ==  1) && ((*FUNC)(CURSOR, X, Y) OP 0)))
+
+// Comparison function is parameterized by record and field. (JAT)
+#define COMPARISON_FUNCTION "P2_comp_id%d_id%d" // container_id, cursor_id
+
+// Sort function is parameterized by record. (JAT)
+#define SORT_FUNCTION       "P2_sort_id%d"      // container_id
+#if QUICKSORT
+#define SORT1_FUNCTION      "P2_sort1_id%d"     // container_id
+#endif
+
+#define ORDERBY_CURS_FIELD  "orderby_curs_ptr"
+#define ORDERBY_CURS        "orderby_curs"
+#define ORDERBY_CONT_FIELD  "orderby_cont_ptr"
+#define ORDERBY_ORIG_TYPE   "orderby_orig_type"
+
+#if SMART
+#define SET_SORTED       cursor.sorted = container.modified;
+#define CLEAR_SORTED     (container.modified)++;
+#define IF_NOT_SORTED    if ((cursor.sorted) < (container.modified))
+#else // SMART
+#define SET_SORTED
+#define CLEAR_SORTED
+#define IF_NOT_SORTED
+#endif // SMART
+
+#define END(END_ADV, END_REV) \
+{ \
+  if (orderby_direction == 0 || orderby_direction == retrieval_direction) { \
+    %{ \
+       END_ADV(cursor) \
+    %} \
+  } \
+  else if (orderby_direction + retrieval_direction == 0) { \
+    funbody = MACRO_EXPAND_FUNBODY; \
+    %{ \
+       END_REV(cursor) \
+    %} \
+  } \
+  else { \
+    call bindc5(cursor); \
+    %{ \
+       END_ADV(cursor5) \
+    %} \
+  } \
+}
+
+#define MOVE(ADV, REV, END_ADV) \
+{ \
+  if (orderby_direction == 0 || orderby_direction == retrieval_direction) { \
+    %{ \
+       ADV(cursor); \
+    %} \
+  } \
+  else if (orderby_direction + retrieval_direction == 0) { \
+    funbody = MACRO_EXPAND_FUNBODY; \
+    %{ \
+       REV(cursor); \
+    %} \
+  } \
+  else { \
+    call bindc5(cursor); \
+    %{ \
+      ADV(cursor5); \
+      if (!END_ADV(cursor5)) { \
+        cursor.obj = cursor5.ptr; \
+      } \
+    %} \
+  } \
+}
+
+#define RESET(RESET_START, RESET_END, END_ADV) \
+{ \
+  if (orderby_direction == 0 || orderby_direction == retrieval_direction) \
+  { \
+    %{ \
+      RESET_START(cursor); \
+    %} \
+  } \
+  else if (orderby_direction + retrieval_direction == 0) \
+  { \
+    funbody = MACRO_EXPAND_FUNBODY; \
+    %{ \
+      RESET_END(cursor); \
+    %} \
+  } \
+  else { \
+    char comp[MAX_IDENT_LEN]; \
+    char sort[MAX_IDENT_LEN]; \
+    char direction[MAX_IDENT_LEN]; \
+    char rptr[MAX_IDENT_LEN]; \
+    sprintf(comp, COMPARISON_FUNCTION, container_id, cursor_id); \
+    sprintf(sort, SORT_FUNCTION, container_id); \
+    sprintf(direction, "%d", orderby_direction); \
+    sprintf(rptr, "r.ptr%d", %ln); \
+    call bindk5(container5, "cursor0"); \
+    call bindc5(cursor); \
+    /* funbody = MACRO_EXPAND_FUNBODY; */ \
+    %{ \
+      IF_NOT_SORTED \
+      { \
+        reset_start(cursor); \
+        open_cont(container5); \
+        init_curs(cursor5); \
+        while(!(end_adv(cursor))) \
+        { \
+          if (query(cursor)) \
+          { \
+            struct orig_type5 r; \
+            %v.rptr = (struct obj_type *) cursor.obj; \
+            insert(cursor5, r); \
+          } \
+          adv(cursor); \
+        } \
+        RESET_START(cursor); \
+      } \
+      RESET_START(cursor5); \
+      if (!END_ADV(cursor5)) \
+      { \
+	IF_NOT_SORTED \
+	{ \
+          %v.sort(&cursor, %v.comp, %v.direction); \
+          SET_SORTED \
+          RESET_START(cursor5); \
+        } \
+        cursor.obj = cursor5.ptr; \
+      } \
+    %} \
+  } \
+}
+
+cursor_func bindc5(cursor)
+{
+  sprintf(cursor_type5,    "P2_%s_id%d_curs", ORDERBY_CURS, container_id);
+  sprintf(container_type5, "P2_%s_id%d_cont", ORDERBY_CURS, container_id);
+  sprintf(obj_type5,       "P2_%s_id%d_xf",   ORDERBY_CURS, container_id);
+  sprintf(orig_type5,      "P2_%s_id%d",      ORDERBY_ORIG_TYPE, container_id);
+  funbody5 = MACRO_EXPAND_FUNBODY;
+  sprintf(cursor5,         "(%s).%s%d", cursor, ORDERBY_CURS_FIELD, %ln);
+  sprintf(container5,      "(%s).%s%d", cursor, ORDERBY_CONT_FIELD, %ln);
+  
+  sprintf(predicate5,      "1");
+  cursor_id5 = UNKNOWN_CURS_ID;
+  container_id5 = UNKNOWN_CONT_ID;
+  cost5 =  %c.orderby_retrieval_cost;
+  layer5 = %c.orderby_retrieval_layer;
+}
+
+cursor_func bindc7(cursor)
+{
+  sprintf(cursor_type7,    "P2_%s_id%d_curs", ORDERBY_CURS, container_id);
+  sprintf(container_type7, "P2_%s_id%d_cont", ORDERBY_CURS, container_id);
+  sprintf(obj_type7,       "P2_%s_id%d_xf",   ORDERBY_CURS, container_id);
+  sprintf(orig_type7,      "P2_%s_id%d",      ORDERBY_ORIG_TYPE, container_id);
+  funbody7 = MACRO_EXPAND_FUNBODY;
+  sprintf(cursor7,         "(%s).%s%d", cursor, ORDERBY_CURS_FIELD, %ln);
+  sprintf(container7,      "(%s).%s%d", cursor, ORDERBY_CONT_FIELD, %ln);
+  
+  sprintf(predicate7,      "1");
+  cursor_id7 = UNKNOWN_CURS_ID;
+  container_id7 = UNKNOWN_CONT_ID;
+  cost7 =  %c.orderby_retrieval_cost;
+  layer7 = %c.orderby_retrieval_layer;
+}
+
+container_func bindk5(container, "CURS_ARG* cursor0")
+{
+  sprintf(container_type5, "P2_%s_id%d_cont", ORDERBY_CURS, container_id);
+  sprintf(obj_type5,       "P2_%s_id%d_xf",   ORDERBY_CURS, container_id);
+  sprintf(orig_type5,      "P2_%s_id%d",      ORDERBY_ORIG_TYPE, container_id);
+  funbody5 = MACRO_EXPAND_FUNBODY;
+  sprintf(container5,      "(%s).%s%d", cursor, ORDERBY_CONT_FIELD, %ln);
+}
+
+xform(element, container, cursor)
+{
+   char  orderby_cursor_orig_type_name[MAX_IDENT_LEN];
+   char  orderby_cursor_name[MAX_IDENT_LEN];
+   char  orderby_cursor_field_name[MAX_IDENT_LEN];
+   char  orderby_container_field_name[MAX_IDENT_LEN];
+   IDENT *e;
+
+#if SMART
+   add container : unsigned modified;
+   add cursor : unsigned sorted;
+#endif // SMART
+
+   add element : int odf;
+
+#if 0
+   // Add a new annotation to the primary container here in xform(),
+   // rather than in ddlhint() (which is the normal case), since
+   // orderby takes no annotation (which would cause ddlhint() to be
+   // called).  Adorn the new annotation with the id (id5) of the
+   // orderby container (container5).
+   add_annotation(te, sizeof(struct orderby_annote), UNKNOWN_CONT_ID,
+                  "P2_default");
+   // Use cont_id_counter to uniquify the name of the orderby cursor
+   // and container.
+   %a.id5 = cont_id_counter++;
+   sprintf(orderby_cursor_orig_type_name, "P2_%s_id%d",
+           ORDERBY_ORIG_TYPE, %a.id5);
+   sprintf(orderby_cursor_name, "%s_id%d", ORDERBY_CURS, %a.id5);
+#else
+   // Use this container's id to uniquify the name of the orderby
+   // cursor and container.  Previously, we stored other_id_counter++
+   // in the annotation structure, but this didn't work for schemas
+   // with multiple containers.
+   sprintf(orderby_cursor_orig_type_name, "P2_%s_id%d",
+           ORDERBY_ORIG_TYPE, container_id);
+   sprintf(orderby_cursor_name, "%s_id%d", ORDERBY_CURS, container_id);
+#endif
+
+   e = new_struct(orderby_cursor_orig_type_name, TRUE);
+   add e : struct element *ptr;
+   new_container_type5 orderby_cursor_name with_type e mapped_via_param 1;
+   replicate_cursor5 as_cursor7;
+   sprintf(orderby_cursor_field_name, ORDERBY_CURS_FIELD);
+   sprintf(orderby_container_field_name, ORDERBY_CONT_FIELD);
+   add cursor : struct cursor5 %v.orderby_cursor_field_name;
+   add cursor : struct container5 %v.orderby_container_field_name;
+   xform(element, container, cursor);
+}   
+
+optimize(cursor)
+{
+  char q[40];
+
+  sprintf(q,"$.odf%d == 0", %ln);
+  post_and(predicate, q);
+  optimize(cursor);
+
+  %c.retrieval_layer = layer;
+  layer = %ln;
+
+  if (orderby_direction != 0 && orderby_direction != retrieval_direction
+      && orderby_direction + retrieval_direction != 0) {
+    ENTRY *e = symtab_lookup(symtab[SUE], orig_type);
+
+    call bindc5(cursor);
+    cost5 = MAX_QOPT_COST;
+    layer5 = MACRO_EXPAND_FUNBODY;   
+    optimize(cursor5);
+    %c.orderby_retrieval_cost = cost5;
+    %c.orderby_retrieval_layer = layer5;
+
+    if (e == NULL)
+      assertion_failed("could not find orig_type in symtab[SUE]");
+    else {
+      %c.typeptr = find_data_type(e->ident, orderby_field);
+      %c.orderby_field_type = %c.typeptr->typename;
+    }
+  }
+}
+
+query(cursor)
+{
+  layer = %c.retrieval_layer;
+  if (orderby_direction != 0 && orderby_direction != retrieval_direction
+      && orderby_direction + retrieval_direction != 0) {
+    call bindc5(cursor);
+    %{
+       query(cursor5)
+    %}
+  }
+  else
+    %{
+       query(cursor)
+    %}
+  layer = %ln;
+}
+
+#if SMART
+init_cont(container)
+%{
+  // Call down
+  init_cont(container);
+  container.modified = 0;
+%}
+#endif // SMART
+
+init_curs(cursor)
+{
+  %{
+    init_curs(cursor);
+  %}
+  if (orderby_direction != 0 && orderby_direction != retrieval_direction
+      && orderby_direction + retrieval_direction != 0)
+  {
+    call bindc5(cursor);
+    %{
+       cursor5.obj = 0;
+       init_curs(cursor5);
+    %}
+  }
+#if SMART
+  %{
+    cursor.sorted = 0;
+  %}
+#endif // SMART
+}
+
+end_adv(cursor)
+{
+  layer = %c.retrieval_layer;
+  END(end_adv, end_rev)
+  layer = %ln;
+}
+
+end_rev(cursor)
+{
+  layer = %c.retrieval_layer;
+  END(end_rev, end_adv)
+  layer = %ln;
+}
+
+adv(cursor)
+{
+  layer = %c.retrieval_layer;
+  MOVE(adv, rev, end_adv)
+  layer = %ln;
+}
+
+rev(cursor)
+{
+  layer = %c.retrieval_layer;
+  MOVE(rev, adv, end_rev)
+  layer = %ln;
+}
+
+insert(cursor, record)
+{
+  layer = %c.retrieval_layer;
+  %{
+     // Call down.
+     insert(cursor, record);
+     // Mark element as NOT deleted.
+     cursor.odf = 0;
+     // Mark container as NOT sorted.
+     CLEAR_SORTED
+  %}
+  layer = %ln;
+}
+
+varinsert(cursor, record, expr)
+{
+  layer = %c.retrieval_layer;
+  %{
+     // Call down.
+     varinsert(cursor, record, expr);
+     // Mark element as NOT deleted.
+     cursor.odf = 0;
+     // Mark container as NOT sorted.
+     CLEAR_SORTED
+  %}
+  layer = %ln;
+}
+
+
+delete(cursor)
+{
+  layer = %c.retrieval_layer;
+
+  // Can't just blindly call down to delete. (JAT)
+
+  if (orderby_direction == 0 || orderby_direction == retrieval_direction)
+  {
+    %{
+       delete(cursor);
+    %}
+  }
+  else if (orderby_direction + retrieval_direction == 0)
+  {
+    %{
+       delete(cursor);
+    %}
+    if (!are_cursors_stable_thru_retrieval_layer(te, layer))
+    {
+      %{
+         if (cursor.inbetween)
+         {
+#if 0
+           if (end_rev(cursor))
+#else
+           if (end_adv(cursor))
+#endif
+           {
+             reset_end(cursor);
+           }
+           else {
+             rev(cursor);
+           }
+         }
+      %}
+    }
+  }
+  else
+  {
+    call bindc5(cursor);
+    %{
+       if (cursor5.obj)
+       {
+         // Delete object from orderby container.
+         cursor.obj = cursor5.ptr;
+         delete(cursor5);
+
+         // Delete object from main container.
+         cursor.obj = cursor5.ptr;
+       }
+       // Mark element as DELETED.
+       cursor.odf = 1;
+       // Call down.
+       delete(cursor);
+    %}
+    if (!are_cursors_stable_thru_retrieval_layer(te, layer))
+    %{
+        cursor.inbetween = cursor5.inbetween;
+    %}
+  }
+  %{
+    // Mark container as NOT sorted.
+    CLEAR_SORTED
+  %}
+
+  layer = %ln;
+}
+
+reset_start(cursor)
+{
+  layer = %c.retrieval_layer;
+  {
+    char comment[200+(MAX_IDENT_LEN+20)*2];
+    TE *retrieval_layer_te = retrieval_layer_is_below(te, %c.retrieval_layer);
+    
+    sprintf(comment,
+	    "/* retrieval layer = %d */\n"
+	    "/* retrieval layer name = %s */\n"
+	    "/* orderby field = %s */\n"
+	    "/* orderby direction = %d */\n"
+	    "/* retrieval direction = %d */\n"
+	    "/* funbody = %d */",
+	    %c.retrieval_layer,
+            retrieval_layer_te->layer_name,
+            orderby_field,
+	    orderby_direction,
+	    retrieval_direction,
+	    funbody);
+    %{
+       %v.comment;
+    %}
+  }
+
+  RESET(reset_start, reset_end, end_adv)
+  layer = %ln;
+}
+
+reset_end(cursor)
+{
+  layer = %c.retrieval_layer;
+  {
+    char comment[200+(MAX_IDENT_LEN+20)*2];
+    TE *retrieval_layer_te = retrieval_layer_is_below(te, %c.retrieval_layer);
+    
+    sprintf(comment,
+	    "/* retrieval layer = %d */\n"
+	    "/* retrieval layer name = %s */\n"
+	    "/* orderby field = %s */\n"
+	    "/* orderby direction = %d */\n"
+	    "/* retrieval direction = %d */\n"
+	    "/* funbody = %d */",
+	    %c.retrieval_layer,
+            retrieval_layer_te->layer_name,
+            orderby_field,
+	    orderby_direction,
+	    retrieval_direction,
+	    funbody);
+    %{
+       %v.comment;
+    %}
+  }
+
+  RESET(reset_end, reset_start, end_rev)
+  layer = %ln;
+}
+
+getrec(cursor, record)
+{
+#if 0
+  if (orderby_direction != 0 && orderby_direction != retrieval_direction
+      && orderby_direction + retrieval_direction != 0) {
+    %{
+       getrec(cursor, record);
+    %}
+  }
+  else
+    %{
+       getrec(cursor, record);
+    %}
+#endif
+  %{ 
+      getrec(cursor, record); 
+  %}
+}
+
+#if 1
+pos(cursor, expr)
+{
+  // Since we're positioning the cursor in the main container, we need
+  // to invalidate our position in the orderby container.  If we
+  // didn't invalidate our position in the orderby container, and
+  // subsequently called update or delete, we would be updating or
+  // deleting the wrong element. (JAT)
+
+  if (orderby_direction != 0 && orderby_direction != retrieval_direction
+      && orderby_direction + retrieval_direction != 0)
+  {
+    %{
+       cursor5.obj = 0;
+    %}
+  }
+
+  %{
+     pos(cursor, expr);
+  %}
+}
+#endif
+
+swap(cursor0, cursor1)
+{
+  layer = %c.retrieval_layer;
+  %{
+    // Mark container as NOT sorted.
+    CLEAR_SORTED
+    swap(cursor0, cursor1);
+  %}
+  layer = %ln;
+}
+
+upd(cursor, field, expr)
+{
+  layer = %c.retrieval_layer;
+  %{
+    // Mark container as NOT sorted.
+    CLEAR_SORTED
+    upd(cursor, field, expr);
+  %}
+  layer = %ln;
+}
+
+c_verbatim(cursor)
+{
+  layer = %c.retrieval_layer;
+  if (orderby_direction != 0 && orderby_direction != retrieval_direction
+      && orderby_direction + retrieval_direction != 0)
+  {
+    // Need to generate c_verbatim() code.
+    typedef struct id_list_struct {
+      int id;
+      struct id_list_struct *next;
+    } ID_LIST;
+    static ID_LIST *id_list_header = NULL;
+    ID_LIST *id_list = id_list_header;
+    char prim[MAX_IDENT_LEN];
+    char comp[MAX_IDENT_LEN];
+    char sort[MAX_IDENT_LEN];
+    char sort1[MAX_IDENT_LEN];
+    char type[MAX_IDENT_LEN];
+    char *fld = orderby_field;
+    char debugging_string[100];
+
+    sprintf(prim, "%scmp", %c.orderby_field_type);
+    sprintf(comp, COMPARISON_FUNCTION, container_id, cursor_id);
+    sprintf(sort, SORT_FUNCTION, container_id);
+#if QUICKSORT
+    sprintf(sort1, SORT1_FUNCTION, container_id);
+#endif
+    if (strcmp(%c.orderby_field_type, "str") == 0)
+      sprintf(type, "char*");
+    else
+      sprintf(type, "%s", %c.orderby_field_type);
+
+    // Comparison function.
+ %{
+    int
+    %v.comp (struct cursor_type *P2_curs0,
+             struct obj_type *p1, struct obj_type *p2)
+    {
+       %v.type o1;
+       %v.type o2;
+
+       cursor.obj = p1;
+       o1 = cursor.%v.fld;
+       cursor.obj = p2;
+       o2 = cursor.%v.fld;
+
+       return(%v.prim(o1, o2));
+    } // End of comparison function.
+ %}
+
+    // Look for container_id in the list of containers for which we've
+    // already generated code for the sort function.
+    while (id_list != NULL && id_list->id != container_id)
+      id_list = id_list->next;
+    // Did NOT find it, generate sort code.
+    if (id_list == NULL)
+    {
+      id_list = (ID_LIST *) xmalloc(sizeof(ID_LIST));
+      id_list->id = container_id;
+      id_list->next = id_list_header;
+      id_list_header = id_list;
+
+      call bindc5(cursor);
+      call bindc7(cursor);
+
+    // Quicksort helper function.
+#if QUICKSORT
+ %{
+    void
+    %v.sort1 (struct cursor_type *P2_curs0,
+              struct cursor_type5 *first, struct cursor_type5 *last,
+              int (*comp_func)(), int direction, int size)
+    {
+      if (size > 1)
+      {
+ %}
+      sprintf(cursor5, "(c5)");
+      sprintf(cursor7, "(c7)");
+ %{
+      struct cursor_type5 c5 = *first;
+      struct cursor_type5 c7 = *last;
+      struct obj_type pivot = *cursor7.ptr;
+      int size5 = 0;
+      int size7 = 0;
+      while (size5 + size7 < size)
+      {
+        while ((size7 < size)
+               && COMP(cursor7.ptr, >=, &pivot, P2_curs0, direction, comp_func))
+        {
+          rev(cursor7);
+          size7++;
+        }
+        while ((size5 < size)
+               && COMP(cursor5.ptr, <,  &pivot, P2_curs0, direction, comp_func))
+        {
+          adv(cursor5);
+          size5++;
+        }
+        if (size5 + size7 < size)
+        {
+          swap(cursor5, cursor7);
+#if 0
+          size5++;
+          size7++;
+#endif
+        }
+      } // End of while (size5 + size7 < size)
+      if (size5 == 0)
+      {
+        adv(cursor7);
+        cursor5 = *last;
+        swap(cursor5, cursor7);
+        size7--;
+      }
+      else
+      {
+        rev(cursor5);
+        %v.sort1(P2_curs0, first, &cursor5, comp_func, direction, size5);
+      }
+      adv(cursor7);
+      %v.sort1(P2_curs0, &cursor7,  last, comp_func, direction, size7);
+    } // End of quicksort helper function.
+ %}
+    call bindc5(cursor);
+    call bindc7(cursor);
+#endif
+
+    // Sort function.
+ %{
+    void
+    %v.sort (struct cursor_type *P2_curs0, int (*comp_func)(),int direction)
+    {
+      struct cursor_type5 c5 = cursor5;
+      struct cursor_type5 c7 = cursor5;
+ %}
+    sprintf(cursor5, "(c5)");
+    sprintf(cursor7, "(c7)");
+    sprintf(debugging_string,
+            "/* container_id = %d\n"
+            "orig_type = %s\n"
+            "orig_type5 = %s\n */",
+            container_id, orig_type, orig_type5);
+ %{
+#if QUICKSORT
+      // Quicksort.
+      int size = 0;
+      reset_start(cursor5);
+      reset_start(cursor7);
+      if (!end_adv(cursor7))
+      {
+        do
+        {
+          adv(cursor7);
+          size++;
+        } while (!end_adv(cursor7));
+        reset_end(cursor7);
+      }
+      if (!end_adv(cursor5))
+        %v.sort1 (P2_curs0, &cursor5, &cursor7, comp_func, direction, size);
+#else
+      // Bubble sort.
+      %v.debugging_string;
+      reset_start(cursor5);
+      while (!end_adv(cursor5))
+      {
+        cursor7.obj = cursor5.obj;
+        adv(cursor7);
+        while (!end_adv(cursor7))
+        {
+          if (COMP(cursor5.ptr, >, cursor7.ptr, P2_curs0, direction, comp_func))
+          {
+            swap(cursor5, cursor7);
+          }
+          adv(cursor7);
+        }
+        adv(cursor5);
+      }
+#endif
+    } // End of sort function
+ %}
+    } // End of did NOT find it, generate sort code.
+   } // End of need to generate c_verbatim() code.
+
+ %{
+    // Call down.
+    c_verbatim(cursor);
+ %}
+    layer = %ln;
+}
+

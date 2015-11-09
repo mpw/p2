@@ -1,0 +1,421 @@
+// $Id: odlist.xp,v 45.0 1997/09/19 05:46:40 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds odlist[ ds ] unstable annotation retrieval_sometimes
+
+!#include "odlist.h"
+!#include "qopt.h"
+!#include "string-util.h" /* copy_string() */
+
+// odlist - ordered, doubly linked list
+// orders on te->ofield, bounds impact function te->bi
+// adds prev, next to elements
+// adds first, last to container
+
+// Recompute bounds and check to see if the predicate specifies a LOWER bound.
+// If the predicate specifies a LOWER bound, skip to the FIRST record
+// that satisfies the LOWER bound.
+// Else set cursor.obj = container.FIRST.
+
+// Macros
+
+#define RESET_START(BOTTOM, INC_LOWER, LOWER, _LT, _LE, FIRST, NEXT) \
+{ \
+  BOUNDS b; \
+  char   *lim; \
+  char   func[MAX_IDENT_LEN]; \
+  define_bounds(te, &b, cursor, predicate, %a.ofield, %a.bi); \
+  strcpy(func, %a.ofield_type); \
+  if (!b.BOTTOM) { \
+    if (b.INC_LOWER) \
+      strcat(func, _LT); \
+    else \
+      strcat(func, _LE); \
+    lim = copy_string(b.LOWER); \
+    %{ \
+       cursor.obj = container.FIRST; \
+       while (cursor.obj && %v.func(cursor.%a.ofield, %v.lim)) { \
+         cursor.obj = cursor.NEXT; \
+       } \
+    %} \
+  } \
+  else \
+  %{ \
+    cursor.obj = container.FIRST; \
+  %} \
+}
+
+// link cursor function
+
+cursor_func link(cursor)
+{
+  char comp_func[30];
+  char temp[30];
+  char value[30];
+  strcpy(comp_func, %a.ofield_type);
+  strcat(comp_func, "_LT");
+  sprintf(temp, "P2_temp%d", other_id_counter++);
+  sprintf(value, "P2_temp%d", other_id_counter++);
+
+  // Four cases:
+  //   (1) EMPTY list
+  //   (2) END of list
+  //   (3) BEGINNING of list
+  //   (4) INTERNAL to list
+
+  %{
+    if (!container.first)
+    {
+      // (1) EMPTY list.
+      container.first = cursor.obj;
+      container.last  = cursor.obj;
+      cursor.next     =  0;
+      cursor.prev     =  0;
+    }
+    else
+    {
+      // NON-empty list.
+      struct obj_type *%v.temp = cursor.obj;
+      %a.ofield_type  *%v.value = &(cursor.%a.ofield);
+      int comparison_result;
+
+      // Find position at which to insert record.
+      cursor.obj = container.first;
+      comparison_result = %v.comp_func(cursor.%a.ofield, *%v.value);
+      while (comparison_result && cursor.next)
+      {
+        cursor.obj = cursor.next;
+        comparison_result = %v.comp_func(cursor.%a.ofield, *%v.value);
+      }
+      if (comparison_result)
+      {
+        // (2) END of list. 
+        struct obj_type *prev = cursor.obj;
+        cursor.next = %v.temp;
+        cursor.obj = %v.temp;
+        cursor.prev = prev;
+        cursor.next = 0;
+        container.last = cursor.obj;
+      }
+      else
+      {
+        // Not end of list.
+        struct obj_type *prev = cursor.prev;
+        struct obj_type *next = cursor.obj;
+        if (!prev)
+        {
+          // (3) BEGINNING of list.
+          container.first = %v.temp;
+        }
+        else
+        {
+          // (4) INTERNAL to list.
+          cursor.prev->next = %v.temp;
+        }
+        cursor.prev = %v.temp;
+        cursor.obj = %v.temp;
+        cursor.prev = prev;
+        cursor.next = next;
+      }
+    }
+  %}
+}
+
+// unlink cursor function
+
+cursor_func unlink(cursor)
+{
+  %{
+    // Note record prev and next ptrs still intact for advancing.
+    if (cursor.prev)
+      cursor.prev->next = cursor.next;
+    else
+      container.first = cursor.next;
+    if (cursor.next)
+      cursor.next->prev = cursor.prev;
+    else
+      container.last = cursor.prev;
+  %}
+}
+
+// ddlhint
+
+//******************************************************
+//  ddlhints are of the form:
+//
+//  odlist KEY [container] IS _expr
+//
+//  Note: since we don't know the element type, annotations
+//  (bi, typeptr, ofield_type) won't be filled in until xform
+//  is called.
+//
+//**********************************************************
+
+ddlhint(argc, argv)
+{
+  limit 1 argument;
+  get_ddlhint_argument(%a.ofield, argv[1]);
+}
+
+// xform
+
+xform(element, container, cursor)
+{
+   // Step 1:  add pointers to element and container
+
+   add element   : struct element *next;
+   add element   : struct element *prev;
+   add container : struct element *first;
+   add container : struct element *last;
+
+   // Step 2:  remember additional info about annotations
+
+   %a.typeptr     = find_data_type(element, %a.ofield);
+   %a.ofield_type = %a.typeptr->typename;
+   %a.bi          = %a.typeptr->bounds_impact;
+
+   // Step 3:  transform the input data types
+
+   xform(element, container, cursor);
+}
+
+
+// Optimize
+
+#define COST0   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+#define COST1   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*(3.0/4)
+#define COST2   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*(1.0/2)
+
+optimize(cursor)
+{
+  BOUNDS b;
+
+  optimize(cursor);
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi)) {
+
+  case 0:  // Layer won't help in processing.
+           // Use this layer if there is nothing else available.
+
+    if (cost>COST0) {
+      cost  = COST0;
+      layer = %ln;
+      if (strcmp(%a.ofield, orderby_field) == 0)
+        retrieval_direction = 1;
+      else
+        retrieval_direction = 0;
+    }
+    break;
+
+  case 1:  // We can do a range search.
+           // Use this layer if there is nothing better.
+
+    if (cost>COST1) {
+      cost = COST1;
+      layer = %ln;
+      if (strcmp(%a.ofield, orderby_field) == 0)
+        retrieval_direction = 1;
+      else
+        retrieval_direction = 0;
+    }
+    break;
+
+  case 2:  // Point qualification.
+           // Bingo--this is probably the best layer to use.
+           // We can do a range search.
+
+    if (cost > COST2) {
+      cost = COST2;
+      layer = %ln;
+      if (strcmp(%a.ofield, orderby_field) == 0)
+        retrieval_direction = 1;
+      else
+        retrieval_direction = 0;
+    }
+    break;
+
+  default: error("use_layer failed");
+  }
+}
+
+// Retrieval operations.
+
+adv(cursor)
+%{
+   cursor.obj = cursor.next;
+%}
+
+rev(cursor)
+%{
+   cursor.obj = cursor.prev;
+%}
+
+end_adv(cursor)
+{
+   BOUNDS b;
+   char   lim[MAX_IDENT_LEN];
+   char   func[MAX_IDENT_LEN];
+
+   // See if the cursor's predicate specifies an upper bound
+   define_bounds(te, &b, cursor, predicate, %a.ofield, %a.bi);
+   if (b.top)
+   %{
+       // The cursor's predicate does not specify an upper bound.
+       // We have advanced to the end of the list iff cursor.obj == 0.
+       (!cursor.obj)
+   %}
+   else {
+     // The cursor's predicate specifies an upper bound.
+     // We have advanced to the end of the list iff cursor.obj == 0
+     // or we have advanced to a record whose ofield exceeds the upper bound.
+     strcpy(lim, b.upper);
+     strcpy(func, %a.ofield_type);
+     if (b.inc_upper)
+       strcat(func, "_GT");
+     else
+       strcat(func, "_GE");
+     %{
+       (!cursor.obj || %v.func(cursor.%a.ofield, %v.lim))
+     %}
+   }
+}
+
+end_rev(cursor)
+{
+     BOUNDS b;
+     char   lim[MAX_IDENT_LEN];
+     char   func[MAX_IDENT_LEN];
+
+     // See if the cursor's predicate specifies a lower bound
+     define_bounds(te, &b, cursor, predicate, %a.ofield, %a.bi);
+     if (b.bottom)
+     %{
+         // The cursor's predicate does not specify a lower bound.
+         // We have advanced to the beginnning of the list iff cursor.obj == 0.
+         (!cursor.obj)
+     %}
+     else {
+        // The cursor's predicate specifies a lower bound.
+        // We have advanced to the beginning of the list iff cursor.obj == 0
+        // or we have advanced to a record whose ofield exceeds the lower bound.
+        strcpy(lim, b.lower);
+        strcpy(func, %a.ofield_type);
+        if (b.inc_lower)
+           strcat(func, "_LT");
+        else
+           strcat(func, "_LE");
+        %{
+           (!cursor.obj || %v.func(cursor.%a.ofield, %v.lim))
+        %}
+     }
+}
+
+reset_start(cursor)
+{
+  RESET_START(bottom, inc_lower, lower, "_LT", "_LE", first, next)
+}
+
+reset_end(cursor)
+{
+  RESET_START(top, inc_upper, upper, "_GT", "_GE", last, prev)
+}
+
+query(cursor)
+{
+  BOUNDS b;
+  char   rresult[MAX_IDENT_LEN];
+  char *p;
+
+  // query() is called only within a FOREACH construct.
+  // We have already satisfied the lower-bound (since we
+  // are advancing in a forward direction.
+  // Thus, we can simplify the predicate by eliminating
+  // the test for the lower bound.
+  // We modify the query, however only if this is the
+  // layer that is doing the retrieval.
+
+  if (layer == %ln) {
+     define_bounds(te, &b, cursor, predicate, %a.ofield, %a.bi);
+     simplify_predicate(predicate,&b, %a.ofield,TRUE,rresult);
+     p = bind_predicate(te, cursor, obj_type, rresult);
+     %{
+        %v.p
+     %}
+  }
+  else
+  %{
+      query(cursor)
+  %}
+}
+
+// Nonretrieval operations.
+
+init_cont(container)
+%{
+   init_cont (container);
+
+   container.first = 0;
+   container.last  = 0;
+%}
+
+insert(cursor, record)
+%{
+   insert(cursor, record);
+   call link (cursor);
+%}
+
+varinsert(cursor, record, expr)
+%{
+   varinsert(cursor, record, expr);
+   call link (cursor);
+%}
+
+delete(cursor)
+{
+  char temp[30];
+  sprintf(temp, "P2_temp%d", other_id_counter++);
+
+  // For post-positioning--remember next pointer.
+  if (layer == %ln) 
+  %{
+     {
+       struct obj_type *%v.temp = cursor.next;
+       call unlink(cursor);
+       delete (cursor);
+       cursor.obj = %v.temp;
+       cursor.inbetween = 1;
+      }
+  %}
+  else
+  %{
+     call unlink(cursor);
+     delete(cursor);
+  %}
+}
+
+swap(cursor0, cursor1)
+%{
+   P2_runtime_error("cannot swap records in ordered, doubly linked list");
+%}
+
+upd(cursor, field, expr)
+{
+  // Do the update at the bottom level first,
+  // then delete it and reinsert it.
+  if (strcmp(field, %a.ofield) == 0)
+  { 
+    %{ 
+       { 
+         struct obj_type *n = cursor.next;
+         call unlink(cursor);
+         upd (cursor, field, expr);
+         call link(cursor);
+         cursor.obj = n;
+         cursor.inbetween = 1;
+       }
+    %}
+  }
+  else 
+  %{
+     upd (cursor, field, expr);
+  %} 
+}

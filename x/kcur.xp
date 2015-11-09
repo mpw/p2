@@ -1,0 +1,13 @@
+// $Id: kcur.xp,v 45.0 1997/09/19 05:46:30 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds kcur[ ds ] stable no annotation
+
+// This file should be as empty as possible.
+// This layer need merely be present in a type expression, for the
+// _kcur field to be added to composite cursor member cursors. (JAT)
+
+optimize (cursor)
+{
+   optimize(cursor);
+}

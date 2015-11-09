@@ -1,0 +1,214 @@
+// $Id: protocol_fine.xp,v 45.1 1997/09/19 07:51:35 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Simple (deadlock-prone???) fine-granularity locking protocol.
+// Lock the finest granule possible.
+
+layer ds protocol_fine[ ds ] stable no annotation retrieval_always
+
+!#include "protocol_fine.h"
+
+/* Print debugging output: print each lock before it is acquired. */
+#if 0
+#if !defined(DEBUG)
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+#define LOCK_TIMEOUT 60
+#define LOCK_CLASS P2_LOCK_LONG
+#define ERROR(x) P2_runtime_error("protocol_fine: lock failed: " x)
+
+// Operations that do NOT require locks.
+
+ddlhint(argc, argv)
+{
+}
+
+xform(element, container, cursor)
+{
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  optimize(cursor);
+}
+
+// Operations that DO require locks.
+
+delete(cursor)
+%{
+#if defined(DEBUG)
+  printf("P2_lock(0x%x, P2_LOCK_X, %s, %d)\\n",
+         &(container),
+         P2_lock_class_string(LOCK_CLASS),
+         LOCK_TIMEOUT);
+#endif // DEBUG
+  P2_lock_protocol_fine(&(container), P2_LOCK_X);
+  delete(cursor);
+%}
+
+insert(cursor, record)
+%{
+#if defined(DEBUG)
+  printf("P2_lock(0x%x, P2_LOCK_X, %s, %d)\\n",
+         &(container),
+         P2_lock_class_string(LOCK_CLASS),
+         LOCK_TIMEOUT);
+#endif // DEBUG
+  P2_lock_protocol_fine(&(container), P2_LOCK_X);
+  insert(cursor, record);
+%}
+
+varinsert(cursor, record, expr)
+%{
+#if defined(DEBUG)
+  printf("P2_lock(0x%x, P2_LOCK_X, %s, %d)\\n",
+         &(container),
+         P2_lock_class_string(LOCK_CLASS),
+         LOCK_TIMEOUT);
+#endif // DEBUG
+  P2_lock_protocol_fine(&(container), P2_LOCK_X);
+  varinsert(cursor, record, expr);
+%}
+
+iref(cursor, field)
+%{
+#if defined(DEBUG)
+  printf("P2_lock(0x%x, P2_LOCK_S, %s, %d)\\n",
+         &(cursor.field),
+         P2_lock_class_string(LOCK_CLASS),
+         LOCK_TIMEOUT);
+#endif // DEBUG
+  (P2_lock_protocol_fine(&(cursor.field), P2_LOCK_S), iref(cursor, field))
+%}
+
+ref(cursor, field)
+%{
+  (
+#if defined(DEBUG)
+  printf("P2_lock(0x%x, P2_LOCK_S, %s, %d)\\n",
+         &(cursor.field),
+         P2_lock_class_string(LOCK_CLASS),
+         LOCK_TIMEOUT),
+#endif // DEBUG
+  P2_lock_protocol_fine(&(cursor.field), P2_LOCK_S), ref(cursor, field))
+%}
+
+swap(cursor0, cursor1)
+%{
+#if defined(DEBUG)
+  printf("P2_lock(0x%x, P2_LOCK_X, %s, %d)\\n",
+         &(container),
+         P2_lock_class_string(LOCK_CLASS),
+         LOCK_TIMEOUT);
+#endif // DEBUG
+  P2_lock_protocol_fine(&(container), P2_LOCK_X);
+  swap(cursor0, cursor1);
+%}
+
+upd(cursor, field, expr)
+%{
+#if defined(DEBUG)
+  printf("P2_lock(0x%x, P2_LOCK_X, %s, %d)\\n",
+         &(cursor.field),
+         P2_lock_class_string(LOCK_CLASS),
+         LOCK_TIMEOUT);
+#endif // DEBUG
+  P2_lock_protocol_fine(&(cursor.field), P2_LOCK_X);
+  upd(cursor, field, expr);
+%}
+
+abort_xact(schema)
+%{
+  // Call down.
+  abort_xact(schema);
+%}
+
+begin_xact(schema)
+%{
+  // Call down.
+  begin_xact(schema);
+%}
+
+commit_xact(schema)
+%{
+  // Call down.
+  commit_xact(schema);
+%}
+
+checkpoint_schema(schema)
+%{
+  // Call down.
+  checkpoint_schema(schema);
+%}
+
+s_verbatim(schema)
+{
+  char *ifndef = "#ifndef P2_PROTOCOL_FINE_S_VERBATIM\n";
+  char *define = "#define P2_PROTOCOL_FINE_S_VERBATIM\n";
+  char *endif  = "#endif\n";
+%{
+  %v.ifndef
+  %v.define
+
+  void P2_lock_protocol_fine (void *address, P2_LOCK_MODE mode)
+  {
+    P2_LOCK_NAME name;
+
+    if (P2_my_xact_id == 0)
+      ERROR("not in a transaction");
+
+#if 1
+    // Normal.
+    name = (P2_LOCK_NAME) address;
+#else
+    // Debugging.
+    name = 1;
+#endif
+
+#ifndef NDEBUG
+    {
+      P2_LOCK_REPLY reply = P2_lock(name, mode, LOCK_CLASS, LOCK_TIMEOUT);
+      if (reply != P2_LOCK_OK)
+        switch (reply)
+        {
+          case P2_LOCK_TIMEOUT:
+            ERROR("timeout");
+          case P2_LOCK_DEADLOCK:
+            ERROR("deadlock");
+          case P2_LOCK_REQUEST_OVERFLOW:
+            ERROR("lock request overflow");
+          case P2_LOCK_HEAD_OVERFLOW:
+            ERROR("lock head overflow");
+          default:
+            ERROR("lock failed");
+        }
+    }
+#else
+    if (P2_lock(name, mode, P2_LOCK_LONG, LOCK_TIMEOUT) != P2_LOCK_OK)
+      ERROR("");
+#endif // NDEBUG
+  }
+
+  %v.endif
+
+  // Figure out a way to get rid of this semicolon. 
+  ; 
+
+  s_verbatim(schema);
+%}
+}
+
+def_cursor_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}
+
+def_container_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}

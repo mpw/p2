@@ -1,0 +1,159 @@
+/* $Id: hash_array02.p2,v 45.0 1997/09/19 05:43:30 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Insert some data, the perform some operations on it. */
+
+#include <stdio.h>  /* prinitf() */
+#include <stdlib.h> /* rand(), RAND_MAX */
+
+#define N 1234 /* Size of array. */ 
+#define M 1000 /* Number of Monte Carlo trials. */
+
+#if 1
+
+/* Use hash_array */
+#if !defined(HASH_ARRAY)
+#define HASH_ARRAY
+#endif /* HASH_ARRAY */
+
+#elif 0
+
+/* Use hash, avail, and array */
+#if !defined(HASH)
+#define HASH
+#endif /* HASH */
+
+/* Otherwise, use delflag and malloc */
+
+#endif
+
+typedef struct {
+  int k;
+} T;
+
+typex {
+#if defined(HASH_ARRAY)
+#if 0
+  t = top2ds_qualify[hash_array[transient]];
+#else
+  t = top2ds[hash_array[transient]];
+#endif
+#elif defined(HASH)
+  t = top2ds_qualify[hash[avail[array[transient]]]];
+#else
+  t = top2ds_qualify[dlist[delflag[malloc[transient]]]];
+#endif
+}
+
+container <T> stored_as t with {
+#if defined(HASH_ARRAY)
+  hash_array key is k with size N;
+#elif defined(HASH)
+  array size is N;
+  hash key is k with size N;
+#endif
+} cont;
+
+cursor <cont> unqualified_curs;
+cursor <cont> where "$.k == i" qualified_curs;
+
+int i;
+int j;
+element<cont> *a[N];
+
+main()
+{
+  T t;
+
+  init_cont(cont);
+  init_curs(qualified_curs);
+
+  /* Insert data. */
+  for (i = 0; i < N; i = i+2)
+  {
+    t.k = i;
+    insert(qualified_curs, t);
+    a[i] = qualified_curs.obj;
+  }
+
+  i = 0;
+  /* Count and print data. */
+  foreach(unqualified_curs)
+  {
+#if 0
+    printf("%2d. %d\n", i, unqualified_curs.k);
+#endif
+    i++;
+  }
+  if (i != N/2)
+  {
+    printf("Error: i = %d not equal to N/2 = %d", i, N/2);
+    exit(1);
+  }
+
+  /* Test the operators. */
+  for (j = 0; j < M; j++)
+  {
+    /* reset_start(): item IN array. */
+    i = ((int) (((float) N/2)*rand()/(RAND_MAX+1.0)))*2;
+    reset_start(qualified_curs);
+    if (end_adv(qualified_curs))
+    {
+      printf("Error: end_adv(), i = %d, j = %d\n", i, j);
+      exit(1);
+    }
+    if (qualified_curs.k != i)
+    {
+      printf("Error: reset_start(), qualified_curs.k = %d not equal to i = %d,"
+	     " j = %d\n", qualified_curs.k, i, j);
+      exit(1);
+    }
+
+    /* reset_end(): item NOT in array. */
+    i = (((int) (((float) N/2)*rand()/(RAND_MAX+1.0)))*2)+1;
+    reset_start(qualified_curs);
+    if (!end_adv(qualified_curs))
+    {
+      printf("Error: !end_adv(), i = %d, j = %d\n", i, j);
+      exit(1);
+    }
+
+    /* reset_end(): item IN array. */
+    i = ((int) (((float) N/2)*rand()/(RAND_MAX+1.0)))*2;
+    reset_end(qualified_curs);
+    if (end_rev(qualified_curs))
+    {
+      printf("Error: end_rev(), i = %d, j = %d\n", i, j);
+      exit(1);
+    }
+    if (qualified_curs.k != i)
+    {
+      printf("Error: reset_end(), qualified_curs.k = %d not equal to i = %d,"
+             " j = %d\n", qualified_curs.k, i, j);
+      exit(1);
+    }
+
+    /* reset_end(): item NOT in array. */
+    i = (((int) (((float) N/2)*rand()/(RAND_MAX+1.0)))*2)+1;
+    reset_end(qualified_curs);
+    if (!end_rev(qualified_curs))
+    {
+      printf("Error: !end_rev(), i = %d, j = %d\n", i, j);
+      exit(1);
+    }
+
+    /* pos() */
+    i = ((int) (((float) N/2)*rand()/(RAND_MAX+1.0)))*2;
+    pos(qualified_curs, a[i]);
+    if (qualified_curs.k != i)
+    {
+      printf("Error: pos(), qualified_curs.k = %d not equal to i = %d,"
+             " j = %d\n", qualified_curs.k, i, j);
+      exit(1);
+    }
+  }
+
+  printf("Success!\n");
+  close_cont(cont);
+  exit(0);
+}

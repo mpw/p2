@@ -1,0 +1,1 @@
+malloc_multi.o: malloc_multi.xp malloc.xph ../config.h xact.xph adhoc.xph

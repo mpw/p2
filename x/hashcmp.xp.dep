@@ -1,0 +1,1 @@
+hashcmp.o: hashcmp.xp ../common/qopt.h hashcmp.h

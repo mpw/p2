@@ -1,0 +1,219 @@
+// $Id: dlist.xph,v 45.0 1997/09/19 05:46:21 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Doubly-linked list implementation.
+// Included by:
+//    dlist.xp
+//    dlist_deque.xp
+//    dlist_stable.xp.
+
+// dlist adds prev, next to elements
+// dlist adds first, last to container
+
+// dlist maintains a doubly-linked list of chronologically-insert-
+// ordered elements
+
+// xform - dlist adds next, prev to elements; first, last to container
+
+!#include "qopt.h"
+
+// link cursor function
+
+cursor_func link(cursor)
+%{
+   if (!container.first)
+   {
+      // EMPTY list.
+      container.first = cursor.obj;
+      container.last  = cursor.obj;
+      cursor.next     = 0;
+      cursor.prev     = 0;
+   }
+   else
+   {
+      // NON-empty list.
+#if defined(DEQUE)
+      if (P2_insert_tail)
+      {
+	// Add record to end of list.
+	P2_insert_tail     = 0;
+	cursor.next        = 0;
+	cursor.prev        = container.last;
+	cursor.prev->next  = cursor.obj;
+	container.last     = cursor.obj;
+      }
+      else
+#endif // DEQUE
+      {
+        // Add record to beginning of list. 
+        cursor.next       = container.first;
+        cursor.prev       = 0;
+        cursor.next->prev = cursor.obj;
+        container.first   = cursor.obj;
+      }
+   }
+%}
+
+// xform - dlist adds next, prev, mark to elements; first, last to container
+
+xform(element, container, cursor)
+{
+   add element   : struct element *next; 
+   add element   : struct element *prev; 
+   add container : struct element *first; 
+   add container : struct element *last;
+   xform(element, container, cursor);
+}
+
+// optimize
+
+#if !defined(COST)
+#define COST LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+#endif // COST
+
+optimize(cursor)
+{
+   optimize(cursor);
+   if (cost>COST)
+   {
+      cost  = COST;
+      layer = %ln;
+      retrieval_direction = 0;
+   }
+}
+
+// retrieval operations
+
+query(cursor)
+{
+   char *p = bind_predicate(te, cursor, obj_type, predicate);
+   %{
+      %v.p
+   %}
+   xfree(p);
+}
+
+// retrieval operations - adv, rev
+
+adv(cursor)
+%{
+        cursor.obj = cursor.next;
+%}
+
+rev(cursor)
+%{
+        cursor.obj = cursor.prev;
+%}
+
+// retrieval operations - end_adv, end_rev
+
+end_adv(cursor)
+%{
+   (cursor.obj == 0)
+%}
+
+
+end_rev(cursor)
+%{
+   (cursor.obj == 0)
+%}
+
+
+// retrieval operations - reset_start, reset_end
+
+reset_start(cursor)
+%{
+   cursor.obj = container.first;
+%}
+
+
+reset_end(cursor)
+%{
+   cursor.obj = container.last;
+%}
+
+// non-retrieval operations - init_cont
+
+init_cont(container)
+%{
+   init_cont(container);
+
+   container.first = 0;
+   container.last  = 0;
+%}
+
+#if 0
+// non-retrieval operations - init_curs
+
+init_curs(cursor)
+%{
+   init_curs(cursor);
+   cursor.obj = 0;
+%}
+#endif
+
+// non-retrieval operations - insert
+
+insert(cursor, record)
+%{
+   insert(cursor, record);
+   call link(cursor);
+%}
+
+
+// non-retrieval operations - varinsert
+
+varinsert(cursor, record, expr)
+%{
+   varinsert(cursor, record, expr);
+#if 1
+   call link(cursor);
+#endif
+%}
+
+// non-retrieval operations - delete
+
+delete(cursor)
+{
+  %{
+    // Note: the deleted record's prev and next pointers are left intact
+    // for advancing.
+    if (cursor.next)
+    { 
+        cursor.next->prev = cursor.prev;
+    }
+    else
+    { 
+        container.last = cursor.prev;
+    }
+    if (cursor.prev)
+    { 
+        cursor.prev->next = cursor.next;
+    }
+    else
+    { 
+        container.first = cursor.next;
+    }
+  %}
+
+#if !defined(STABLE)
+  // For post-positioning--remember next pointer.
+  if (layer == %ln) 
+  {
+    char q[20];
+    sprintf(q, "P2_temp%d", other_id_counter++);
+    %{
+      {
+        struct obj_type *%v.q = cursor.next;
+        delete (cursor);
+        cursor.obj = %v.q;
+        cursor.inbetween = 1;
+      }
+    %}
+  }
+#else
+  %{
+    delete(cursor);
+  %}
+#endif // STABLE
+}

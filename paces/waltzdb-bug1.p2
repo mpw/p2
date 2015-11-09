@@ -1,0 +1,343 @@
+/* $Id: waltzdb-bug1.p2,v 45.0 1997/09/19 05:44:56 jthomas Exp $ */
+
+/************************************
+           waltzdb.p2
+************************************/
+
+/************************************
+  options selected: active_rule malloc pred_indx string_optimization shadow_optimization 
+************************************/
+
+#define DEBUG                 0
+#define STRING_OPTIMIZATION   1
+#define SHADOW_OPTIMIZATION   1
+#define NEGATION_OPTIMIZATION 0
+
+#include <stdlib.h>
+
+typedef enum {
+  FALSE,
+  TRUE
+} BOOLEAN;
+
+int dom_timestamp;
+
+/*****************  valid defines ****************/
+
+#define ta " $a._ts <= dom_timestamp "
+#define tb " $b._ts <= dom_timestamp "
+#define tc " $c._ts <= dom_timestamp "
+#define td " $d._ts <= dom_timestamp "
+#define te " $e._ts <= dom_timestamp "
+#define tf " $f._ts <= dom_timestamp "
+#define tg " $g._ts <= dom_timestamp "
+
+
+#define va " (!is_deleted($a)) "
+#define vb " (!is_deleted($b)) "
+#define vc " (!is_deleted($c)) "
+#define vd " (!is_deleted($d)) "
+#define ve " (!is_deleted($e)) "
+#define vf " (!is_deleted($f)) "
+#define vg " (!is_deleted($g)) "
+
+
+#define and " && "
+
+#define t2_a and tb
+#define t2_b and ta
+#define t3_a and tb and tc
+#define t3_b and ta and tc
+#define t3_c and ta and tb
+#define t4_a and tb and tc and td
+#define t4_b and ta and tc and td
+#define t4_c and ta and tb and td
+#define t4_d and ta and tb and tc
+#define t5_a and tb and tc and td and te
+#define t5_b and ta and tc and td and te
+#define t5_c and ta and tb and td and te
+#define t5_d and ta and tb and tc and te
+#define t5_e and ta and tb and tc and td
+#define t6_a and tb and tc and td and te and tf
+#define t6_b and ta and tc and td and te and tf
+#define t6_c and ta and tb and td and te and tf
+#define t6_d and ta and tb and tc and te and tf
+#define t6_e and ta and tb and tc and td and tf
+#define t6_f and ta and tb and tc and td and te
+#define t7_a and tb and tc and td and te and tf and tg
+#define t7_b and ta and tc and td and te and tf and tg
+#define t7_c and ta and tb and td and te and tf and tg
+#define t7_d and ta and tb and tc and te and tf and tg
+#define t7_e and ta and tb and tc and td and tf and tg
+#define t7_f and ta and tb and tc and td and te and tg
+#define t7_g and ta and tb and tc and td and te and tf
+
+#define v2_a vb
+#define v2_b va
+#define v3_a vb and vc
+#define v3_b va and vc
+#define v3_c va and vb
+#define v4_a vb and vc and vd
+#define v4_b va and vc and vd
+#define v4_c va and vb and vd
+#define v4_d va and vb and vc
+#define v5_a vb and vc and vd and ve
+#define v5_b va and vc and vd and ve
+#define v5_c va and vb and vd and ve
+#define v5_d va and vb and vc and ve
+#define v5_e va and vb and vc and vd
+#define v6_a vb and vc and vd and ve and vf
+#define v6_b va and vc and vd and ve and vf
+#define v6_c va and vb and vd and ve and vf
+#define v6_d va and vb and vc and ve and vf
+#define v6_e va and vb and vc and vd and vf
+#define v6_f va and vb and vc and vd and ve
+#define v7_a vb and vc and vd and ve and vf and vg
+#define v7_b va and vc and vd and ve and vf and vg
+#define v7_c va and vb and vd and ve and vf and vg
+#define v7_d va and vb and vc and ve and vf and vg
+#define v7_e va and vb and vc and vd and vf and vg
+#define v7_f va and vb and vc and vd and ve and vg
+#define v7_g va and vb and vc and vd and ve and vf
+
+/************ generated record types ***************/
+
+typedef struct {
+   int value;
+   int     _ts;
+} stage;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   int     _ts;
+} line;
+
+typedef struct {
+   int type;
+   int     p1;
+   int     p2;
+   int joined;
+   int     _ts;
+} edge;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   int l_name;
+   int     l_id;
+   int     _ts;
+} edge_label;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   int     p3;
+   int     base_point;
+   int type;
+   int name;
+   int visited;
+   int     _ts;
+} junction;
+
+typedef struct {
+   int     id;
+   int type;
+   int name;
+   int n1;
+   int n2;
+   int n3;
+   int     _ts;
+} label;
+
+typedef struct {
+   int     bp;
+   int     l_id;
+   int     _ts;
+} illegal;
+
+/************ generated container declarations ***************/
+
+typex { leaps_x = top2ds_qualify[
+                  lpredindx[llist[
+                  delflag[malloc[transient_fast]]]]]; }
+
+container < stage > stored_as leaps_x with {
+   lpredindx timestamp is _ts predicate " $.value == _duplicate " with activate1 with deactivate1;
+   lpredindx timestamp is _ts predicate " $.value == _detect_junctions " with activate2 with deactivate2;
+   lpredindx timestamp is _ts predicate " $.value == _find_initial_boundary " with activate3 with deactivate3;
+   lpredindx timestamp is _ts predicate " $.value == _find_second_boundary " with activate4 with deactivate4;
+   lpredindx timestamp is _ts predicate " $.value == _labeling " with activate5 with deactivate5;
+   lpredindx timestamp is _ts predicate " $.value == _visiting_threej " with activate6 with deactivate6;
+   lpredindx timestamp is _ts predicate " $.value == _visiting_twoj " with activate7 with deactivate7;
+   lpredindx timestamp is _ts predicate " $.value == _marking " with activate8 with deactivate8;
+   lpredindx timestamp is _ts predicate " $.value == _checking " with activate9 with deactivate9;
+   lpredindx timestamp is _ts predicate " $.value == _remove_label " with activate10 with deactivate10;
+   lpredindx timestamp is _ts predicate " $.value == _printing " with activate11 with deactivate11;
+   llist timestamp is _ts;
+}  cont_stage;
+
+container < line > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_line;
+
+container < line > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  shadow_line;
+
+container < edge > stored_as leaps_x with {
+   lpredindx timestamp is _ts predicate " $.joined == _false " with activate12 with deactivate12;
+   llist timestamp is _ts;
+}  cont_edge;
+
+container < edge > stored_as leaps_x with {
+   lpredindx timestamp is _ts predicate " $.joined == _false " with null with null;
+   llist timestamp is _ts;
+}  shadow_edge;
+
+container < edge_label > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_edge_label;
+
+container < edge_label > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  shadow_edge_label;
+
+container < junction > stored_as leaps_x with {
+   lpredindx timestamp is _ts predicate " $.type == _twoj " with activate13 with deactivate13;
+   lpredindx timestamp is _ts predicate " $.type == _threej && $.name == _arrow " with activate14 with deactivate14;
+   lpredindx timestamp is _ts predicate " $.type == _threej && $.visited == _no " with activate15 with deactivate15;
+   lpredindx timestamp is _ts predicate " $.visited == _now " with activate16 with deactivate16;
+   lpredindx timestamp is _ts predicate " $.type == _twoj && $.visited == _no " with activate17 with deactivate17;
+   lpredindx timestamp is _ts predicate " $.visited == _yes " with activate18 with deactivate18;
+   lpredindx timestamp is _ts predicate " $.visited == _check " with activate19 with deactivate19;
+   lpredindx timestamp is _ts predicate " $.type == _threej " with activate20 with deactivate20;
+   llist timestamp is _ts;
+}  cont_junction;
+
+container < junction > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  shadow_junction;
+
+container < label > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_label;
+
+container < illegal > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_illegal;
+
+/************** generated container numbers *******************/
+
+#define stage_num  1
+#define line_num  2
+#define shadow_line_num  3
+#define edge_num  4
+#define shadow_edge_num  5
+#define edge_label_num  6
+#define shadow_edge_label_num  7
+#define junction_num  8
+#define shadow_junction_num  9
+#define label_num  10
+#define illegal_num  11
+
+/************ utility cursor decls ***************/
+
+typedef cursor <cont_stage> stage_cursor;
+typedef cursor <cont_line> line_cursor;
+typedef cursor <shadow_line> shadow_line_cursor;
+typedef cursor <cont_edge> edge_cursor;
+typedef cursor <shadow_edge> shadow_edge_cursor;
+typedef cursor <cont_edge_label> edge_label_cursor;
+typedef cursor <shadow_edge_label> shadow_edge_label_cursor;
+typedef cursor <cont_junction> junction_cursor;
+typedef cursor <shadow_junction> shadow_junction_cursor;
+typedef cursor <cont_label> label_cursor;
+typedef cursor <cont_illegal> illegal_cursor;
+
+stage_cursor   a_stage;
+
+line_cursor   a_line;
+
+shadow_line_cursor   a_shadow_line;
+
+edge_cursor   a_edge;
+
+shadow_edge_cursor   a_shadow_edge;
+
+edge_label_cursor   a_edge_label;
+
+shadow_edge_label_cursor   a_shadow_edge_label;
+
+junction_cursor   a_junction;
+
+shadow_junction_cursor   a_shadow_junction;
+
+label_cursor   a_label;
+
+illegal_cursor   a_illegal;
+
+/**************************** rule #28: checking :
+   (stage ^value  checking  )
+   (junction ^base_point  <bp> ^visited  check  )
+   (edge_label ^p1  <bp> ^p2  <p> ^l_name  <n> ^l_id  <id>  )
+   (junction ^base_point  <p> ^visited  yes  )
+   - (edge_label ^p1  <p> ^p2  <bp> ^l_name  <n>  )
+    -->  *******************************/
+
+int id_28;
+int n_28;
+int p_28;
+int bp_28;
+
+cursor <cont_edge_label> where " $.p1 == p_28 && $.p2 == bp_28 && $.l_name == n_28 "
+   C28_5;
+cursor <shadow_edge_label> where " $.p1 == p_28 && $.p2 == bp_28 && $.l_name == n_28  && $._ts > dom_timestamp"
+   S28_5;
+
+BOOLEAN N28_5(  junction_cursor *b, edge_label_cursor *c )
+{
+   n_28 = c->l_name;
+   p_28 = c->p2;
+   bp_28 = b->base_point;
+   foreach(C28_5) { return FALSE; }
+   foreach(S28_5) { return FALSE; }
+   return TRUE;
+}
+
+#define query_28 where " $a.value == _checking && $b.visited == _check \
+        && $c.p1 == $b.base_point \
+        && $d.base_point == $c.p2 && $d.visited == _yes && (N28_5(&$b,&$c)) "
+
+#define negated_28 " (N28_5(&$b,&$c)) "
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge_label, d cont_junction >
+   given < a >
+   query_28 t4_a
+   valid v4_a  and negated_28
+   curs28_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge_label, d cont_junction >
+   given < b >
+   query_28 t4_b
+   valid v4_b  and negated_28
+   curs28_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge_label, d cont_junction >
+   given < c >
+   query_28 t4_c
+   valid v4_c  and negated_28
+   curs28_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge_label, d cont_junction >
+   given < d >
+   query_28 t4_d
+   valid v4_d  and negated_28
+   curs28_d;
+
+curs28_a c;
+
+int main()
+{
+  return 0;
+}

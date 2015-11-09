@@ -1,0 +1,1 @@
+splaytree.o: splaytree.xp ../common/qopt.h splaytree.h

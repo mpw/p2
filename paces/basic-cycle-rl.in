@@ -1,0 +1,4 @@
+(make counter ^value 0)
+(watch 0)
+(run)
+(exit)

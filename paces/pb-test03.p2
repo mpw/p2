@@ -1,0 +1,29 @@
+/* $Id: pb-test03.p2,v 45.0 1997/09/19 05:43:58 jthomas Exp $ */
+
+/* This file tests for the presence of a specific (and now fixed)
+   bug in pb, that resulted in the incorrect interpretation of
+   some declarations.  This bug was caused by code in pb that pushed
+   scope iff the current declaration name was non-NULL.  The bug fix
+   was to modify the code so that it always pushes scope.
+   I have saved the following prototype declarations as a regression test.
+   (JAT) */
+
+/* The following prototypes did NOT exhibit the bug. */
+
+void yyy (int, char(*)());
+void vvv (int, int);
+void xxx (char(*)());           
+
+/* The following prototypes DID exhibit the bug. */
+
+void zzz (char(*)(), int);
+void rrr (char*());
+void sss (int, char*());
+void uuu (char*(), char*());
+void ttt (int, char(*)(), char(*)());
+void www (char(*)(), char(*)());
+
+int main ( int argc, char *argv[] )
+{
+  exit( 0 );
+}

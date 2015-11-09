@@ -1,0 +1,36 @@
+/* $Id: xact15.p2,v 45.0 1997/09/19 05:45:36 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Toy program to gcc demonstrate bug: conflicting types for the enum
+   constants NONE, DO, UNDO, and REDO.  This bug was caused by the
+   fact that these enum constants were defined in both the
+   log_transient.xp layer and the P2_log-manager.h header file
+   (which is automatically #include'd by all .p2 files). */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+  int i;
+} EMP_TYPE;
+
+typex {
+#if 1
+  /* Bug: log_transient */
+  t = top2ds[init_generic[log_transient[array[transient]]]];
+#else
+  /* No bug: no log_transient */
+  t = top2ds[init_generic[log_tid_hack[array[transient]]]];
+#endif
+}
+
+schema {
+  container <EMP_TYPE> emp_cont;
+} stored_as t with {
+  array size of emp_cont is 10;
+} emp_schema;
+
+int main (void) 
+{
+  return 0;
+}

@@ -1,0 +1,235 @@
+/* $Id: xact-lock06.p2,v 45.0 1997/09/19 05:45:17 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test P2_lock-manager mode P2_LOCK_X times N with transactions. */
+/* N = 100, begin_xact OUTside mutex. */
+/* Limit the number of live children to M. */
+
+/* Analogous to paces/lock04.p2 and paces/xact00.p2 */
+/* Analogous to paces/xact-lock03.p2 (N = 10, begin_xact INside mutex) */
+/* Analogous to paces/xact-lock04.p2 (N = 10, begin_xact OUTside mutex) */
+/* Analogous to paces/xact-lock05.p2 (N = 100, begin_xact INside mutex) */
+/* Analogous to paces/xact-lock06.p2 (N = 100, begin_xact OUTside mutex) */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <assert.h>   /* assert() */
+#include <stdio.h>    /* fprintf() */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+/* Print debugging output. */
+#if 0
+#if !defined(DEBUG)
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* Label processes. */
+#if defined(TRACE)
+#define LABEL
+#endif /* TRACE */
+
+#if 1
+/* If P2_FORK_PROCESS is defined, then we will fork the children. */
+#if !defined(P2_FORK_PROCESS)
+#define P2_FORK_PROCESS
+#endif /* P2_FORK_PROCESS */
+#endif
+
+/* Transactions. */
+#if 1
+#if !defined(XACT)
+#define XACT
+#endif /* XACT */
+#endif
+
+/* Total number of children to fork() */
+#define N 100
+
+/* Maxium number of live children */
+#define M 10
+
+/* Mutex lock name. */
+#define LOCK_NAME 6
+
+/* Mutex lock timeout. */
+#define LOCK_TIMEOUT 5
+
+/* Mutex lock class (aka duration). */
+#define LOCK_CLASS P2_LOCK_MEDIUM
+
+/*****************************************************************************/
+/*                  Declare typex and schema.                                */
+/*****************************************************************************/
+
+typex {
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+}
+
+typedef struct {
+  int i;
+} E;
+
+schema {
+  container <E> k;
+} stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, 1);
+} s;
+
+/*****************************************************************************/
+/*                  Print errors.                                            */
+/*****************************************************************************/
+
+static void
+parent_error (const char *s, int i)
+{
+  fprintf(stderr, "Parent");
+  if (i == -1)
+    fprintf(stderr, ": ");
+  else
+    fprintf(stderr, " i = %d: ", i);
+  perror(s);
+  fflush(stderr);
+  exit(1);
+}
+
+static void
+child_error (const char *s, int i)
+{
+  fprintf(stderr, "Child i = %d: ", i);
+  perror(s);
+  fflush(stderr);
+  exit(1);
+}
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int i;
+
+int
+main()
+{
+  P2_PROCESS_ID child_pid[N];
+  P2_LOCK_REPLY lock_reply;
+
+#if defined(LABEL)
+  /* Process label. */
+  char label[P2_PROCESS_ID_LABEL_SIZE];
+#endif /* LABEL */
+
+  /* Open schema. */
+  open_schema(s);
+
+#if defined(LABEL)
+  /* Label the parent process. */
+  P2_label_process_id("Parent");
+#endif /* LABEL */
+
+  for (i = 0; i < N; i++)
+  {
+#if defined(P2_FORK_PROCESS)
+    /* Fork child. */
+    child_pid[i] = P2_fork_process();
+#else
+    child_pid[i] = 0;
+#endif /* P2_FORK_PROCESS */
+    if (child_pid[i] == -1)
+    {
+      /*** This is an error. ***/
+
+      parent_error("P2_fork_process() failed", i);
+    }
+    else if (child_pid[i] == 0)
+    {
+      /*** This is the child. ***/
+
+#if defined(LABEL)
+      /* Label the child process. */
+      sprintf(label, "child %d", i);
+      P2_label_process_id(label);
+#endif /* LABEL */
+
+#if defined(XACT)
+      /* Begin transaction. */
+      begin_xact(s);
+#endif /* XACT */
+
+      /* Lock mutex lock. */
+      lock_reply = P2_lock(LOCK_NAME, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT);
+      assert(lock_reply == P2_LOCK_OK
+	     || lock_reply == P2_LOCK_TIMEOUT
+	     || lock_reply == P2_LOCK_REQUEST_OVERFLOW
+	     || lock_reply == P2_LOCK_HEAD_OVERFLOW);
+      if (lock_reply != P2_LOCK_OK)
+        child_error("P2_lock(mutex) failed", i);
+
+      /* Print "Hello World" */
+#if defined(DEBUG) || defined(TRACE)
+      printf("%d. Hello World!\n", i);
+#else
+      printf("Hello World!\n");
+#endif /* DEBUG || TRACE */
+      /* Flush stdout. */
+      fflush(stdout);
+
+#if defined(XACT)
+      /* Commit transaction--will release all locks held by the transaction. */
+      commit_xact(s);
+#else
+      /* Not in a transaction--must explicitly release the lock. */
+      lock_reply = P2_unlock(LOCK_NAME);
+      assert(lock_reply == P2_LOCK_OK);
+#endif /* XACT */
+
+#if defined(P2_FORK_PROCESS)
+      /* Exit success. */
+      exit(0);
+#endif /* P2_FORK_PROCESS */
+    }
+    else
+    {
+      /*** This is the parent. ***/
+
+      /* Wait for child i-(M-1) to finish before forking child i.
+	 That is, limit the number of live children to M. */
+      if (i >= (M-1))
+        if (P2_join_process(child_pid[i-(M-1)]) != 0)
+          parent_error("P2_join_process() != 0", i);
+    }
+  }
+
+#if defined(P2_FORK_PROCESS)
+  /* Barrier: wait for all N children to exit. */
+  for (i = N-(M-1); i < N; i++)
+    if (P2_join_process(child_pid[i]) != 0)
+      parent_error("P2_join_process() != 0", i);
+#endif /* P2_FORK_PROCESS */
+
+  /* Lock mutex lock. */
+  lock_reply = P2_lock(LOCK_NAME, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT);
+  assert(lock_reply == P2_LOCK_OK
+	 || lock_reply == P2_LOCK_TIMEOUT
+	 || lock_reply == P2_LOCK_REQUEST_OVERFLOW
+	 || lock_reply == P2_LOCK_HEAD_OVERFLOW);
+  if (lock_reply != P2_LOCK_OK)
+    parent_error("P2_lock(mutex) failed", -1);
+
+  /* Close schema. */
+  close_schema(s);
+
+  printf("Parent Exits\n");
+  /* Flush stdout. */
+  fflush(stdout);
+
+  /* Exit. */
+  exit(0);
+}

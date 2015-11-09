@@ -1,0 +1,1 @@
+qualify.o: qualify.xp ../common/qopt.h qualify.h

@@ -1,0 +1,6 @@
+@c $Id: adv-function-index.texi,v 45.0 1997/09/19 05:42:01 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node       Functions and Variables Index, dlist.xp program, Concept Index, Top
+@unnumbered Functions and Variables Index
+@printindex fn

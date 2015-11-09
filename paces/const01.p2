@@ -1,0 +1,14 @@
+/* $Id: const01.p2,v 45.0 1997/09/19 05:42:59 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* pb unparsed this incorrectly as:
+     char *const const aaa[];
+*/
+
+const char * const aaa[];
+ 
+int
+main()
+{
+  return(0);
+}

@@ -1,0 +1,50 @@
+/* $Id: lock02.p2,v 45.0 1997/09/19 05:43:35 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test P2_lock-manager mode P2_LOCK_X
+   First, lock 0, 1, 2, ..., MAX_LOCK_NAME.
+   Then, unlock MAX_LOCK_NAME, ..., 2, 1, 0 */
+
+#include "P2_paces.h"
+#include <stdio.h>    /* fprintf() */
+
+#define N 10
+#define LOCK_TIMEOUT 2
+
+int
+main()
+{
+  P2_LOCK_NAME lock_name;
+
+  /* Initialize process and lock manager. */
+  P2_init_process();
+  P2_init_lock_manager();
+
+  /*** First, lock. ****/
+
+  lock_name = 0;
+  while (lock_name < N)
+  {
+    printf("P2_lock(%d)\n", lock_name);
+    if (P2_lock(lock_name, P2_LOCK_X, P2_LOCK_MEDIUM, 10) != P2_LOCK_OK)
+      fprintf(stderr, "P2_lock(%d) failed\n", lock_name);
+    lock_name++;
+  }
+
+  /*** Then, unlock. ***/
+
+  while (lock_name > 0)
+  {
+    lock_name--;
+    printf("P2_unlock(%d)\n", lock_name);
+    if (P2_unlock(lock_name) != P2_LOCK_OK)
+      fprintf(stderr, "P2_unlock(%d) failed\n", lock_name);
+  }
+
+  /* Delete process and lock manager. */
+  P2_delete_lock_manager();
+  P2_delete_process();
+
+  /* Exit. */
+  exit(0);
+}

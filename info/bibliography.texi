@@ -1,0 +1,51 @@
+@c $Id: bibliography.texi,v 45.0 1997/09/19 05:42:01 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node       P2 Bibliography, Concept Index, Invoking P2, Top
+@chapter   P2 Bibliography
+
+@cindex P2 references
+@cindex P2 bibliography
+
+These are a few of the papers which describe the P2 system.
+
+@ignore
+D. Batory, @cite{xp: A Preprocessor For Defining Layers in Predator},
+Department of Computer Science, University of Texas at Austin, in
+preparation.
+@end ignore
+
+@itemize @bullet
+
+@item
+D. Batory, Vivek Singhal, Marty Sirkin, and Jeff Thomas, "Scalable
+Software Libraries", @cite{Proceedings of ACM SIGSOFT '93: Symposium on
+the Foundations of Software Engineering}, Los Angeles, California, 7-10
+December, 1993.
+
+@item
+Don Batory, Vivek Singhal, Jeff Thomas, Sankar Dasari, Bart Geraci, and
+Marty Sirkin.  "Achieving Reuse with Software System Generators",
+@cite{IEEE Software}, September 1994.
+
+@item 
+M. Sirkin, D. Batory, and V. singhal, "Software Components in a Data
+Structure Precompiler", @cite{Proc. 15th Internnational Conference on
+Software Engineering}, May 1993.
+
+@item
+M. Sirkin, @cite{A Software System Generator for Data Structures},
+Ph.D. dissertation, Department of Computer Science, University of
+Washington, Seattle, Washington, 1994.
+
+@item 
+D. Batory and S. O'Malley. "The Design and Implementation of
+Hierarchical Software Systens with Reusable Componets, @cite{ACM
+Transactions on Software Engineering and Methodology}, October 1992. 
+
+@item
+D. Batory, J. Thomas. and M. Sirkin, @cite{Reengineering a Complex
+Application Using a Scalable Data Strcutre Compiler}, Department of
+Computer Science, University of Texas at Austin, May 1994.
+
+@end itemize

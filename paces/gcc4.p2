@@ -1,0 +1,54 @@
+/* $Id: gcc4.p2,v 45.0 1997/09/19 05:43:23 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* gcc-specific extensions: local labels (also requires typeof) */
+
+/* #include "P2_paces.h" */
+
+#include <stdio.h>
+
+/* gcc-specific extensions: local labels, statement expressions,
+   and typeof */
+
+/* If taget appears in array[max][max], return its index.
+   Otherwise, return -1. */
+
+#if 1
+#define SEARCH(array, target)                     \
+({                                                \
+  __label__ found;                                \
+  typeof (target) _SEARCH_target = (target);      \
+  typeof (*(array)) *_SEARCH_array = (array);     \
+  int i, j;                                       \
+  int value;                                      \
+  for (i = 0; i < max; i++)                       \
+    for (j = 0; j < max; j++)                     \
+      if (_SEARCH_array[i][j] == _SEARCH_target)  \
+        { value = i; goto found; }                \
+  value = -1;                                     \
+ found:                                           \
+  value;                                          \
+})
+#else
+#define SEARCH(array, target) -1
+#endif
+
+int max = 3;
+int a1[3][3] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+char a2[3][3] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i' };
+
+int
+main ()
+{
+  __label__ label0, label1;
+
+  if (SEARCH(a1, 7) == -1 || SEARCH(a2, 'z') != -1)
+    goto label1;
+  else
+    goto label0;
+
+ label0:
+  return 0;
+ label1:
+  return 1;
+}

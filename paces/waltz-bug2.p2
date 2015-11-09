@@ -1,0 +1,140 @@
+/* $Id: waltz-bug2.p2,v 45.0 1997/09/19 05:44:48 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include "P2_paces.h"
+
+/*
+
+The code p2 generates for a foreachk(k) (where k is of type curs4_a):
+
+  (((*c).b)).obj = (cont_edge).first2;
+  while (!((!((*c).b).obj)) && 
+         !((int_LE ((((*c).b).obj)->_ts, dom_timestamp) && 
+            strcmp (((*c).b).obj->joined, "false") == 0 && 
+            1 && 
+            1 && 
+            ((*c).a).obj-> value == "detect_junctions")))       *******
+    {
+      (((*c).b)).obj = (((*c).b).obj)->next2;
+    }
+
+Note two things:
+
+(1) The line indicated by ******* is not correct.  It should be
+    strcmp( (*c).a).obj-> value, "detect_junctions" ) == 0, or
+    rather, from pb output, str_eq(...) (i think).
+
+    The problem is that your solution to the compound cursor problem
+    for binding queries works for integer data types, but not
+    string data types.  This is why (when I turn on all rl optimizations)
+    I get the correct output since I use integer, not string, comparisons.
+
+(2) Again return to the ******** line.  This test really shouldn't
+    be part of the loop.  Instead, it should be pulled out of the
+    loop altogether and be a constant test.  Cursor c->a is "given",
+    and constant tests on given cursors should be the preface evaluation
+    before executing nested loop code.
+
+(DSB)
+
+*/
+
+int    dom_timestamp;       /* dominant timestamp */
+
+/*****************  valid defines ****************/
+
+#define ta " $a._ts <= dom_timestamp "
+#define tb " $b._ts <= dom_timestamp "
+#define tc " $c._ts <= dom_timestamp "
+#define td " $d._ts <= dom_timestamp "
+#define te " $e._ts <= dom_timestamp "
+#define tf " $f._ts <= dom_timestamp "
+
+#define va " (!deleted($a)) "
+#define vb " (!deleted($b)) "
+#define vc " (!deleted($c)) "
+#define vd " (!deleted($d)) "
+#define ve " (!deleted($e)) "
+#define vf " (!deleted($f)) "
+
+#define and " && "
+
+#define t2_a and tb
+#define t2_b and ta
+#define t3_a and tb and tc
+#define t3_b and ta and tc
+#define t3_c and ta and tb
+#define t4_a and tb and tc and td
+
+#define v2_a vb
+#define v2_b va
+#define v3_a vb and vc
+#define v3_b va and vc
+#define v3_c va and vb
+#define v4_a vb and vc and vd
+
+/************ generated record types ***************/
+
+typedef struct {
+   char    value[30];
+   int     _ts;
+} stage;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   char    joined[7];
+   char    label[7];
+   char    plotted[5];
+   int     _ts;
+} edge;
+
+/************ generated container declarations ***************/
+
+typex { leaps_x = top2ds_qualify[
+                  llist[
+                  P2_DELFLAG_LAYER[malloc[transient]]]]; }
+
+container < stage > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_stage;
+
+container < edge > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_edge;
+
+
+#if 1
+
+#define query_4 where " $a.value == 'detect_junctions' && " \
+                      " $b.joined == 'false' && " \
+                      " $c.p1 == $b.p1 && $c.p2 != $b.p2 && " \
+                      "    $c.joined == 'false' && " \
+                      " $d.p1 == $b.p1 && $d.p2 != $b.p2 && " \
+                      "    $d.p2 != $c.p2 && $d.joined == 'false' "
+
+#else
+
+#define query_4 where " $a.value == 'detect_junctions' && $b.joined == 'false' " \
+        " && $c.p1 == $b.p1 && $c.p2 != $b.p2 && $c.joined == 'false' " \
+        " && $d.p1 == $b.p1 && $d.p2 != $b.p2 && $d.p2 != $c.p2 " \
+        " && $d.joined == 'false' "
+
+#endif
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < a >
+   query_4 t4_a
+   valid v4_a
+   curs4_a;
+
+curs4_a k;
+
+int main()
+{
+  if (0) {
+    foreachk(k) {
+    }
+  }
+  return 0;
+}

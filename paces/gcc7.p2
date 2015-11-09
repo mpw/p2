@@ -1,0 +1,56 @@
+/* $Id: gcc7.p2,v 45.0 1997/09/19 05:43:24 jthomas Exp $ */
+/* Copyright (C) 1995, The University of Texas at Austin. */
+
+/* gcc-specific extensions: extended asm and asm labels */
+
+/* asm labels */
+
+int foo1 asm ("P2_foo1") __attribute__ ((aligned (1))) = 0;
+int foo2 __attribute__ ((aligned (1))) = 0;
+int foo3 asm ("P2_foo3") = 0;
+struct { int i; } foo4 asm ("P2_foo4");
+
+int func () asm ("P2_func");
+int func ()
+{
+  return 0;
+}
+
+/* gcc doesn't complain about giving an asm name to a typedef,
+   even though I think it should be illegal (JAT). */
+
+typedef int T asm ("P2_T");
+T foo5, *foo6;
+T foo7 asm ("P2_foo7");
+
+int
+main()
+{
+  /* extended asm */
+
+#if 1
+  /* This is a very week test, but should work on any machine. (JAT) */
+  asm ("nop" );
+  __asm ("nop \n nop");
+  __asm__ ("nop \n nop \n nop");
+#else
+  /* This is a stronger test, but doesn't work on any machine,
+     Although, on a SPARC, it gets as far as the assembler. (JAT) */
+  int result, angle, from, to, count, input;
+  asm ("fsinx %1,%0" : "=f" (result) : "f" (angle));
+  asm ("combine %2,%0" : "=r" (foo1) : "0" (foo1), "g" (foo2));
+  asm volatile ("movc3 %0,%1,%2"
+       : /* no outputs */
+       : "g" (from), "g" (to), "g" (count)
+       : "o0", "o1", "o2", "o3", "o4", "o5");
+  asm ("movl %0,r9;movl %1,r10;call _foo"
+       : /* no outputs */
+       : "g" (from), "g" (to)
+       : "o0", "o1");
+  asm ("clr %0;frob %1;beq 0f;mov #1,%0;0:"
+       : "=g" (result)
+       : "g" (input));
+#endif
+
+  return func();
+}

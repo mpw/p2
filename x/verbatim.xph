@@ -1,0 +1,19 @@
+// $Id: verbatim.xph,v 45.0 1997/09/19 05:46:55 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Default implementations of verbatim operations.
+// Included by various layers, especially basis layers,
+// e.g. xp/transient.xph xp/mmap.xph
+
+// Provide null implementations for verbatim operations.
+
+// It is necessary to provide null implementations, because
+// (1) common/op-tab.c defines the verbatim special operations to be
+// of type "expr" (so that $GENSEMI does not add a semicolon), and
+// (2) special operations of type "expr" have a default implementation
+// of "0" rather than null. (JAT)
+
+c_verbatim (cursor)    %{ %}
+k_verbatim (container) %{ %}
+s_verbatim (schema)    %{ %}
+l_verbatim ()          %{ %}

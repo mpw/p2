@@ -1,0 +1,333 @@
+/* $Id: P2_attr.txt,v 45.1 1997/09/29 05:18:19 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/*
+
+Attribute file format:
+
+restfile   :== <attr-list> <layerdefs>*
+attr-list  :== attributes = "{" STRING* "}"
+layerdefs  :== <layernames>+ : "{" <cond>* "}"
+layernames :== STRING
+cond       :==  preconditions [warnings] <list>* 
+             | postconditions <list2>* 
+             | restrictions [warnings] <list>* 
+             | restrictions-<num> [warnings] <list>* 
+list       :== assert <attr>* | negate <attr>* | set <attr>* | 
+              unset <attr>* | may negate <attr>* | may assert <attr>*
+list2      :== assert <attr>* | negate <attr>* 
+attr       :== STRING 
+  attribute name 
+num        :== NUMBER 
+  nth parameter restriction 
+
+==============
+In addition: 
+
+(1) C-style comments can appear anywhere.
+(2) Tokens are separated by whitespace. 
+
+*/
+
+/*
+
+Associated with each attribute is a string that describes the 
+  type of layer with the attribute.
+
+*/
+
+attributes = {  
+        /* Does this layer manipulate the inbetween flag? */
+        in_between       "an inbetween flag layer"
+
+        /* Is this layer unstable? */
+        unstable        "an unstable layer"
+
+        /* Can this layer be a retrieval layer? */
+        retrieval       "a retrieval layer"
+
+        /* Is this layer used in retrieval operations? */
+        always          "a layer always used in retrievals"
+
+        /* Is this layer ordered using predicates? */
+        pred            "a predicate-ordered layer"
+
+        /* Is this layer ordered using timestamps? */
+        temporal        "a timestamp-ordered layer"
+
+        /* Does this layer need a delete flag layer above it? */
+        need_df         "a layer that needs a delete flag layer above it"
+
+        /* Do we have a link layer specification? */
+        llayer          "a link layer"
+
+        /* Is the qualify layer present? */
+        qual_present    "a qualification layer"
+
+        /* Is the delete flag layer present? */
+        df_present      "a delete flag layer" 
+}
+
+/* Some theory on setting attributes:
+
+Let a chain exist from layer "top" to layer "bottom".
+Let "X" be an attribute.
+
+1) To see if there exists a layer with X asserted in the chain, 
+        bottom : { post     negate X } 
+        top    : { restrict assert X } 
+        L      : { post     assert X } 
+                for only the layers L that assert X 
+
+2) To have a layer L appear once and only once in the chain : 
+        bottom : { }
+        L      : { pre negate X      post assert X }
+        top    : { restrict assert X post negate X }
+
+
+3) To have a layer L appear 0 or 1 times in the chain :  
+        bottom : { post assert X }
+        L      : { pre negate X       post assert X }
+        top    : { restrict assert X  post negate X }
+
+
+4a) To have 0+ layer B appear ONLY below 1+ layer L :  
+        bottom : {  }
+        B      : { post assert X }
+        L      : { pre negate X restrict may assert X }
+        top    : { post negate X }
+ b) To have 1+ layer B appear ONLY below 1+ layer L :  
+        bottom : { post negate X }
+        B      : { post assert X }
+        L      : { pre negate X restrict may assert X }
+        top    : { post negate X }
+
+*/
+
+/*
+
+Rules for P2:
+
+  From top2ds to the bottom layer, there must exist at least one
+  retrieval layer.
+
+  inbetween layer is used only once.
+
+  inbetween layer is always above at least one unstable layer.
+  If there are no unstable layers, then it is a warning rather than an error.
+
+  delflag and all its variants should only be used once.
+
+  delflag should only be above layers that need delflag.
+  If there are no such layers, then a warning is generated.
+
+  From top2link to termlink, there should be a link layer (llayer).
+
+  { orderby, mlist, part, etc. } should assert retrieval only if retrieval
+  is asserted in its first parameter. 
+
+Warnings are generated for:
+
+  qualify is below top2ds_qualify
+
+*/
+
+array
+qsort : { 
+        preconditions  assert df_present 
+        postconditions assert retrieval need_df
+}
+
+avail : { 
+        preconditions assert retrieval
+        restrictions  may negate retrieval
+}
+
+avl
+bintree
+hash
+hash_array
+hash_array_overwrite
+hash_slow
+iarray
+mlist
+odlist
+queue
+slist
+slist_prev
+slist_stable
+slist_stack
+slist_queue
+slist_unstable
+slow_hash
+splaytree
+stack : { 
+        preconditions      assert in_between
+        postconditions     assert retrieval unstable
+}
+
+avl
+bintree
+odlist : { 
+	postconditions     assert pred
+}
+
+ccbus : { 
+        postconditions assert always
+}
+
+delflag
+delflag_forarray : { 
+        preconditions negate df_present need_df
+        postconditions assert df_present
+        restrictions may assert need_df
+        restrictions warnings unset need_df
+}
+
+dlist
+dlist_deque
+dlist_old
+dlist_stable
+dlist_unstable
+deque_dlist
+indx : { 
+        postconditions assert retrieval 
+}
+
+fasttransient
+mmap_shared
+mmap_persistent
+persistent
+transient
+transient_fast : { 
+        preconditions assert retrieval
+        postconditions negate retrieval
+}
+
+generic
+generic_funcall : { 
+        postconditions assert always
+}
+
+hlist
+hpredindx
+llist
+lpredindx
+tlist
+tpredindx : { 
+        postconditions assert retrieval temporal 
+}
+
+inbetween : { 
+        preconditions   negate in_between retrieval
+        postconditions  assert always in_between 
+        restrictions    may assert unstable
+                        assert retrieval
+}
+
+linkterm : { 
+        preconditions  assert llayer
+        postconditions negate llayer
+}
+
+log
+log_transient
+log_tid_hack : {
+}
+
+fastmalloc
+malloc
+malloc_fast
+malloc_free
+malloc_multi
+multimalloc : { 
+        preconditions assert retrieval
+}
+
+named_funcall : { 
+        postconditions assert always
+}
+
+nloops
+ringlist : { 
+        postconditions assert llayer
+}
+
+orderby
+orderby_fast
+orderby_smart : { 
+        postconditions assert always
+        restrictions-1 negate retrieval 
+        restrictions-0 assert retrieval
+}
+
+part : { 
+        /*
+           Retrieval should be true only if retrieval is true
+           at lower levels but, top2ds will do the checking for us.
+        */
+            
+        postconditions assert always retrieval
+}
+
+predindx : { 
+        postconditions assert retrieval pred 
+}
+
+qualify : { 
+        preconditions  may negate retrieval
+        postconditions assert always qual_present
+        restrictions   assert retrieval
+}
+
+refdel : { 
+        postconditions assert always 
+}
+
+top2ds
+top2ds_qualify : { 
+        postconditions  negate  in_between qual_present df_present
+                                retrieval need_df
+                        assert  always
+}
+
+top2ds_qualify : {
+        postconditions assert qual_present
+        restrictions   warnings assert qual_present
+}
+
+top2link : { 
+        postconditions negate llayer
+        restrictions   assert llayer
+}
+
+/* Other layers */
+
+cardinality
+container_structure
+cursor_structure
+free
+hashcmp
+id
+init_cont_function
+init_generic
+kcur
+lock
+log
+log_async
+log_transient
+log_tid_hack
+null
+process
+protocol_coarse
+protocol_fine
+protocol_xact_mutex
+red_black_tree
+refcount
+serial_number
+timestamp
+trace
+vtimestamp
+xact : {
+}
+

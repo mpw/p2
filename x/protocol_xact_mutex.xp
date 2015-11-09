@@ -1,0 +1,138 @@
+// $Id: protocol_xact_mutex.xp,v 45.1 1997/09/19 07:51:36 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Simple transaction mutual exclusion locking protocol.
+
+// begin_xact() acquires a P2_LOCK_X mode lock on the entire schema in
+// for the duration of the transaction.
+//
+// This protocol is analogous to the protocol used by
+// x/protocol_coarse.xp in which operations that require locks aquire
+// a lock on the entire schema for the duration of the transaction.
+//
+// But, this layer allows slightly less concurrency than that layer,
+// because this layer acquires the lock on the entire schema
+// (1) at the beginning of the transaction, and (2) in P2_LOCK_X mode
+// regardless or whether or not the transaction will modify the
+// container.
+
+// Is this most simple protocol possible???
+
+layer ds protocol_xact_mutex[ ds ] stable no annotation retrieval_always
+
+!#include "protocol_xact_mutex.h"
+
+#define LOCK_TIMEOUT 60
+#define ERROR(x) P2_runtime_error("protocol_xact_mutex: lock failed: " x)
+
+// Operations that do NOT require locks.
+
+ddlhint(argc, argv)
+{
+}
+
+xform(element, container, cursor)
+{
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  optimize(cursor);
+}
+
+// Operations that DO require locks.
+
+begin_xact(schema)
+%{
+  P2_lock_protocol_xact_mutex(&(schema), P2_LOCK_X);
+  // Call down.
+  begin_xact(schema);
+%}
+
+abort_xact(schema)
+%{
+  // Call down.
+  abort_xact(schema);
+%}
+
+commit_xact(schema)
+%{
+  // Call down.
+  commit_xact(schema);
+%}
+
+checkpoint_schema(schema)
+%{
+  // Call down.
+  checkpoint_schema(schema);
+%}
+
+s_verbatim(schema)
+{
+  char *ifndef = "#ifndef P2_PROTOCOL_XACT_MUTEX_S_VERBATIM\n";
+  char *define = "#define P2_PROTOCOL_XACT_MUTEX_S_VERBATIM\n";
+  char *endif  = "#endif\n";
+%{
+  %v.ifndef
+  %v.define
+
+  void P2_lock_protocol_xact_mutex (void *address, P2_LOCK_MODE mode)
+  {
+    P2_LOCK_NAME name;
+
+#ifndef NDEBUG
+    if (P2_my_xact_id == 0)
+      ERROR("not in a transaction");
+#endif
+
+#if 1
+    name = (P2_LOCK_NAME) address;
+#else
+    name = 1;
+#endif
+
+#ifndef NDEBUG
+    {
+      P2_LOCK_REPLY reply = P2_lock(name, mode, P2_LOCK_LONG, LOCK_TIMEOUT);
+      if (reply != P2_LOCK_OK)
+        switch (reply)
+        {
+          case P2_LOCK_TIMEOUT:
+            ERROR("timeout");
+          case P2_LOCK_DEADLOCK:
+            ERROR("deadlock");
+          case P2_LOCK_REQUEST_OVERFLOW:
+            ERROR("lock request overflow");
+          case P2_LOCK_HEAD_OVERFLOW:
+            ERROR("lock head overflow");
+          default:
+            ERROR("");
+        }
+    }
+#else
+    if (P2_lock(name, mode, P2_LOCK_LONG, LOCK_TIMEOUT) != P2_LOCK_OK)
+      ERROR("");
+#endif // NDEBUG
+  }
+
+  %v.endif
+
+  // Figure out a way to get rid of this semicolon. 
+  ; 
+
+  s_verbatim(schema);
+%}
+}
+
+def_cursor_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}
+
+def_container_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}

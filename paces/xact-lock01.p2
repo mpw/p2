@@ -1,0 +1,53 @@
+/* $Id: xact-lock01.p2,v 45.0 1997/09/19 05:45:15 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test P2_lock-manager mode P2_LOCK_X with transactions. */
+/* Analogous to paces/lock01.p2 and paces/xact00.p2 */
+
+#include "P2_paces.h"
+#include <stdio.h>    /* printf() */
+
+#define LOCK_NAME 1
+#define LOCK_TIMEOUT 5
+
+typex {
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+}
+
+typedef struct {
+  int i;
+} E;
+
+schema {
+  container <E> k;
+} stored_as t with {
+#ifdef P2_BOTTOM_SCHEMA_ANNOTE
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, 1);
+#endif /* P2_BOTTOM_SCHEMA_ANNOTE */
+} s;
+
+int
+main()
+{
+  /* Open schema. */
+  open_schema(s);
+  /* Begin transaction. */
+  begin_xact(s);
+
+  if (P2_lock(LOCK_NAME, P2_LOCK_X, P2_LOCK_MEDIUM, LOCK_TIMEOUT) != P2_LOCK_OK)
+    fprintf(stderr, "P2_lock(%d) failed\n", LOCK_NAME);
+  printf("Hello World!\n");
+#if 1
+  /* It is not necessary to call P2_unlock() explicitly, since we're
+     in a transaction, and commit_xact() will call P2_unlock_class(). */
+  if (P2_unlock(LOCK_NAME) != P2_LOCK_OK)
+      fprintf(stderr, "P2_unlock(%d) failed\n", LOCK_NAME);
+#endif
+
+  /* Commit transaction--will unlock all locks held by transaction. */
+  commit_xact(s);
+  /* Close schema. */
+  close_schema(s);
+  /* Exit. */
+  exit(0);
+}

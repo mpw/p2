@@ -1,0 +1,4 @@
+(make foo ^bar 900)
+(make counter ^result 0)
+(run)
+(exit)

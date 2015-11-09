@@ -1,0 +1,20 @@
+f( c ):
+10020, 18, 99.0, "History", "Aaron, Bob"
+10000, 60, 99.5, "English", "Akers, Mark"
+10070, 22, 99.4, "Physics", "Andrews, Kay"
+10010, 40, 98.7, "Computer Sciences", "Batory, Don"
+10080, 31, 98.7, "Culinary Arts", "Geraci, Bart"
+10060, 65, 98.8, "Nutrition", "Zacks, William"
+
+gf( c ):
+10020, 18, 99.0, "History", "Aaron, Bob"
+10000, 60, 99.5, "English", "Akers, Mark"
+10070, 22, 99.4, "Physics", "Andrews, Kay"
+10010, 40, 98.7, "Computer Sciences", "Batory, Don"
+10080, 31, 98.7, "Culinary Arts", "Geraci, Bart"
+10060, 65, 98.8, "Nutrition", "Zacks, William"
+
+gf( cs ):
+10050, 23, 96.1, "Computer Sciences", "Thomas, Jeff"
+10040, 42, 98.5, "Computer Sciences", "Singhal, Vivek"
+10010, 40, 98.7, "Computer Sciences", "Batory, Don"

@@ -1,0 +1,278 @@
+/* $Id: mmap_shared01.p2,v 45.0 1997/09/19 05:43:47 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Demonstrate that the mmap_shared MEM layer works.  Spawn 10 child
+   processes, each of which adds a single tuple to a container stored
+   in mmap_shared, then print the contents of the container. */
+
+/* This is an older file that uses it's own interface to the IPC
+   semaphores, rather than using the generic semaphores in
+   P2_process.h, or the IPC semaphores in P2_process-unix.[ch] (JAT) */
+
+#undef TRACE
+
+#include <assert.h>      /* assert() */
+#include <stdarg.h>      /* va_list, va_start(), va_end() */
+#include <stdio.h>       /* fprintf(), vfprintf() */
+#include <unistd.h>      /* getpid() */
+
+#include "P2_paces.h"
+
+/*****************************************************************************/
+/*                  Declarations                                             */
+/*****************************************************************************/
+
+#define barrier 0
+#define child_mutex 1
+#define trace_mutex 2
+
+typedef struct {
+   int f;
+} TUPLE;
+
+#define CARDINALITY
+#define ORDERBY
+
+typex {
+#ifdef ORDERBY
+  t = top2ds[orderby_fast[cardinality[array1[mmap_shared]],
+			 top2ds[array2[transient]]]];
+#else
+  t = top2ds[cardinality[array1[mmap_shared]]];
+#endif /* ORDERBY */
+}
+
+container <TUPLE> stored_as t with {
+#if 0
+  mmap_persistent file is "/tmp/P2_mmap_shared01-data" with size 2000;
+#else
+  mmap_shared file is "/tmp/P2_mmap_shared01-data" with size 2000;
+#endif
+  array1 size is 10;
+#ifdef ORDERBY
+  array2 size is 10;
+#endif /* ORDERBY */
+} cont;
+
+cursor <cont> curs;
+
+#ifdef ORDERBY
+cursor <cont> orderby ascending f ordered_curs;
+#else
+cursor <cont> ordered_curs;
+#endif /* ORDERBY */
+
+/* forward declarations */
+void ipc_semaphore_create(void);
+void ipc_semaphore_lock(int sem_num);
+void ipc_semaphore_unlock(int sem_num);
+void ipc_semaphore_remove(void);
+
+/*****************************************************************************/
+/*                  Tracing Routines                                         */
+/*****************************************************************************/
+
+void
+print_trace(char *format, ...)
+{
+#ifdef TRACE
+  va_list args;
+
+  ipc_semaphore_lock(trace_mutex);
+  fprintf(stderr, "pid=%d ", getpid());
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fprintf(stderr, "\n");
+  fflush(stderr);
+  ipc_semaphore_unlock(trace_mutex);
+#endif /* TRACE */
+}
+
+char *
+semaphore_string(int sem_num)
+{
+#ifdef TRACE
+  assert(sem_num == barrier || sem_num == child_mutex || sem_num == trace_mutex);
+
+  if (sem_num == barrier)
+    return("barrier");
+  else if (sem_num == child_mutex)
+    return("child_mutex");
+  else
+    return("trace_mutex");
+#endif /* TRACE */
+}
+
+void
+print_error(char *format, ...)
+{
+#ifdef TRACE
+  va_list args;
+
+  fprintf(stderr, "pid=%d error: ", getpid());
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  perror(" ");
+  fflush(stderr);
+  exit(1);
+#endif /* TRACE */
+}
+
+/*****************************************************************************/
+/*                  Semaphore Routines                                       */
+/*****************************************************************************/
+
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+
+#define NUM_IPC_SEMAPHORE 3
+
+static struct sembuf ipc_semaphore_init_op[] = {
+  0, 1, 0 /* increment sem[0] by 1 */
+};
+
+static struct sembuf ipc_semaphore_lock_op[] = {
+  0, 0, 0, /* wait for sem[0] to become 0 */
+  0, 1, 0, /* then increment sem[0] by 1 */
+
+  1, 0, 0, /* wait for sem[1] to become 0 */
+  1, 1, 0, /* then increment sem[1] by 1 */
+
+  2, 0, 0, /* wait for sem[2] to become 0 */
+  2, 1, 0  /* then increment sem[2] by 1 */
+};
+
+static struct sembuf ipc_semaphore_unlock_op[] = {
+  0, -1, IPC_NOWAIT, /* decrement sem[0] by 1 (sets it to 0) */
+  1, -1, IPC_NOWAIT, /* decrement sem[1] by 1 (sets it to 0) */
+  2, -1, IPC_NOWAIT  /* decrement sem[2] by 1 (sets it to 0) */
+};
+
+int semid = -1; /* semaphore id */
+
+void
+ipc_semaphore_create(void)
+{
+  key_t key;
+
+  key = ftok(__FILE__, 1);
+  if (key < 0)
+    print_error("ipc_semaphore_create failed to get key");
+  semid = semget(key, NUM_IPC_SEMAPHORE, IPC_CREAT|0600);
+  if (semid < 0)
+    print_error("ipc_semaphore_create failed to get semaphores");
+  if (semop(semid, &ipc_semaphore_init_op[0], 1) < 0)
+    print_error("ipc_semaphore_create() failed to initialize semaphores");
+}
+
+void
+ipc_semaphore_lock(int sem_num)
+{
+  assert(sem_num == barrier || sem_num == child_mutex || sem_num == trace_mutex);
+
+  if (sem_num != trace_mutex)
+    print_trace("ipc_sempahore_lock(%s)", semaphore_string(sem_num));
+  assert(semid >= 0);
+  if (semop(semid, &ipc_semaphore_lock_op[sem_num*2], 2) < 0)
+    print_error("ipc_semaphore_lock(%s) failed", semaphore_string(sem_num));
+}
+
+void
+ipc_semaphore_unlock(int sem_num)
+{
+  assert(sem_num == barrier || sem_num == child_mutex || sem_num == trace_mutex);
+
+  if (sem_num != trace_mutex)
+    print_trace("ipc_sempahore_unlock(%s)", semaphore_string(sem_num));
+  assert(semid >= 0);
+  if (semop(semid, &ipc_semaphore_unlock_op[sem_num], 1) < 0)
+    print_error("ipc_semaphore_unlock(%s) failed", semaphore_string(sem_num));
+}
+
+void
+ipc_semaphore_remove(void)
+{
+  assert(semid >= 0);
+  if (semctl(semid, 0, IPC_RMID, 0) < 0)
+    print_error("ipc_semaphore_remove() failed");
+  semid = -1;
+}
+
+/*****************************************************************************/
+/*                  Main                                                     */
+/*****************************************************************************/
+
+int
+main(void) 
+{
+  int i;
+
+  open_cont(cont);
+  init_curs(curs);
+
+#ifdef CARDINALITY
+  assert(cardinality(cont) == 0);
+#endif /* CARDINALITY */
+
+  ipc_semaphore_create();
+
+  for (i = 0; i < 10; i++)
+  {
+    TUPLE tuple;
+    int child_pid;
+
+    child_pid = fork();
+    if (child_pid == -1)
+      print_error("Can't fork child %d", i);
+    else if (child_pid == 0)
+    {
+      /* Child process. */
+      int j;
+      /* Lock child mutex semaphore. */
+      ipc_semaphore_lock(child_mutex);
+      /* Insert a new tuple. */
+      print_trace("inserting %d", i);
+      tuple.f = i;
+      insert(curs, tuple);
+      /* Make sure cardinality is valid. */
+#ifdef CARDINALITY
+      j = cardinality(cont);
+#else
+      j = 0;
+      foreach(curs)
+      {
+	j++;
+      }
+#endif /* CARDINALITY */
+      print_trace("cardinality = %d", j);
+      assert(j > 0 && j <= 10);
+      /* If this is the last tuple, unlock the barrier. */
+      if (j == 10)
+      {
+	ipc_semaphore_unlock(barrier);
+      }
+      print_trace("child exits");
+      /* Unlock child mutex semaphore. */
+      ipc_semaphore_unlock(child_mutex);
+      exit(0);
+    }
+  }
+
+  print_trace("parent waits");
+  ipc_semaphore_lock(barrier);
+  ipc_semaphore_lock(child_mutex);
+  print_trace("parent continues");
+
+  init_curs(ordered_curs);
+  foreach(ordered_curs)
+  {
+    printf("%d\n", ordered_curs.f);
+  }
+
+  ipc_semaphore_remove();
+  close_cont(cont);
+  exit(0);
+}

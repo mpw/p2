@@ -1,0 +1,130 @@
+// $Id: hashcmp.xp,v 45.0 1997/09/19 05:46:26 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds hashcmp [ ds ] stable multiple annotations
+
+!#include "qopt.h"
+!#include "hashcmp.h"
+
+//  hashcmp is a layer that hashes designated fields
+//  (currently only string fields) and stores that
+//  hash value into the record.  Also, any query clause
+//  of the form (Attr == value) is replaced by (hash == hash(value))
+//  && (Attr == value).  The idea is that it is much faster to 
+//  compare two shorts for equality than two strings.  Of
+//  course, the comparison is probabalistic, but still it
+//  should be a win for string comparisons.  The idea holds
+//  for other nontrivial data types as well.
+
+//  hashcmp was the first layer to allow and process multiple
+//  annotations.
+
+xform(element, container, cursor)
+{
+  OP_TAB *t;
+  char   fieldname[30];
+
+  FOREACH_ANNOTATION
+  {
+
+      // note that the name of the int field that is augmented
+      // has the layer number on it, to distinguish it from 
+      // the original field 
+
+      add element : short %a.ofield ; 
+
+      sprintf(%a.hfield,"%s%d",%a.ofield,%ln);
+       
+      t = find_data_type(element, %a.ofield);
+      %a.hashcmp    = t->hashcmp;
+      %a.is_literal = t->is_literal;
+      strcpy(%a.hashcmp_name, t->hashcmp_name);
+  }
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+   FOREACH_ANNOTATION
+   {
+
+      // hashcmp_expand_predicate does the query modification
+      // described in the header of this file
+
+      hashcmp_expand_predicate(predicate, %a.ofield, %ln,
+        %a.is_literal, %a.hashcmp, "==");
+   }
+   optimize(cursor);
+}
+
+//*********************************************************
+//  ddlhints are of the form:
+//
+//  hashcmp [container] field <fieldname>;
+//
+//  Note: since we don't know the element type, annotations
+//  (hashcmp, hashcmp_name, is_literal) won't be filled in
+//  until xform is called.
+//
+//**********************************************************
+
+ddlhint(argc, argv)
+{
+   limit 1 arguments;
+   get_ddlhint_argument(%a.ofield, argv[1]);
+}
+
+insert(cursor, record)
+{
+  char fname[MAX_IDENT_LEN];
+
+  %{
+     insert(cursor, record);
+  %}
+  FOREACH_ANNOTATION
+  {
+    %{
+      cursor.%a.hfield = %a.hashcmp_name(cursor.%a.ofield);
+    %}
+  }
+}
+
+
+upd(cursor, field, expr)
+{
+  char  fname[MAX_IDENT_LEN];
+  short s;
+
+  %{ 
+      upd(cursor, field, expr);
+  %}
+  FOREACH_ANNOTATION {
+      if (strcmp(%a.ofield, field) == 0)
+      {
+
+         // a bit of optimization here - if expr is a constant
+         // we can hash at compile time
+
+         if ((*%a.is_literal)(expr))
+         {
+            s = (*%a.hashcmp)(expr);
+            %{
+               cursor.%a.hfield = %v.s;
+            %}
+            break;
+         } 
+         else
+         {
+            %{
+               cursor.%a.hfield = %a.hashcmp_name(cursor.field);
+            %}
+            break;
+         }
+      }
+   }
+}
+ 
+swap(cursor0, cursor1) 
+%{
+    P2_runtime_error("hashcmp does not support swap");
+%}

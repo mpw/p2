@@ -1,0 +1,140 @@
+/* $Id: compcurs03.p2,v 45.0 1997/09/19 05:42:54 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+#include <stdio.h> /* printf() */
+#include "P2_paces.h"
+
+typedef struct {
+  int  empno;
+  int  age;
+  int  deptno;
+  int  jobno;
+  char *dept_name;
+  char *name;
+} EMPLOYEE;
+
+typedef struct {
+  int  deptno;
+  char *name;
+} DEPARTMENT;
+
+typedef struct {
+  int  jobno;
+  char *name;
+} JOB;
+
+typex {
+  t = P2_COMPCURS_TYPEX;
+}
+
+container <EMPLOYEE> stored_as t with {
+  P2_COMPCURS_ANNOTE(name, 10);
+} employee;
+
+container <DEPARTMENT> stored_as t with {
+  P2_COMPCURS_ANNOTE(name, 10);
+} department;
+
+container <JOB> stored_as t with {
+  P2_COMPCURS_ANNOTE(name, 10);
+} job;
+
+compcurs < ee employee, dd department, jj job >
+  where "$ee.deptno == $dd.deptno && $ee.jobno == $jj.jobno && $ee.dept_name == 'Biology'"
+  orderby $ee.empno
+xx;
+
+cursor < employee > orderby empno eee;
+cursor < department > ddd;
+cursor < job > jjj;
+
+void
+read_data (void)
+{
+  EMPLOYEE employee_data[] = {
+   { 10000,60,1,100,"Biology","Akers, Mark" },
+   { 10070,22,1,101,"Biology","Andrews, Kay" },
+   { 10020,21,1,102,"Biology","Alexander, Joe" },
+   { 10010,40,2,102,"History","Akin, Monica" },
+   { 10050,42,1,101,"Biology","Akerson, Suzanne" },
+   { 10040,53,3,100,"Physics","Akerson, Mary" },
+   { 10060,61,1,102,"Biology","Andrews, John" },
+   { 10030,23,1,100,"Biology","Akerson, Gwyn" },
+   { -1 }
+  };
+
+  DEPARTMENT department_data[] = {
+   { 1,"Biology" },
+   { 2,"History" },
+   { 3,"Physics" },
+   { -1 }
+  };
+
+  JOB job_data[] = {
+   { 100,"Faculty" },
+   { 101,"Staff" },
+   { 102,"Graduate" },
+   { 103,"Undergraduate" },
+   { -1 }
+  };
+
+  {
+    EMPLOYEE *p;
+    for (p = employee_data; p->empno != -1; p++) {
+      insert(eee, *p);
+    }
+  }
+  {
+    DEPARTMENT *p;
+    for (p = department_data; p->deptno != -1; p++) {
+      insert(ddd, *p);
+    }
+  }
+  {
+    JOB *p;
+    for (p = job_data; p->jobno != -1; p++) {
+      insert(jjj, *p);
+    }
+  }
+}
+
+int
+main ()
+{
+  open_cont(employee);
+  open_cont(department);
+  open_cont(job);
+
+  init_curs(eee);
+  init_curs(ddd);
+  init_curs(jjj);
+
+  read_data();
+
+  printf("Join obtained by hand:\n");
+  foreach(eee) {
+    foreach(ddd) {
+      foreach(jjj) {
+        if ((eee.deptno == ddd.deptno)
+	    && (eee.jobno == jjj.jobno)
+	    && (strcmp(eee.dept_name, "Biology") == 0)
+           )
+	  printf("%d %20s %6s %-10s\n", eee.empno,
+		 eee.name, ddd.name, jjj.name);
+      }
+    }
+  }
+
+  printf("Join obtained using a composite cursor:\n");
+  initk(xx);
+  foreachk(xx) {
+    printf("%d %20s %6s %-10s\n", (xx.ee).empno,
+	   (xx.ee).name, (xx.dd).name, (xx.jj).name);
+  }
+
+  close_cont(employee);
+  close_cont(department);
+  close_cont(job);
+
+  return(0);
+}

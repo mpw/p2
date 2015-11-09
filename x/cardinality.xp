@@ -1,0 +1,44 @@
+// $Id: cardinality.xp,v 45.0 1997/09/19 05:46:18 jthomas Exp $
+// Copyright (C) 1997 The University of Texas at Austin.
+
+layer ds cardinality[ ds ] stable no annotation
+
+// This layer maintains cardinality(container) = the number of
+// (non-deleted) elements currently in container.
+
+// This layer is analogous to x/serial_number.xp, but it does NOT
+// count deleted elements.
+
+// This layer was formerly called sizeof.  I found this name
+// misleading, because this layer returns the number of ELEMENTS in a
+// container, not the size of the container in BYTES, as does the C
+// function sizeof()).  (JAT)
+
+xform(element, container, cursor)
+{
+    add container : int cardinality;  
+    xform(element, container, cursor);
+}
+
+insert(cursor, record)
+%{ 
+    (container.cardinality)++; 
+    insert(cursor, record);
+%}
+
+delete(cursor) 
+%{ 
+    (container.cardinality)--; 
+    delete(cursor);
+%}  
+
+init_cont(container) 
+%{ 
+    (container.cardinality) = 0; 
+    init_cont(container); 
+%} 
+
+adhoc cardinality(container)
+%{  
+    (container.cardinality)
+%}

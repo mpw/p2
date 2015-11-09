@@ -1,0 +1,19 @@
+after insert:
+10000 60 Biology Akers, Mark
+10010 40 Biology Akin, Monica
+10020 21 Biology Alexander, Joe
+10030 23 Biology Akerson, Gwyn
+10040 53 Biology Akerson, Mary
+10050 42 Biology Akerson, Suzanne
+10060 61 Biology Andrews, John
+10070 22 Biology Andrews, Kay
+after swap:
+10000 60 Updated Akers, Mark
+10010 40 Updated Akin, Monica
+10020 21 Updated Alexander, Joe
+10030 23 Updated Akerson, Gwyn
+10040 53 Updated Akerson, Mary
+10050 42 Updated Akerson, Suzanne
+10060 61 Updated Andrews, John
+10070 22 Updated Andrews, Kay
+after abort:

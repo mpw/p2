@@ -1,0 +1,92 @@
+/* $Id: bus-list-bug.p2,v 45.0 1997/09/19 05:42:51 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* This program exposes a now-fixed bug in P2.
+   I have retained this program as a regression test. (JAT) */
+
+/* Bug--this rule:
+
+   typedef compcurs < a cont_context, b cont_guest, c cont_count >
+     given < b >
+     query_1 t3_b
+     valid v3_b
+     curs1_b;
+
+   is enough to choke pb.  Apparently the bus_list of ccbus
+   contains references to cont_context, cont_count, cont_context
+   (in this order).  I don't know why - it should be cont_context,
+   cont_guest, cont_count in this (or the reverse) order. (DSB) */
+
+/* Fix--the bus_list was initialied correctly,
+   but then (un-intentionally) over-written. (JAT) */
+
+/*****************  valid defines ****************/
+
+#define ta " $a._ts <= dom_timestamp "
+#define tc " $c._ts <= dom_timestamp "
+
+#define va " (!deleted($a)) "
+#define vc " (!deleted($c)) "
+
+#define and " && "
+
+#define t3_b and ta and tc
+#define v3_b va and vc
+
+/************ generated record types ***************/
+
+typedef struct {
+   char    name[20];
+   char    sex[20];
+   int     hobby;
+   int     _ts;
+} guest;
+
+typedef struct {
+   char    value[20];
+   int     _ts;
+} context;
+
+typedef struct {
+   int     c;
+   int     _ts;
+} count;
+
+/************ generated container declarations ***************/
+
+typex { leaps_x = top2ds_qualify[
+                  llist[
+                  delflag[malloc[transient]]]]; }
+
+container < guest > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_guest;
+
+container < context > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_context;
+
+container < count > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_count;
+
+/**************************** rule #1: assign_first_seat :
+   (context ^value  start  )
+   (guest ^name  <n>  )
+   (count ^c  <c>  )
+    -->  *******************************/
+
+#define query_1 where " $a.value == 'start' "
+
+typedef compcurs < a cont_context, b cont_guest, c cont_count >
+   given < b >
+   query_1 t3_b
+   valid v3_b
+   curs1_b;
+
+int main()
+{
+  curs1_b c;
+  initk(c);
+  return 0;
+}

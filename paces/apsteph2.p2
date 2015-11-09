@@ -1,0 +1,56 @@
+/* $Id: apsteph2.p2,v 45.0 1997/09/19 05:42:47 jthomas Exp $ */ 
+
+/* Simplified version of apsteph1.p2 */
+
+#define SYM_LEN		40	/* Length of character fields */
+
+/* container declaration attribute information */
+typedef struct {
+   int	attr_no;		/* ordering index */
+   char	name[SYM_LEN];		/* attribute name */
+} CONT_BODY;
+
+/* container variable symbol table */
+typedef struct {
+   int	var_id;			/* unique symbol identifier */
+   char	name[SYM_LEN];		/* variable name */
+   int	attr_num;		/* attribute number of the container */
+} S_TAB;
+
+typex {
+   cont = top2link[nloops[linkterm[ \
+	    top2ds_qualify[inbetween[odlist[malloc[transient]]]]
+          ]]];
+}
+
+container <CONT_BODY> stored_as cont with {
+   odlist key is attr_no;
+} relation_attrs;
+
+container <S_TAB> stored_as cont with {
+   odlist key is var_id;
+} sym_tab;
+
+/* lookup container & attribute, given a symbol table entry */
+compcurs < a sym_tab, b relation_attrs >
+  where "$a.attr_num == $b.attr_no"
+cc_vars;
+
+/* initialize containers & cursors */
+void init_containers(void)
+{
+   open_cont(relation_attrs);
+   open_cont(sym_tab);
+   initk(cc_vars);
+}
+
+int
+main(void)
+{
+   init_containers();
+   foreachk(cc_vars) {
+      printf("%s.%s\n", (cc_vars.a).name, (cc_vars.b).name);
+   }
+   return(0);
+}
+

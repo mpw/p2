@@ -1,0 +1,85 @@
+/* $Id: mmap_shared05.p2,v 45.0 1997/09/19 05:43:49 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Single process, multiple mmap_shared segments. */
+
+/* Analogous to paces/mmap_shared04.p2 */
+/* Open 10 mmap shared files with names that differ only in one
+   character of their name.  Currently, the number of mmap file hash
+   buckets (defined by MAX_MMAP_FILE in paces/P2_mmap.c) is 25, so there
+   should be no hash clash with an reasonable str_hash function */
+
+#include <stdio.h> /* printf() */
+
+typedef struct {
+  int i;
+} S;
+S s;
+
+typex {
+  t = top2ds[array[mmap_shared]];
+}
+
+int i;
+
+#define DEFINE_SHARED(F, K, C) \
+  container <S> stored_as t with { \
+    mmap_shared file is F with size 100; \
+    array size is 1; \
+  } K; \
+  \
+  cursor <K> C;
+
+#define INIT_SHARED(K, C, I) \
+  open_cont(K); \
+  init_curs(C); \
+  s.i = I; \
+  insert(C, s);
+
+#define DELETE_SHARED(K, C) \
+  reset_start(C); \
+  i = ref(C, i); \
+  printf("%d\n", i); \
+  close_cont(K);
+
+DEFINE_SHARED("/tmp/P2_mmap_shared05-00-data", cont00, curs00)
+DEFINE_SHARED("/tmp/P2_mmap_shared05-01-data", cont01, curs01)
+DEFINE_SHARED("/tmp/P2_mmap_shared05-02-data", cont02, curs02)
+DEFINE_SHARED("/tmp/P2_mmap_shared05-03-data", cont03, curs03)
+DEFINE_SHARED("/tmp/P2_mmap_shared05-04-data", cont04, curs04)
+DEFINE_SHARED("/tmp/P2_mmap_shared05-05-data", cont05, curs05)
+DEFINE_SHARED("/tmp/P2_mmap_shared05-06-data", cont06, curs06)
+DEFINE_SHARED("/tmp/P2_mmap_shared05-07-data", cont07, curs07)
+DEFINE_SHARED("/tmp/P2_mmap_shared05-08-data", cont08, curs08)
+DEFINE_SHARED("/tmp/P2_mmap_shared05-09-data", cont09, curs09)
+
+main()
+{
+  /* Initialize process manager. */
+  P2_init_process();
+  /* Open containers. */
+  INIT_SHARED(cont00, curs00, 0);
+  INIT_SHARED(cont01, curs01, 1);
+  INIT_SHARED(cont02, curs02, 2);
+  INIT_SHARED(cont03, curs03, 3);
+  INIT_SHARED(cont04, curs04, 4);
+  INIT_SHARED(cont05, curs05, 5);
+  INIT_SHARED(cont06, curs06, 6);
+  INIT_SHARED(cont07, curs07, 7);
+  INIT_SHARED(cont08, curs08, 8);
+  INIT_SHARED(cont09, curs09, 9);
+  /* Close containers. */
+  DELETE_SHARED(cont09, curs09);
+  DELETE_SHARED(cont08, curs08);
+  DELETE_SHARED(cont07, curs07);
+  DELETE_SHARED(cont06, curs06);
+  DELETE_SHARED(cont05, curs05);
+  DELETE_SHARED(cont04, curs04);
+  DELETE_SHARED(cont03, curs03);
+  DELETE_SHARED(cont02, curs02);
+  DELETE_SHARED(cont01, curs01);
+  DELETE_SHARED(cont00, curs00);
+  /* Delete process manager. */
+  P2_delete_process();
+  exit(0);
+}

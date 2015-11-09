@@ -1,0 +1,36 @@
+// $Id: ccbus.xp,v 45.0 1997/09/19 05:46:18 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer top ccbus [ top ] stable no annotation retrieval_always
+
+!#include "qopt.h"
+
+#if 0
+// pb/typex.h is included in pb.h
+!#include "typex.h" // reroute()
+#endif
+
+optimize(cursor)
+{
+   optimize(cursor);
+}
+
+def_cursor_func : 
+$HEADER
+{ 
+  TE *te_old = te;
+
+  te = reroute(te, container_id);
+  $CALL_LEVEL ; 
+  te = te_old ;
+}
+
+def_container_func : 
+$HEADER
+{ 
+  TE *te_old = te;
+
+  te = reroute(te, container_id);
+  $CALL_LEVEL ; 
+  te = te_old ;
+}

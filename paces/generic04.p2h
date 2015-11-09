@@ -1,0 +1,67 @@
+/* $Id: generic04.p2h,v 1.2 1997/09/25 13:29:14 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Exercise the code in pb/pb-actions.c:print_param() to add an extra
+   level of indirection to the container argument of a proceduralized
+   special operation iff the special operation has indirect_container
+   equal to TRUE (e.g., open_cont), AND type expression has
+   indirect_only equal to TRUE (e.g., those that contain conceptual
+   (if conceptual is defined to include init_generic), init_generic,
+   or mmap_persistent).  See pb/pb-actions.c:print_param() */
+/* Note that a special operation will be proceduralized if the type
+   expression n contains init_generic, generic_funcall (hence the word
+   generic in the names of these programs), and/or named_funcall). */
+
+/* This file is included by the following paces files.  Note that
+   those files that exercise the extra indirection code are starred.
+   The other files are intended for comparison:
+
+       paces/generic04.p2 (NON-schema, standard typex)
+       paces/generic05.p2 (SCHEMA, standard typex).
+ 
+       paces/generic06.p2 (NON-schema, mmap_persistent).
+       paces/generic07.p2 (SCHEMA, mmap_persistent).
+ 
+       paces/generic08.p2 (NON-schema, init_generic, transient).
+       paces/generic09.p2 (SCHEMA, init_generic, transient).
+ 
+     * paces/generic10.p2 (NON-schema, conceptual, mmap_persistent).
+     * paces/generic11.p2 (SCHEMA, conceptual, mmap_persistent).
+
+       paces/generic12.p2 (SCHEMA, indirect reference, indirect_only).
+
+*/
+
+cursor <P2_PACES_CONTAINER> c;
+
+int
+main ()
+{
+  P2_PACES_ELEMENT e;
+
+#if defined(P2_PACES_INITIALIZATION)
+  /* Defined only in paces/generic12.p2 (JAT) */
+  P2_PACES_INITIALIZATION
+#endif
+
+  open_cont(P2_PACES_CONTAINER);
+  init_cont(P2_PACES_CONTAINER);
+  init_curs(c);
+
+  /* Could use any container operation here. (JAT) */
+  (void) overflow(P2_PACES_CONTAINER);
+
+  for (e.i = 0; e.i < 10; e.i++)
+  {
+    insert(c, e);
+  }
+  foreach(c)
+  {
+    printf("%d\n", c.i);
+  }
+
+  delete_curs(c);
+  close_cont(P2_PACES_CONTAINER);
+
+  return(0);
+}

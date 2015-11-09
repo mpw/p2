@@ -1,0 +1,46 @@
+/* $Id: lock12.p2,v 45.0 1997/09/19 05:43:40 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Successful lock conversion */
+/* Analogous to lock1[012].p2 */
+
+#include "P2_paces.h"
+
+#include <assert.h>   /* assert() */
+#include <stdio.h>    /* printf() */
+
+#define LOCK_NAME 12
+
+#define LOCK(MODE) \
+{ \
+  P2_LOCK_REPLY reply = P2_lock(LOCK_NAME, MODE, P2_LOCK_MEDIUM, 1); \
+  assert(reply == P2_LOCK_OK || reply == P2_LOCK_TIMEOUT); \
+  printf("Lock " #MODE " %s \n", \
+    (reply == P2_LOCK_OK)? "succeeded" : "failed"); \
+  fflush(stdout); \
+}
+
+int
+main()
+{
+  /* Initialize process and lock manager. */
+  P2_init_process();
+  P2_init_lock_manager();
+
+  /* Lock in modes IS, IX, SIX, X */
+
+  LOCK(P2_LOCK_IS);
+  LOCK(P2_LOCK_IX);
+  LOCK(P2_LOCK_SIX);
+  LOCK(P2_LOCK_X);
+
+  /* Unlock */
+  P2_unlock(LOCK_NAME);
+
+  /* Delete process and lock manager. */
+  P2_delete_lock_manager();
+  P2_delete_process();
+
+  /* Exit. */
+  exit(0);
+}

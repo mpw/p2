@@ -1,0 +1,67 @@
+\input texinfo  @c -*-texinfo-*-
+@c $Id: p2-intro.texinfo,v 45.0 1997/09/19 05:42:08 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@c %**start of header
+@setfilename p2-intro.info
+@settitle Introductory P2 System Manual
+@setchapternewpage odd
+@c %**end of header
+
+@syncodeindex vr fn
+
+@c =================================================
+
+@include edition.texi
+@include version.texi
+@set UPDATED August 1994
+
+@ifinfo
+This file documents the P2 system.
+Edition @value{EDITION}, @value{UPDATED}. 
+
+Written by Don Batory, Bart J. Geraci, and Jeff Thomas
+
+Contact information:
+@var{dsb@@cs.utexas.edu}
+
+@end ifinfo
+
+@c  This title page illustrates only one of the
+@c  two methods of forming a title page.
+
+@c =================================================
+
+@titlepage
+@title Introductory P2 System Manual
+@subtitle Edition @value{EDITION}, @value{UPDATED}
+@author Don Batory 
+@author Bart J. Geraci
+@author Jeff Thomas
+
+@c  The following two commands
+@c  start the copyright page.
+@page
+@vskip 0pt plus 1filll
+
+Copyright @copyright{} 1994, The University of Texas at Austin.
+
+@sp 2
+Edition @value{EDITION} @*
+For @code{P2} Version @value{VERSION} @*
+@value{UPDATED} @*
+
+For information, questions, and to report inaccuracies, please contact:
+@var{dsb@@cs.utexas.edu}
+
+@end titlepage
+@page
+
+@c =================================================
+
+@include p2-intro.top.texinfo
+
+@contents
+@bye
+===========================================================
+All these notes here are ignored. So what do I want to say? (BJG)

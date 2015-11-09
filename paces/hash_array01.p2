@@ -1,0 +1,90 @@
+/* $Id: hash_array01.p2,v 45.0 1997/09/19 05:43:29 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Insert alot of data, delete it, then print it. */
+/* This puts alot of stress on, and often breaks an incorrect layer. */
+
+#define N 1000
+
+#if 1
+
+/* Use hash_array */
+#if !defined(HASH_ARRAY)
+#define HASH_ARRAY
+#endif /* HASH_ARRAY */
+
+#elif 0
+
+/* Use hash, avail, and array */
+#if !defined(HASH)
+#define HASH
+#endif /* HASH */
+
+/* Otherwise, use delflag and malloc */
+
+#endif
+
+typedef struct {
+  int k;
+} T;
+
+typex {
+#if defined(HASH_ARRAY)
+  t = top2ds_qualify[hash_array[transient]];
+#elif defined(HASH)
+  t = top2ds_qualify[hash[avail[array[transient]]]];
+#else
+  t = top2ds_qualify[dlist[delflag[malloc[transient]]]];
+#endif
+}
+
+container <T> stored_as t with {
+#if defined(HASH_ARRAY)
+  hash_array key is k with size N;
+#elif defined(HASH)
+  array size is N;
+  hash key is k with size N;
+#endif
+} cont;
+
+cursor <cont> where "$.k == i" curs;
+
+int i;
+
+main()
+{
+  T t;
+
+  init_cont(cont);
+  init_curs(curs);
+
+  /* Insert data. */
+  for (i = 0; i < N; i++)
+  {
+    t.k = i;
+    insert(curs, t);
+  }
+
+  /* Delete data. */
+  for (i = 0; i < N; i++)
+  {
+    reset_start(curs);
+    if (end_adv(curs))
+    {
+      printf("Error: end_adv(curs), i = %d\n", i);
+      exit(1);
+    }
+    else
+      delete(curs);
+  }
+
+  /* Print data. */
+  foreach(curs)
+  {
+    printf("%d\n", curs.k);
+  }
+
+  printf("Success!\n");
+  close_cont(cont);
+  exit(0);
+}

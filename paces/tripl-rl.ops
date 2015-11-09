@@ -1,0 +1,26 @@
+(literalize foo
+            bar integer)
+
+(literalize rel1
+            val integer) 
+
+(literalize rel2
+            val integer)
+
+
+(p generate-data
+   (foo ^bar {<x> < 35})
+  -->
+   (make rel1 ^val <x>)
+   (make rel2 ^val <x>)
+   (modify 1 ^bar (compute <x> + 1 ))
+)
+
+
+(p print-sequences
+   (rel1 ^val <r>)
+   (rel2 ^val {<s> > <r>})
+   (rel1 ^val {<t> > <r> > <s>})
+   -->
+   (write strictly increasing sequence <r> <s> <t> (crlf)))
+

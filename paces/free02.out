@@ -1,0 +1,74 @@
+On each "Container:" line, the number (refcount of element)
+should equal the total number of capital and lowercase
+"X/x"'s and "O/o"'s (cursors referencing the element).
+
+On each "Deleting:" line, the number should equal the total
+number of lowercase "x"'s and "o"'s (non-deletion cursors
+referencing the element)
+
+Container:
+ 2 X  x 10001 69 Aziz, Jim
+ 0      10002 18 Azure, Hank
+ 1   X  10003 60 Aka, Foo
+ 0      10004 60 Akers, Mark
+ 0      10010 42 Akin, Monica
+ 0      10020 21 Alexander, Joe
+ 0      10030 23 Anderson, Gwyn
+ 0      10040 53 Anderson, Mary
+ 0      10050 42 Anderson, Suzanne
+ 1  X   10060 61 Andrews, John
+ 0      10070 22 Andrews, Kay
+
+Deleting:
+ 1 O  x 10001 69 Aziz, Jim
+ 0  O   10060 61 Andrews, John
+ 1   Ox 10003 60 Aka, Foo
+
+Container:
+ 0      10002 18 Azure, Hank
+ 3 X Xx 10004 60 Akers, Mark
+ 0      10010 42 Akin, Monica
+ 0      10020 21 Alexander, Joe
+ 0      10030 23 Anderson, Gwyn
+ 0      10040 53 Anderson, Mary
+ 0      10050 42 Anderson, Suzanne
+ 1  X   10070 22 Andrews, Kay
+
+Deleting:
+ 2 O Xx 10004 60 Akers, Mark
+ 0  O   10070 22 Andrews, Kay
+
+Container:
+ 0      10002 18 Azure, Hank
+ 2 X X  10010 42 Akin, Monica
+ 1    x 10020 21 Alexander, Joe
+ 0      10030 23 Anderson, Gwyn
+ 0      10040 53 Anderson, Mary
+ 0      10050 42 Anderson, Suzanne
+
+Deleting:
+ 1 O X  10010 42 Akin, Monica
+
+Container:
+ 0      10002 18 Azure, Hank
+ 0      10020 21 Alexander, Joe
+ 1    x 10030 23 Anderson, Gwyn
+ 1 X    10040 53 Anderson, Mary
+ 0      10050 42 Anderson, Suzanne
+
+Deleting:
+ 0 O    10040 53 Anderson, Mary
+
+Container:
+ 0      10002 18 Azure, Hank
+ 0      10020 21 Alexander, Joe
+ 0      10030 23 Anderson, Gwyn
+ 2 X  x 10050 42 Anderson, Suzanne
+
+Deleting:
+ 1 O  x 10050 42 Anderson, Suzanne
+
+Container:
+ 0      10002 18 Azure, Hank
+ 0      10020 21 Alexander, Joe
+ 0      10030 23 Anderson, Gwyn

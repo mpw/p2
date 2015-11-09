@@ -1,0 +1,1 @@
+malloc_free.o: malloc_free.xp malloc.xph ../config.h xact.xph adhoc.xph

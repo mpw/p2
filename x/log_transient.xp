@@ -1,0 +1,704 @@
+// $Id: log_transient.xp,v 45.3 1997/09/24 05:12:24 jthomas Exp $ */
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// OBSOLETE log manager.
+
+// No 2nd parameter for backing store, does not use paces/P2_log-manager.p2,
+// always uses a malloc()'ed singly-linked list.
+
+//*****************************************************************************
+//                  ANNOTATION.
+//*****************************************************************************
+
+// Problem:
+//   Need to store the strings insert_op, delete_op, swap_op, etc.
+//   such that these values are accessible in abort_xact(schema) at
+//   compile time.
+// Solution:
+//   annotation
+//     * This is the solution used when ANNOTATION is defined.
+//     + Works.
+//     + Analogous to layer_state.
+//   ! operator (copy line verbatim to xp generated code output)
+//     * This is the solution used when ANNOTATION is not defined.
+//     + Works.
+//     - Ugly: requires unique prefix to work when multiple log layers
+//         (e.g., log_transient and log_tid_hack are present).
+//   curs_state or cont_state
+//     * This solution is never used.
+//     - Doesn't work: curs_state and cont_state are not available in
+//         abort_xact(schema).  What we really need is a schema_state
+//         or layer_state.
+
+#if 1
+// Use annotation to store insert_op, etc.
+#define ANNOTATION
+#else
+// Use ! operator to define insert_op, etc.
+#undef ANNOTATION
+#endif
+
+#ifdef ANNOTATION
+layer ds log_transient[ ds ] stable optional annotation retrieval_always
+#else
+layer ds log_transient[ ds ] stable no annotation retrieval_always
+#endif // ANNOTATION
+
+//*****************************************************************************
+//                   Includes.
+//*****************************************************************************
+
+!#include <assert.h>   // assert()
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "op-id.h"     // P2_MAX_OP_ID
+#include "op-vec.h"    // P2_OP_NAME_VEC_INITIALIZER, P2_PUT_OP_VEC
+
+//*****************************************************************************
+//                  Miscellaneous defines.
+//*****************************************************************************
+
+// Uniquification prefix
+#define VERBATIM(X) P2_log_transient_ ## X
+
+// Typedefs
+#define XACT_ID long
+
+#ifdef ANNOTATION
+
+#define ITOKEN(X) %a. ## X
+#define CTOKEN(X) %a. ## X
+
+!#include "log_transient.h"
+
+#else // ANNOTATION
+
+#define ITOKEN(X) %v. ## VERBATIM(X)
+#define CTOKEN(X) VERBATIM(X)
+
+!char VERBATIM(delete_op)[10]       = "";
+!char VERBATIM(init_curs_op)[10]    = "";
+!char VERBATIM(insert_op)[10]       = "";
+!char VERBATIM(pos_op)[10]          = "";
+!char VERBATIM(swap_op)[10]         = "";
+
+!char VERBATIM(begin_xact_op)[10]   = "";
+!char VERBATIM(commit_xact_op)[10]  = "";
+!char VERBATIM(abort_xact_op)[10]   = "";
+
+!OP_LIST *VERBATIM(default_op_list) = 0;
+
+#endif // ANNOTATION
+
+// Maximum size of transformed cursor structure.
+#define MAX_SIZEOF_CURS 1024
+
+//*****************************************************************************
+//                  Operation list matching.
+//*****************************************************************************
+
+// For the cursor operation named OP, find new_op_id.
+// If the variable named OP_op has previously had an old_op_id value
+// assigned to it, make sure new_op_id and old_op_id match.
+// Otherwise, assign the value new_op_id to OP_op.
+#define OP_MATCH(OP_LIST, OP) \
+  new_op_id = op_list_match(OP_LIST, #OP, 0); \
+  assert(new_op_id != -1); \
+  if (CTOKEN(OP ## _op)[0] != '\0') \
+  { \
+    sscanf(CTOKEN(OP ## _op ), "%d", &old_op_id); \
+    assert(new_op_id == old_op_id); \
+  } \
+  else \
+    sprintf(CTOKEN(OP ## _op ), "%d", new_op_id);
+
+#define CURS_OP_LIST_MATCH(OP_LIST) \
+{ \
+  int old_op_id; \
+  int new_op_id; \
+  if (CTOKEN(default_op_list) == 0) \
+  { \
+    if (OP_LIST == 0) \
+      CTOKEN(default_op_list) = new_op_list1(0, 0, CUR, 0); \
+    else \
+      CTOKEN(default_op_list) = OP_LIST; \
+  } \
+  if (OP_LIST->size == 0) \
+    error("%s->size == 0, need init_generic layer?", #OP_LIST); \
+  OP_MATCH(OP_LIST, delete) \
+  OP_MATCH(OP_LIST, init_curs) \
+  OP_MATCH(OP_LIST, insert) \
+  OP_MATCH(OP_LIST, pos) \
+  OP_MATCH(OP_LIST, swap) \
+}
+
+#define SCHEMA_OP_LIST_MATCH(OP_LIST) \
+{ \
+  int old_op_id; \
+  int new_op_id; \
+  if (OP_LIST->size == 0) \
+    error("%s->size == 0, need init_generic layer?", #OP_LIST); \
+\
+  OP_MATCH(OP_LIST, abort_xact) \
+  OP_MATCH(OP_LIST, begin_xact) \
+  OP_MATCH(OP_LIST, commit_xact) \
+}
+
+//*****************************************************************************
+//                  ddlhint, xform, optimize.
+//*****************************************************************************
+
+#ifdef ANNOTATION
+ddlhint(argc, argv)
+{
+  limit 0 arguments;
+  CTOKEN(delete_op)[0]      = '\0';
+  CTOKEN(init_curs_op)[0]   = '\0';
+  CTOKEN(insert_op)[0]      = '\0';
+  CTOKEN(pos_op)[0]         = '\0';
+  CTOKEN(swap_op)[0]        = '\0';
+
+  CTOKEN(begin_xact_op)[0]  = '\0';
+  CTOKEN(commit_xact_op)[0] = '\0';
+  CTOKEN(abort_xact_op)[0]  = '\0';
+
+  CTOKEN(default_op_list)   = 0;
+}
+#endif // ANNOTATION
+
+xform(element, container, cursor)
+{
+  xform(element, container, cursor);
+  if (sizeof(cursor) > MAX_SIZEOF_CURS)
+    error("transformed cursor structure too large--increase MAX_SIZEOF_CURS");
+}
+
+optimize(cursor)
+{
+  CURS_OP_LIST_MATCH(op_list)
+  optimize(cursor);
+}
+
+//*****************************************************************************
+//                  init_{curs,schema}.
+//*****************************************************************************
+
+init_curs(cursor)
+{
+  P2_OP_NAME_VEC_INITIALIZER
+ 
+  CURS_OP_LIST_MATCH(op_list)
+%{
+  // Call down.
+  init_curs(cursor);
+
+#ifndef NDEBUG
+  if (cursor.op_vec == 0)
+    P2_runtime_error("log_transient:init_curs: cursor has NULL operation"
+                     " vector, does type expression include init_generic?");
+#endif // NDEBUG
+
+  P2_PUT_OP_VEC(cursor_id, cursor.op_vec)
+%}
+}
+
+init_schema(schema)
+{
+  %{
+     // Initialize the log manager FIRST, because the log manager data
+     // is memory mapped persistent, and we always want it to be mapped
+     // at the same address.
+     P2_init_log_manager();
+     P2_init_op_vec_manager();
+
+#if 1
+     P2_set_xact_status(P2_XACT_NONE);
+#endif
+
+     // Call down.
+     init_schema(schema);
+  %}
+}
+
+//*****************************************************************************
+//                  cursor operations.
+//*****************************************************************************
+
+// init_curs(cursor): see above.
+
+//
+// REDO: entire, variable-size cursor.obj
+// UNDO: tid
+//
+
+insert(cursor, record)
+{
+  CURS_OP_LIST_MATCH(op_list)
+%{
+    // Perform insert before logging it, so that cursor.obj
+    // will be valid--if we logged it first, then, cursor.obj
+    // cursor.obj could be, for example, NULL.
+
+    // Call down.
+    insert(cursor, record);
+    if (P2_my_xact_status == P2_XACT_DO)
+    {
+      P2_log_record_size = offsetof(VERBATIM(STRUCT), v)
+        + sizeof(struct obj_type);
+#if 0
+      VERBATIM(STRUCT) *VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(VERBATIM(s));
+#else
+      VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(P2_log_record_size);
+#endif
+      VERBATIM(r)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(r);
+
+      VERBATIM(r)->xact_id = 0;
+      VERBATIM(r)->op_id = ITOKEN(insert_op);
+      VERBATIM(r)->curs_id = cursor_id;
+#ifndef NDEBUG
+      if (cursor_id == 0)
+        P2_runtime_error("log_transient:insert: cursor_id = 0");
+#endif // NDEBUG
+      VERBATIM(r)->obj_id = cursor.obj;
+      memcpy(VERBATIM(r)->v.obj_data, (void *) cursor.obj,
+             sizeof(struct obj_type));
+    }
+%}
+}
+
+//
+// REDO: tid
+// UNDO: entire, variable-size cursor.obj
+//
+
+delete(cursor)
+{
+  CURS_OP_LIST_MATCH(op_list)
+%{
+    if (P2_my_xact_status == P2_XACT_DO)
+    {
+      P2_log_record_size = offsetof(VERBATIM(STRUCT), v)
+        + sizeof(struct obj_type);
+      VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(P2_log_record_size);
+      VERBATIM(r)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(r);
+
+      VERBATIM(r)->xact_id = 0;
+      VERBATIM(r)->op_id = ITOKEN(delete_op);
+      VERBATIM(r)->curs_id = cursor_id;
+#ifndef NDEBUG
+      if (cursor_id == 0)
+        P2_runtime_error("log_transient:delete: cursor_id = 0");
+#endif // NDEBUG
+      VERBATIM(r)->obj_id = cursor.obj;
+      memcpy(VERBATIM(r)->v.obj_data, (void *) cursor.obj,
+             sizeof(struct obj_type));
+    }
+    // Call down.
+    delete(cursor);
+%}
+}
+
+//
+// REDO and UNDO: tid0 and tid1
+//
+
+swap(cursor0, cursor1)
+{
+  CURS_OP_LIST_MATCH(op_list)
+%{
+    if (P2_my_xact_status == P2_XACT_DO)
+    {
+      P2_log_record_size = offsetof(VERBATIM(STRUCT), v)
+        + sizeof(VERBATIM(SWAP_STRUCT));
+#if 0
+      VERBATIM(STRUCT) *VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(VERBATIM(s));
+#else
+      VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(P2_log_record_size);
+#endif
+      VERBATIM(r)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(r);
+
+      VERBATIM(r)->xact_id = 0;
+      VERBATIM(r)->op_id = ITOKEN(swap_op);
+      VERBATIM(r)->curs_id = cursor_id0;
+#ifndef NDEBUG
+      if (cursor_id0 == 0)
+        P2_runtime_error("log_transient:swap: cursor_id0 = 0");
+#endif // NDEBUG
+      VERBATIM(r)->obj_id = cursor0.obj;
+      VERBATIM(r)->v.swap_struct.curs_id1 = cursor_id1;
+      VERBATIM(r)->v.swap_struct.obj_id1 = cursor1.obj;
+#ifndef NDEBUG
+      if (cursor_id1 == 0)
+        P2_runtime_error("log_transient:swap: cursor_id1 = 0");
+#endif // NDEBUG
+    }
+    // Call down.
+    swap(cursor0, cursor1);
+%}
+}
+
+//
+// REDO: tid and new cursor.field
+// UNDO: tid and old cursor.field
+//
+
+upd(cursor, field, expr)
+{
+  ENTRY *e;
+  char field_type[MAX_IDENT_LEN];
+  int field_type_is_int;
+  signed short id;
+  char upd_op_id[MAX_IDENT_LEN];
+
+  e = symtab_lookup(symtab[SUE], orig_type);
+  assert(e != NULL);
+  strcpy(field_type, find_data_type(e->ident, field)->typename);
+  assert(strcmp(field_type, "int") == 0 || strcmp(field_type, "str") == 0);
+  field_type_is_int = (strcmp(field_type, "int") == 0);
+
+  id = op_list_match(op_list, "upd", field);
+  assert(id != -1); // op_list_match() returns -1
+  assert(id > 0); // Use negation to distinguish str from int upd()
+  sprintf(upd_op_id, "%d", (field_type_is_int)? id : -id);
+
+  CURS_OP_LIST_MATCH(op_list)
+%{
+    if (P2_my_xact_status == P2_XACT_DO)
+    {
+%}
+
+  if (field_type_is_int)
+%{
+      P2_log_record_size = offsetof(VERBATIM(STRUCT), v)
+                      + sizeof(VERBATIM(UPD_INTEGER));
+%}
+  else
+%{
+      P2_log_record_size0 = strlen(cursor.field) + 1;
+      P2_log_record_size = offsetof(VERBATIM(STRUCT), v)
+                      + P2_log_record_size0 + strlen(expr) + 1;
+%}
+
+%{
+#if 0
+      VERBATIM(STRUCT) *VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(VERBATIM(s));
+#else
+      VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(P2_log_record_size);
+#endif
+      VERBATIM(r)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(r);
+
+      VERBATIM(r)->xact_id = 0;
+      VERBATIM(r)->op_id = %v.upd_op_id;
+      VERBATIM(r)->curs_id = cursor_id;
+#ifndef NDEBUG
+      if (cursor_id == 0)
+        P2_runtime_error("log_transient:swap: cursor_id = 0");
+#endif // NDEBUG
+      VERBATIM(r)->obj_id = cursor.obj;
+%}
+
+  if (field_type_is_int)
+%{
+      VERBATIM(r)->v.upd_union.upd_integer.integer0 = cursor.field;
+      VERBATIM(r)->v.upd_union.upd_integer.integer1 = expr;
+%}
+  else
+%{
+      str_CPY(VERBATIM(r)->v.upd_union.string_data, cursor.field);
+      str_CPY(&(VERBATIM(r)->v.upd_union.string_data[P2_log_record_size0]),
+              expr);
+%}
+
+%{
+    }
+    // Call down.
+    upd(cursor, field, expr);
+%}
+}
+
+//*****************************************************************************
+//                  schema operations.
+//*****************************************************************************
+
+// init_schema(schema): see above.
+
+begin_xact(schema)
+{
+  SCHEMA_OP_LIST_MATCH(op_list)
+%{
+    // Log header should be NULL at the beginning of a transaction.
+#ifndef NDEBUG
+    if (VERBATIM(header) != 0)
+      P2_runtime_error("log_transient:begin_xact: log header != NULL");
+#endif // NDEBUG
+
+    // Status should be NONE at the beginning of a transaction.
+#ifndef NDEBUG
+    if (P2_my_xact_status != P2_XACT_NONE)
+      P2_runtime_error("log_transient:begin_xact: transaction status != NONE");
+#endif // NDEBUG
+
+    // Call down.
+    // Transaction manager will set transaction status to DO.
+    begin_xact(schema);
+
+#if 0
+    P2_set_xact_status(P2_XACT_DO);
+#endif
+    // Begin new transaction.
+    {
+      // Write log record.
+      P2_log_record_size = offsetof(VERBATIM(STRUCT), curs_id) + sizeof(short);
+#if 0
+      VERBATIM(STRUCT) *VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(VERBATIM(s));
+#else
+      VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(P2_log_record_size);
+#endif
+      VERBATIM(r)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(r);
+
+      VERBATIM(r)->xact_id = 0;
+      VERBATIM(r)->op_id = ITOKEN(begin_xact_op);
+      VERBATIM(r)->curs_id = 0; // zero distinguishes schema from cursor ops
+    }
+%}
+}
+
+commit_xact(schema)
+{
+  SCHEMA_OP_LIST_MATCH(op_list)
+%{
+    {
+      // Write log record.
+      P2_log_record_size = offsetof(VERBATIM(STRUCT), curs_id) + sizeof(short);
+#if 0
+      VERBATIM(STRUCT) *VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(VERBATIM(s));
+#else
+      VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(P2_log_record_size);
+#endif
+      VERBATIM(r)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(r);
+
+      VERBATIM(r)->xact_id = 0;
+      VERBATIM(r)->op_id = ITOKEN(commit_xact_op);
+      VERBATIM(r)->curs_id = 0; // zero distinguishes schema from cursor ops
+    }
+    {
+#if 0
+      VERBATIM(STRUCT) *VERBATIM(r) = VERBATIM(header);
+      VERBATIM(STRUCT) *VERBATIM(t);
+#else
+      VERBATIM(r) = VERBATIM(header);
+#endif
+      while (VERBATIM(r) != 0)
+      {
+        VERBATIM(t) = VERBATIM(r);
+        VERBATIM(r) = VERBATIM(r)->next;
+        free(VERBATIM(t));
+      }
+      VERBATIM(header) = 0;
+    }
+    // Call down.
+    commit_xact(schema);
+#if 1
+    // Set transaction status to NONE.
+    P2_set_xact_status(P2_XACT_NONE);    
+#endif
+%}
+}
+
+checkpoint_schema(schema)
+{
+  SCHEMA_OP_LIST_MATCH(op_list)
+%{
+  // Call down.
+  checkpoint_schema(schema);
+%}
+}
+
+abort_xact(schema)
+{
+  CURS_OP_LIST_MATCH(CTOKEN(default_op_list))
+  assert(CTOKEN(delete_op)[0]      != '\0');
+  assert(CTOKEN(init_curs_op)[0]   != '\0');
+  assert(CTOKEN(insert_op)[0]      != '\0');
+  assert(CTOKEN(pos_op)[0]         != '\0');
+  assert(CTOKEN(swap_op)[0]        != '\0');
+  SCHEMA_OP_LIST_MATCH(op_list)
+  assert(CTOKEN(begin_xact_op)[0]  != '\0');
+  assert(CTOKEN(commit_xact_op)[0] != '\0');
+  assert(CTOKEN(abort_xact_op)[0]  != '\0');
+%{
+    // Write log record.
+    {
+      P2_log_record_size = offsetof(VERBATIM(STRUCT), curs_id) + sizeof(short);
+#if 0
+      VERBATIM(STRUCT) *VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(VERBATIM(s));
+#else
+      VERBATIM(r) = (VERBATIM(STRUCT) *) malloc(P2_log_record_size);
+#endif
+      VERBATIM(r)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(r);
+
+      VERBATIM(r)->xact_id = 0;
+      VERBATIM(r)->op_id = ITOKEN(abort_xact_op);
+      VERBATIM(r)->curs_id = 0; // zero distinguishes schema from cursor ops
+    }
+    // Abort old transaction.
+    P2_set_xact_status(P2_XACT_UNDO);
+    {
+      VERBATIM(r) = VERBATIM(header);
+      while (VERBATIM(r) != 0)
+      {
+        if  (VERBATIM(r)->curs_id != 0)
+        {
+          // Cursor variables.
+          char dummy_curs_data[MAX_SIZEOF_CURS];
+          char dummy_curs_data1[MAX_SIZEOF_CURS];
+          P2_BASIC_CURSOR *dummy_curs = (P2_BASIC_CURSOR *) dummy_curs_data;
+          P2_BASIC_CURSOR *dummy_curs1= (P2_BASIC_CURSOR *) dummy_curs_data1;
+
+          // cursor operation 
+  
+          // Initialize operation vector.
+          P2_OP_VEC op_vec = P2_get_op_vec(VERBATIM(r)->curs_id);
+#ifndef NDEBUG
+          if (op_vec == 0)
+            P2_runtime_error("log_transient:abort_xact: P2_get_op_vec"
+                             " returned NULL operation vector");
+#endif // NDEBUG
+  
+          // Initialize cursor.
+          (*op_vec[ITOKEN(init_curs_op)])(dummy_curs);
+    
+          // Position cursor.
+          // upd() (rather than simple assignment) operation fixes the
+          // orderby-log-qsort bug.  See explanation of bug and its
+          // solution in xact06.p2 (JAT)
+          (*op_vec[ITOKEN(pos_op)])(dummy_curs, VERBATIM(r)->obj_id);
+    
+          // Undo insert()
+          if (VERBATIM(r)->op_id == ITOKEN(insert_op))
+          {
+            (*op_vec[ITOKEN(delete_op)])(dummy_curs);
+          }
+    
+          // Undo delete()
+          else if (VERBATIM(r)->op_id == ITOKEN(delete_op))
+          {
+            (*op_vec[ITOKEN(insert_op)])(dummy_curs, VERBATIM(r)->v.obj_data);
+          }
+    
+          // Undo swap()
+          else if (VERBATIM(r)->op_id == ITOKEN(swap_op))
+          {
+            P2_OP_VEC op_vec1 =
+              P2_get_op_vec(VERBATIM(r)->v.swap_struct.curs_id1);
+            // Initialize cursor1.
+            (*op_vec1[ITOKEN(init_curs_op)])(dummy_curs1);
+            (*op_vec1[ITOKEN(pos_op)])
+              (dummy_curs1, VERBATIM(r)->v.swap_struct.obj_id1);
+            (*op_vec[ITOKEN(swap_op)])(dummy_curs, dummy_curs1);
+          }
+  
+          // Undo integer upd()
+          else if (VERBATIM(r)->op_id > 0)
+          {
+            (*op_vec[VERBATIM(r)->op_id])
+              (dummy_curs, VERBATIM(r)->v.upd_union.upd_integer.integer0);
+          }
+  
+          // Undo string upd()
+          else
+          {
+            (*op_vec[-(VERBATIM(r)->op_id)])
+              (dummy_curs, VERBATIM(r)->v.upd_union.string_data);
+          }
+        }
+  
+        VERBATIM(t) = VERBATIM(r);
+        VERBATIM(r) = VERBATIM(r)->next;
+        free(VERBATIM(t));
+      }
+    }
+    VERBATIM(header) = 0;
+    // Call down.
+    abort_xact(schema);
+#if 1
+    // Set transaction status to NONE.
+    P2_set_xact_status(P2_XACT_NONE);
+#endif
+%}
+}
+
+//*****************************************************************************
+//                  Schema verbatim.
+//*****************************************************************************
+
+s_verbatim(schema)
+{
+  char *ifndef = "#ifndef P2_log_transient_s_verbatim\n";
+  char *define = "#define P2_log_transient_s_verbatim\n";
+  char *endif  = "#endif\n";
+%{
+  %v.ifndef
+  %v.define
+
+  typedef struct {
+    short curs_id1;
+    void *obj_id1; // address or tid
+  } VERBATIM(SWAP_STRUCT);
+
+  typedef struct {
+    int integer0; // old
+    int integer1; // new
+  } VERBATIM(UPD_INTEGER);
+
+  typedef union {
+    VERBATIM(UPD_INTEGER) upd_integer;
+    char string_data[4]; // variable-size
+  } VERBATIM(UPD_UNION);
+
+  typedef union {
+    VERBATIM(SWAP_STRUCT) swap_struct; // swap: cursor and object ids
+    VERBATIM(UPD_UNION) upd_union; // upd: old and new values
+    char obj_data[4]; // insert and delete: variable-size cursor.obj
+  } VERBATIM(UNION);
+
+  typedef struct VERBATIM(record_struct) {
+    struct VERBATIM(record_struct) *next;
+    XACT_ID xact_id;
+    signed short op_id; // Use negation to distinguish str from int upd()
+    short curs_id; // zero distinguishes schema from cursor operations
+    void *obj_id; // address or tid
+    VERBATIM(UNION) v;
+  } VERBATIM(STRUCT);
+
+  // Log records.
+  VERBATIM(STRUCT) *VERBATIM(r);
+  VERBATIM(STRUCT) *VERBATIM(t);
+  // Log header.
+  VERBATIM(STRUCT) *VERBATIM(header) = 0;
+
+  // These "VERBATIM" global variables have been moved to
+  // paces/P2_log-manager.[ch] (see paces/contaienr04.p2) (JAT)
+#if 0
+  // These variables are no 
+  // Size of log records.
+  int VERBATIM(size);
+  int VERBATIM(size0);
+#endif
+
+  %v.endif
+  ;
+  s_verbatim(schema);
+%}
+}
+

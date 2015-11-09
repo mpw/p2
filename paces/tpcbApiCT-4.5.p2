@@ -1,0 +1,8 @@
+/* $Id: tpcbApiCT-4.5.p2,v 1.2 1997/09/22 01:51:18 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#ifndef P2
+#define P2
+#endif
+ 
+#include "/u/jthomas/smallbase-4.5/demo/tpcbApiCT.c"

@@ -1,0 +1,132 @@
+// $Id: refcount.xph,v 45.0 1997/09/19 05:46:49 jthomas Exp $
+// Copyright (C) 1997 The University of Texas at Austin.
+
+// Assumption:
+//   cursor.obj either points to a valid element, or equals 0
+
+// Refcount implementation included by x/refcount.xp and x/free.xp.
+
+// Note:
+//   The layers x/refcount.xp and x/free.xp #define the following:
+//     REFCOUNT_XFORM
+//     REFCOUNT_PRE_ACTION
+//     REFCOUNT_POST_ACTION
+//   and then #include this layer.
+
+#ifndef REFCOUNT_XFORM
+#define REFCOUNT_XFORM
+#endif
+
+/* This action is performed before the cursor is moved off of the
+   (old) current element. */
+
+#ifndef REFCOUNT_PRE_ACTION
+#define REFCOUNT_PRE_ACTION \
+  if (cursor.obj) \
+  { \
+    (cursor.refcount)--; \
+  }
+#endif
+
+/* This action is performed after the cursor is moved onto the
+   (new) current element). */
+
+#ifndef REFCOUNT_POST_ACTION
+#define REFCOUNT_POST_ACTION \
+  if (cursor.obj) \
+  { \
+    (cursor.refcount)++; \
+  }
+#endif
+
+xform(element, container, cursor)
+{
+  add element : int refcount;  
+
+  REFCOUNT_XFORM
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  optimize(cursor);
+}
+
+insert(cursor, record)
+%{
+  REFCOUNT_PRE_ACTION
+  insert(cursor, record);
+  cursor.refcount = 1;
+%}
+
+#if 1
+delete(cursor)
+%{
+   REFCOUNT_PRE_ACTION
+   delete(cursor);
+   REFCOUNT_POST_ACTION
+%}
+#endif
+
+init_curs(cursor)
+%{
+  // Q: Should we init cursor.obj = 0 in malloc.xp instead of here???
+  // A: No, because no operation in malloc.xp depends on cursor.obj = 0. (JAT)
+  cursor.obj = 0;
+  init_curs(cursor);
+%}
+
+delete_curs(cursor)
+%{
+  REFCOUNT_PRE_ACTION
+  delete_curs(cursor);
+%}
+
+pos(cursor, expr)
+%{
+  REFCOUNT_PRE_ACTION
+  pos(cursor, expr);
+  REFCOUNT_POST_ACTION
+%}
+
+adv(cursor)
+%{
+  REFCOUNT_PRE_ACTION
+  adv(cursor);
+  REFCOUNT_POST_ACTION
+%}
+
+rev(cursor)
+%{
+  REFCOUNT_PRE_ACTION
+  adv(cursor);
+  REFCOUNT_POST_ACTION
+%}
+
+swap(cursor0, cursor1) 
+%{ 
+  { 
+    int t; 
+    t = cursor0.refcount; 
+    cursor0.refcount = cursor1.refcount;
+    cursor1.refcount = t;
+  } 
+  swap(cursor0, cursor1);
+%}
+
+adhoc refcount(cursor)
+%{  
+  (cursor.refcount)
+%}
+
+def_cursor_func : 
+$HEADER
+{ 
+  $CALLDOWN ; 
+}
+
+def_container_func : 
+$HEADER
+{ 
+  $CALLDOWN ; 
+}

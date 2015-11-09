@@ -1,0 +1,51 @@
+/* $Id: slist_stack.p2,v 45.0 1997/09/19 05:44:18 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Make sure the layer slist_stack.xp provides stack semantics. */
+/* Analogous to paces/slist_queue.xp */
+
+#include <stdio.h>      /* fprintf() */
+#include "P2_paces.h"
+
+#define N 100
+
+typedef struct {
+  int i;
+} E;
+
+typex {
+  t = conceptual[slist_stack[P2_BOTTOM_LAYER]];
+}
+
+container <E> stored_as t with {
+  P2_BOTTOM_ANNOTE(i, N);
+} stack_cont;
+
+cursor <stack_cont> stack_curs;
+
+int i;
+E e;
+
+main()
+{
+  open_cont(stack_cont);
+  init_curs(stack_curs);
+  for (i = 0; i < N; i++)
+  {
+    e.i = i;
+    insert(stack_curs, e);
+  }
+  /* Last in, first out: N-1, N-2, N-3, ..., 0 */
+  i = N-1;
+  foreach(stack_curs)
+  {
+    if (i != stack_curs.i)
+    {
+      fprintf(stderr, "Mismatch: stack_curs.i = %d, i = %d\n", stack_curs.i, i);
+      exit(1);
+    }
+    i--;
+  }
+  close_cont(stack_cont);
+  exit(0);
+}

@@ -1,0 +1,104 @@
+# $Id: Makefile.in,v 45.0 1997/09/19 05:46:04 jthomas Exp $
+# Copyright (C) 1994, The University of Texas at Austin.
+# This file requires GNU make -- it will not work with the normal Unix make.
+# @configure_input@
+
+#### Start of system configuration section. ####
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+srcroot = @srcdir@/..
+objroot = ..
+
+include ../Makeconfig
+
+#### End of system configuration section. ####
+
+SRCS =		container.c \
+		instance.c \
+		rl-main.c \
+		rl-gram.y \
+		rl-lex.l \
+		rule.c
+
+OBJS =		$(patsubst %,%.o,$(notdir $(basename $(SRCS))))
+
+.PRECIOUS:	%-leaps1.o %-leaps1.c
+
+all:		$(RL)
+
+install\
+install-hetero:	all
+
+#
+# Leaps.
+#
+
+LEAPS_CFLAGS =	-O2
+LEAPS_FLAGS =	-s
+
+%-leaps:	%-leaps1.o
+		$(CC) $(LEAPS_CFLAGS) -o $@ $< ../leaps/lib/libops5c.a -lm
+
+%-leaps1.o:	%-leaps1.c
+		$(CC) $(LEAPS_CFLAGS) -c $< -I$../leaps/include
+
+%-leaps1.c:	%-leaps.ops
+		../leaps/bin/ops5c $(LEAPS_FLAGS) $<
+
+#
+# RL.
+#
+
+%-rl:		%-rl.p2
+		$(SPEW) $(P2) \
+		  --no-lines --indent \
+		  --cppflags=-I$(srcdir) \
+		  --cflags="$(PB_CFLAGS)" --lflags=-lm \
+		  $(P2_FLAGS) $<
+
+%-rl.p2:	%-rl.ops
+		$(RL) -s $< > $@
+
+$(RL):		$(OBJS)
+		$(CC) $(CFLAGS) -o $@ $(OBJS) $(LEXLIB) $(LIBS)
+
+rl-gram.tab.h \
+rl-gram.tab.c:	rl-gram.y
+		$(YACC) $(YFLAGS) $(srcdir)/rl-gram.y
+		mv -f y.tab.c rl-gram.tab.c
+		mv -f y.tab.h rl-gram.tab.h
+
+rl-lex.c:	rl-lex.l rl-gram.tab.h 
+		$(LEX) $(LFLAGS) $(srcdir)/rl-lex.l
+		mv -f lex.yy.c rl-lex.c
+
+rl-lex.o:	rl-lex.c
+		$(CC) $(LEX_CFLAGS) $(CPPFLAGS) -c $<
+
+%.o:		%.c
+		$(CC) $(CFLAGS) $(CPPFLAGS) -c $<
+
+# Clean.
+
+clean: 
+		$(RM) $(OBJS) $(RL)
+
+mostlyclean:	clean
+
+distclean:	clean
+		$(RM) Makefile *.dep
+
+realclean:	clean
+		$(RM) rl-gram.tab.h rl-gram.tab.c rl-lex.c
+		$(RM) Makefile *.dep
+
+backupfiles:
+		$(SHELL) $(srcdir)/mkinstalldirs backup
+		@for file in $(SRCS); do \
+		  cp -f $file backup/$file; \
+		done
+
+ifeq ($(INCLUDE),1)
+include $(patsubst %,%.dep,$(notdir $(basename $(SRCS))))
+endif

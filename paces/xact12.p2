@@ -1,0 +1,107 @@
+/* $Id: xact12.p2,v 45.0 1997/09/19 05:45:34 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* The SEGFAULT bug was caused by the upd() special operation.  The
+   problem was that, for string data, upd() was incorrectly sizing the
+   log record to hold a string pointer (4 bytes), rather than the
+   actual string pointed to (possibly more than 4 bytes). (JAT) */
+
+/* Toy program to demonstrate bug: log_tid_hack SEGFAULT. */
+/* This program gets a segmentation fault or bus error when run with
+   the log_tid_hack layer. */
+/* Transaction with named schema, begin_xact(), commit_xact(),
+   and abort_xact(). */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+   char  name[100];
+} EMP_TYPE;
+
+EMP_TYPE rawdata[] = {
+   { "x" },
+   { "y" },
+   { "z" },
+#if 0
+   /* Segmentation fault. */
+   { "ABCDEFGHIJKLMN, John" },
+#elif 1
+   /* Segmentation fault. */
+   { "ABCDEFGHIJKLMN " },
+#elif 0
+   /* Segmentation fault. */
+   { "ABCDEFGHIJKLMNO " },
+#elif 0
+   /* Bus error. */
+   { "ABCDEFGHIJKLMN John" },
+#elif 0
+   /* Bus error. */
+   { "ABCDEFGHIJKLMN O" },
+#endif
+   { "" }
+};
+
+typex {
+#if 1
+  /* Bug: log_tid_hack */
+  t = top2ds[init_generic[log_tid_hack[array[transient]]]];
+#else
+  /* No bug: log_transient. */
+  t = top2ds[init_generic[log_transient[array[transient]]]];
+#endif
+}
+
+schema {
+  container <EMP_TYPE> emp_cont;
+} stored_as t with {
+  array size of emp_cont is 10;
+} emp_schema;
+
+cursor <emp_schema.emp_cont>
+all_emp;
+
+int main (void) 
+{
+  EMP_TYPE *p;
+
+#if 0
+  /* Initialize xact manager. */
+  P2_init_xact_manager();
+#endif
+
+  open_schema(emp_schema);
+  open_cont(emp_schema.emp_cont);
+  init_curs(all_emp);
+
+  /* Begin transaction. */
+  begin_xact(emp_schema);
+
+  /* Insert. */
+  for (p = rawdata; p->name[0] != '\0'; p++)
+  {
+    insert(all_emp, *p);
+  }
+
+  /* Update. */
+  P2_ITERATOR(all_emp)
+  {
+    upd(all_emp, name, "Updated");
+  }
+
+#if 1
+  /* Abort transaction */
+  commit_xact(emp_schema);
+
+  close_cont(emp_schema.emp_cont);
+  close_schema(emp_schema);
+
+#if 0
+  /* Delete xact manager. */
+  P2_delete_xact_manager();
+#endif
+
+  /* Exit. */
+  exit(0);
+#endif
+}

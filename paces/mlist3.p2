@@ -1,0 +1,126 @@
+/* $Id: mlist3.p2,v 45.0 1997/09/19 05:43:46 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* This file demonstrates a bug in mlist: when the last element in the
+   container is deleted, this deleted element is erroneously retrieved
+   by reset_end (the correct behavior is that the last non-deleted
+   element should be retrieved).
+
+   This bug appears (for example) when we are traversing a list via
+   rofeach and we delete the last element.  Since mlist is unstable,
+   the mlist layer sets the inbetween flag.  Then, when adv is called,
+   the inbetween layer sees that the inbetween flag has been set and
+   calls reset_end (which erroneously retrieves the deleted element).
+
+   (JAT) */
+
+/* Bug appears only for:
+   (1) mlist
+   (2) mlist field is key field
+   (3) rofeach
+   (4) delete */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define ORDERBY 1
+#define ITERATOR rofeach
+#define ASCENDING ascending
+
+#define DELETE 1
+#define MLIST 1
+#define MLIST_FIELD age
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+} EMP_TYPE;
+
+
+EMP_TYPE rawdata[] = {
+  { 10000,60 },
+  { 10070,22 },
+  { 10040,53 },
+  { 10060,61 },
+  { -1 }
+};
+
+typex {
+#if MLIST
+
+/* Bug */
+
+#if 0
+   t = conceptual[mlist[delflag[array1[transient]]],
+                        conceptual[delflag[array2[transient]]]];
+#elif 0
+   t = top2ds[inbetween[qualify[mlist[delflag[array1[transient]]],
+         top2ds[inbetween[qualify[delflag[array2[transient]]]]]]]];
+#elif 1
+   t = top2ds_qualify[inbetween[mlist[delflag[array1[transient]]],
+         top2ds_qualify[inbetween[delflag[array2[transient]]]]]];
+
+/* No Bug */
+
+#elif 0
+   /* Segmentation Fault */
+   t = top2ds_qualify[mlist[delflag[array1[transient]]],
+         top2ds_qualify[delflag[array2[transient]]]];
+#endif
+
+#else /* MLIST */
+
+#if 0
+   t = top2ds_qualify[inbetween[delflag[array1[transient]]]];
+#elif 1
+   t = top2ds_qualify[inbetween[odlist[delflag[array1[transient]]]]];
+#endif
+
+#endif /* MLIST */
+}
+
+container <EMP_TYPE> stored_as t with {
+  array1 size is 30;
+#if MLIST
+  array2 size is 30;
+  mlist on MLIST_FIELD;
+#else
+  odlist key is age;
+#endif /* MLIST */
+} emp_cont;
+
+cursor <emp_cont>
+  where "$.age > 40"
+#if ORDERBY
+  orderby ASCENDING empno
+#endif
+old_emp;
+
+void main(void) 
+{
+  int                  loop;
+  EMP_TYPE             *p;
+
+  open_cont( emp_cont );
+  init_curs( old_emp );
+
+  for (p = rawdata; p->empno != -1; p++) 
+  {
+      insert( old_emp, *p );
+  }
+
+  printf( "old emp are:\n"); 
+  ITERATOR( old_emp )
+  {
+    printf( "%d %d\n",
+            old_emp.empno, 
+            old_emp.age );
+#if DELETE
+    delete( old_emp );
+#endif
+  }
+
+  close_cont( emp_cont );
+  exit( 0 );
+}

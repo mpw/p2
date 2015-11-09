@@ -1,0 +1,36 @@
+// $Id: init_cont_function.xp,v 45.0 1997/09/19 05:46:29 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds init_cont_function [ ds ] stable annotation
+
+// Call the given function when the special operation init_cont() is invoked.
+
+// That is, this layer adds a hook to init_cont() that allows the user
+// to specify a function to call when the init_cont() special
+// operation is invoked.
+
+// This layer is necessary, because the user cannot tell if a
+// container has been initialized.  Internally, P2 maintains an
+// initialized flag that the user could potentially use to tell if a
+// container has been initialized.  But, unfortunately, this flag is
+// not accessible until the user calls open_cont(), and is always TRUE
+// after the user calls open_cont().  Both x/top2ds.xp and
+// x/top2ds_qualify.xp:open_cont() test the initialized flag, and if
+// it is FALSE, call down to init_cont() and then set it to TRUE.
+
+// An init_curs_function layer is NOT necessary, but an
+// init_schema_function layer IS necessary. (JAT)
+
+!#include "init_cont_function.h"
+
+ddlhint(argc, argv)
+{
+  limit 1 argument;
+  get_ddlhint_argument(%a.function, argv[1]);
+}
+
+init_cont(container)
+%{
+  init_cont(container);
+  %a.function();
+%}

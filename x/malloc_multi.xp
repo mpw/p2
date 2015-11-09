@@ -1,0 +1,7 @@
+// $Id: malloc_multi.xp,v 45.0 1997/09/19 05:46:36 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds malloc_multi [ mem ] stable optional annotation retrieval_never
+
+#define P2_MALLOC_MULTI
+#include "malloc.xph"

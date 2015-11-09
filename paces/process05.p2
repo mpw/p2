@@ -1,0 +1,84 @@
+/* $Id: process05.p2,v 45.0 1997/09/19 05:44:05 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test semaphores. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <assert.h>   /* assert() */
+#include <stdio.h>    /* printf() */
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main ()
+{
+  P2_PROCESS_ID child_pid[10];
+  P2_SEMAPHORE_ID semaphore;
+  int i;
+
+  /* Initialize process manager. */
+  P2_init_process();
+
+  if (P2_init_semaphore(&semaphore, 1) < 0)
+  {
+    perror("Can't initialize semaphore");
+    exit(1);
+  }
+
+  for (i = 0; i < 10; i++)
+  {
+    child_pid[i] = P2_fork_process();
+    if (child_pid[i] == -1)
+    {
+      /*** This is an error. ***/
+      
+      fprintf(stderr, "i = %d: ", i);
+      perror("Can't fork child");
+      exit(1);
+    }
+    else if (child_pid[i] == 0)
+    {
+      /*** This is the child. ***/
+
+      if (P2_lock_semaphore(&semaphore) < 0)
+	perror("P2_lock_semaphore() failed");
+      else {
+	printf("Hello World!\n");
+	if (P2_unlock_semaphore(&semaphore) < 0)
+	  perror("P2_unlock_semaphore() failed");
+	else
+	  printf("Goodbye World!\n");
+      }
+      exit(0);
+    }
+    else
+    {
+      /*** This is the parent. ***/
+    }
+  }
+
+  /* Barrier: wait for all 10 children to exit. */
+  for (i = 0; i < 10; i++)
+    if (P2_join_process(child_pid[i]) != 0)
+      perror("P2_join_process() != 0");
+
+  /* Delete the semaphore. */
+  if (P2_delete_semaphore(&semaphore) < 0)
+  {
+    perror("Can't delete semaphore");
+    exit(1);
+  }
+  printf("Parent Exits\n");
+ 
+  /* Delete process manager. */
+  P2_delete_process();
+
+  exit(0);
+}

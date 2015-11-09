@@ -1,0 +1,189 @@
+/* $Id: xact06.p2,v 45.0 1997/09/19 05:45:31 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* TID and minimal type expression. */
+/* This program demonstrates the orderby-log_tid_hack-qsort bug:
+   Orderby requested on empno field, provided (by qsort) on age field. */
+
+/* The bug appeared, because (formerly), the log_tid_hack layer
+   was positioning cursors via a simple assignment--without using the
+   pos() special operation.  Here's exactly what (formerly) happened:
+
+   This program calls begin_xact(), inserts some tuples, updates and
+   prints tuples using P2_ITERATOR--and thus calls a reset_start() or
+   reset_end() in the process--then calls abort_xact().
+
+   Because this program has called reset_start() or reset_end()--after
+   begin_xact() and insert(), but before abort_xact()--the qsort layer
+   will have shuffled the tuples around, invalidating the mappings
+   between an element's address and it's TID.
+
+   Because the element's address can thus not be used as it's TID, the
+   log_tid_hack layer will scan the container looking for the
+   element with the correct TID.  Scanning the container will call
+   reset_start(), which will cause the orderby layer to copy all of
+   the elements in the main container to the orderby container, sort
+   the orderby container, and then do retrievals from the orderby
+   container, rather than the main container.
+
+   Unfortunately, when the log_tid_hack layer (formerly)
+   positioned the cursor via a simple assignment--without using the
+   pos() operation--the cursor would be correctly positioned in the
+   main container, but incorrectly positioned in the orderby container
+   (actually, the simple assignment had no effect on the position of
+   the cursor in the orderby container, and thus the simple assignment
+   had no effect at all).  Subsequent retrieval operations would be
+   based on the cursor's incorrect position in the orderby container.
+
+   The net result was that, when undoing insert() operations, the
+   log_tid_hack layer would delete() the wrong elements, elements
+   which should have been delete()'ed would remain in the container,
+   and the insert() operations were not undone.
+
+   The solution to this bug was to have the log_tid_hack layer
+   position the cursor using the pos() operation, rather than via a
+   simple assignment.  The pos() operation causes the orderby layer to
+   invalidate the position of the cursor in the orderby container, and
+   perform subsequent retrievals from the main container, rather than
+   the orderby container (until another reset_start() or reset_end()
+   is called).
+
+   (JAT) */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+EMP_TYPE rawdata[] = {
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10070,22,"Biology","Andrews, Kay" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10010,40,"Biology","Akin, Monica" },
+   { 10050,42,"Biology","Akerson, Suzanne" },
+   { 10040,53,"Biology","Akerson, Mary" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10030,23,"Biology","Akerson, Gwyn" },
+   { -1 }
+};
+
+#define BUG 1
+#define ORDERBY 1
+
+typex {
+#if BUG
+  /* Demonstrate bug. */
+#if ORDERBY
+  /* Minimal type expression to demonstrate bug: orderby-log_tid_hack-qsort */
+  t = top2ds[init_generic[orderby_fast[
+        inbetween[qualify[log_tid_hack[xact[avail[qsort[transient]]]]],
+          top2ds[dlist[avail[malloc[transient]]]]]]]];
+#else
+  /* Work-around bug: (no orderby layer) */
+  t = top2ds[init_generic[
+	inbetween[qualify[log_tid_hack[xact[avail[qsort[transient]]]]]]]];
+#endif /* ORDERBY */
+#else
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+#endif /* BUG */
+}
+
+schema {
+  container <EMP_TYPE> emp_cont;
+} stored_as t with {
+#if BUG
+  qsort key of emp_cont is age with size 10;
+#if 0
+#if ORDERBY
+  array size of emp_cont is 10;
+#endif /* ORDERBY */
+#endif
+#else
+  P2_BOTTOM_SCHEMA_ANNOTE(emp_cont, age, 10);
+#endif /* BUG */
+} emp_schema;
+
+cursor <emp_schema.emp_cont>
+#if ORDERBY
+  orderby P2_DESCENDING empno
+#endif /* ORDERBY */
+all_emp;
+
+cursor <emp_schema.emp_cont>
+  where "$.age > 40"
+  orderby P2_ASCENDING age
+old_emp;
+
+void print_all_emp (void)
+{
+  P2_ITERATOR(all_emp)
+  {
+    printf("%d %d %s\n", all_emp.empno, all_emp.age, all_emp.name);
+  }
+}
+
+int main (void) 
+{
+  int new_empno = 100000;
+
+  open_schema(emp_schema);
+  open_cont(emp_schema.emp_cont);
+  init_curs(all_emp);
+  init_curs(old_emp);
+
+  /* Begin transaction. */
+
+  begin_xact(emp_schema);
+
+  /* Insert. */
+
+  {
+    EMP_TYPE *p;
+    for (p = rawdata; p->empno != -1; p++) {
+      insert(all_emp, *p);
+    }
+  }
+
+  /* Update. */
+
+  P2_ITERATOR(old_emp)
+  {
+    new_empno--;
+    upd(old_emp, empno, new_empno);
+  }
+
+  /* Print. */
+  /* Performs a reset_start(), thus sorting the array,
+     thus an element's address cannot be used as it's TID. (JAT) */
+
+  printf("insert and update before abort:\n");
+  print_all_emp();
+
+  /* Abort transaction. */
+
+  abort_xact(emp_schema);
+
+  /* Begin transaction. */
+
+  begin_xact(emp_schema);
+
+  /* Print. */
+
+  printf("insert and update after abort:\n");
+  print_all_emp();
+
+  /* Commit transaction. */
+
+  commit_xact(emp_schema);
+
+  close_cont(emp_schema.emp_cont);
+  close_schema(emp_schema);
+
+  /* Exit. */
+  exit(0);
+}

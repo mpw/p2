@@ -1,0 +1,67 @@
+/* $Id: pb-test01.p2,v 45.0 1997/09/19 05:43:57 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* This file tests complex declarations and cursors
+   (ie, involving const keywords, initialization, and indirection) (JAT) */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+const int *pc;
+int *p, i;
+const int ic = 37;
+
+int * const const_pointer;
+const int *pointer_to_const;
+
+typedef int *int_pointer;
+const int_pointer const_pointer1;
+int_pointer const const_pointer2;
+
+volatile int * pv;
+
+typedef struct {
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+typex {
+   paces_typex = P2_PACES_TYPEX;
+}
+
+container <EMP_TYPE> stored_as paces_typex with {
+   P2_PACES_ANNOTE(empno, 1);
+} emp_container;
+
+int foo;
+
+cursor <emp_container> where "1 == 1" o, oprime, *k, **kk;
+
+int main ( int argc, char *argv[] )
+{
+  EMP_TYPE e;
+
+  open_cont( emp_container );
+  init_curs( o );
+  e.empno = 99;
+  insert( o, e );
+  reset_start( o );
+  printf( "%d\n", o.empno );
+  
+  k = &o;
+  (*k).empno++;
+  printf( "%d\n", (*k).empno );
+  k->empno++;
+  printf( "%d\n", k->empno );
+  
+  kk = &k;
+  (**kk).empno++;
+  printf( "%d\n", (**kk).empno );
+  (*kk)->empno++;
+  printf( "%d\n", (*kk)->empno );
+  close_cont( emp_container );
+
+  exit( 0 );
+}

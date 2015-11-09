@@ -1,0 +1,16 @@
+a
+#ifndef NDEBUG
+b
+#else
+c
+#endif // NDEBUG
+d
+
+#ifndef NDEBUG
+e
+#endif /* NDEBUG */
+
+printf("ASSERTIONS")
+
+/* ASSERTIONS */
+

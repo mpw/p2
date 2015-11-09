@@ -1,0 +1,79 @@
+@c $Id: p2-intro.top.texinfo,v 45.0 1997/09/19 05:42:08 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@ifinfo
+@node Top, Agreement, (dir), (dir)
+@top The Introductory P2 System
+
+This document describes the P2 system. 
+
+This document applies to version @value{VERSION} 
+of the program system @code{P2}. This manual 
+is Edition @value{EDITION}, updated @value{UPDATED}.
+
+@end ifinfo
+
+@c =================================================
+
+@menu
+* Agreement::                   Copyright License Agreement.
+* Introduction::                Theory behind P2.  Program descriptions.
+* Distribution::                Getting P2 and reporting bugs.
+* Installation::                Hot to install P2 on your system.
+* P2 Language::                 Constructs in the P2 language.
+* P2 Operations::               Operations in the P2 language.
+* P2 Layers::                   Individual layers in the P2 system.
+* Invoking P2::                 Options for P2.
+* P2 Bibliography::             Publications related to the P2 system.
+* Concept Index::               
+* Functions and Variables Index::  
+* Example P2 program::          The sample.p2 file.
+@end menu
+
+@c =================================================
+
+@iftex
+@unnumbered Preface
+
+    This manual documents the use of the P2 system. 
+It also outlines how programmerrs can customize the system for sophisticated
+applications.
+First-time users are encouraged to read this manual.
+Advanced users are encouraged to read
+@file{Advanced P2 System Manual}.
+
+In addition to the usual index of concepts, this manual provides
+separate indices of all functions and variables. 
+
+This manual is available in both a printed format and on on-line
+format. The on-line format can be browsed by the using the GNU info
+program or the GNU emacs info command.
+@end iftex
+
+@c =================================================
+
+@include intro-agreement.texi
+@include distribution.texi
+@include installation.texi
+@include intro-introduction.texi
+@include language.texi
+@include operations.texi
+@include layers.texi
+@include intro-invoking.texi
+@include bibliography.texi
+
+@include intro-concept-index.texi
+@include intro-function-index.texi
+
+@node Example P2 program, , Functions and Variables Index, Top
+@appendix Example P2 program
+
+Below is the complete P2 program, @file{sample.p2}.
+
+@smallexample
+@c sample.p2.texi is generated automatically
+@c from paces/sample.p2.texi by paces/Makefile.in (JAT)
+@include sample.p2.texi
+@end smallexample
+
+@c =================================================

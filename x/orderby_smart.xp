@@ -1,0 +1,22 @@
+// $Id: orderby_smart.xp,v 45.1 1997/09/28 11:39:18 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds orderby_smart[ ds, top ] stable curs_state no annotation retrieval_always
+
+// (When an orderby direction is specified, and ordering is not
+// provided by other components in the type expression) this layer
+// sorts the orderby container for a reset_start() or reset_end()
+// ONLY IF the container has changed since the last time is was sorted.
+
+// These semantics SLOW the container-modifying special operations
+// insert(), delete(), swap(), and upd(), but make FAST repeated
+// repeated calls to reset_start() and reset_end() operations.
+
+// That is, if reset_start() and/or reset_end() is called N times,
+// without intervening container-modifying special operations, then
+// the orderby container will be sorted only the first time.
+
+!#define P2_LAYER_CSTATE orderby_smart_cstate
+
+#define P2_ORDERBY_SMART
+#include "orderby.xph"

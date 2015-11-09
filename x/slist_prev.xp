@@ -1,0 +1,156 @@
+// $Id: slist_prev.xp,v 45.0 1997/09/19 05:46:50 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Singly-linked list layer with a prev pointer in order to improve
+// the efficiency of single rev() and delete().
+
+layer ds slist_prev [ ds ] unstable no annotation retrieval_sometimes
+
+!#include "qopt.h"
+
+xform(element, container, cursor)
+{
+   add element   : struct element *next;
+   add cursor    : struct element *prev;  // Either valid or NULL
+   add container : struct element *first; 
+   xform(element, container, cursor);
+}
+
+#define COST    LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+
+optimize(cursor)
+{
+   optimize(cursor);
+   if (cost > COST) {
+      cost  = COST;
+      layer = %ln;
+      retrieval_direction = 0;
+   }
+}
+
+init_curs(cursor)
+%{
+  init_curs(cursor);
+  cursor.prev = 0;
+%}
+
+init_cont(container)
+%{
+   init_cont (container);
+   container.first = 0;
+%}
+
+insert(cursor, record)
+%{
+   insert(cursor, record);
+   if (!container.first) {
+      // EMPTY list.
+      cursor.next     = 0;
+      cursor.prev     = 0;
+      container.first = cursor.obj;
+   }
+   else {
+      // NON-empty list.
+      // Add record to beginning of list.
+      cursor.next     = container.first;
+      cursor.prev     = 0;
+      container.first = cursor.obj;
+   }
+%}
+
+query(cursor)
+{
+   char *p = bind_predicate(te, cursor, obj_type, predicate);
+   %{
+      %v.p
+   %}
+   xfree(p);
+}
+
+end_adv(cursor)
+%{
+   (!cursor.obj)
+%}
+
+end_rev(cursor)
+%{
+   (!cursor.obj)
+%}
+
+adv(cursor)
+%{
+   cursor.prev = cursor.obj;
+   cursor.obj = cursor.next;
+%}
+
+rev(cursor)
+%{
+  if (cursor.prev) {
+    // Valid cursor.prev
+    cursor.obj = cursor.prev;
+    cursor.prev = 0;
+  }
+  else if (cursor.obj == container.first) {
+    // Beginning of list
+    cursor.obj = 0;
+  }
+  else {
+    // Invalid cursor.prev
+    struct obj_type *p = cursor.obj;
+    cursor.obj = container.first;
+    while (cursor.next != p) {
+      cursor.prev = cursor.obj;
+      cursor.obj = cursor.next;
+    }
+  }
+%}
+
+delete(cursor)
+{
+  %{
+     {
+       struct obj_type *q = cursor.next;
+       if (cursor.obj == container.first) {
+         // FIRST node.
+         container.first = cursor.next;
+       }
+       else {
+         // INTERNAL node.
+         if (!cursor.prev) {
+           // Invalid cursor.prev
+           cursor.prev = container.first;
+           while (cursor.prev->next != cursor.obj) {
+             cursor.prev = cursor.prev->next;
+           }
+         }
+         cursor.prev->next = q;
+       }
+       delete (cursor);
+  %}
+       // for post-positioning - remember next pointer
+       if (layer == %ln)
+  %{
+            {
+               cursor.obj = q;
+               cursor.inbetween = 1;
+            }
+  %}
+  %{
+     }
+  %}
+}
+
+reset_start(cursor)
+%{
+   cursor.obj = container.first;
+   cursor.prev = 0;
+%}      
+
+reset_end(cursor)
+%{
+  while (cursor.next != 0) {
+    cursor.prev = cursor.obj;
+    cursor.obj = cursor.next;
+  }
+%}
+

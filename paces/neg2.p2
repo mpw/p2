@@ -1,0 +1,236 @@
+/****************** NEG2
+  - note: since no objects of a are deleted, there really
+    doesn't need to be a shadow container....
+
+(literalize count val)
+(literalize foo b)
+
+
+(p r1
+  (count ^val {<x> < 10})
+-->
+  (make foo ^b <x>)
+  (modify 1 ^val (compute <x> + 1))
+)
+
+(p r2
+  (foo ^b <x>)
+ -(foo ^b > <x>)
+-->
+  (write <x> is the biggest number)
+)
+
+**********************************************/
+
+
+#include "ops5.h"
+
+/************ generated #defines ********************/
+
+#define cont_count_num  1
+#define cont_foo_num 2
+#define shadow_foo_num 3
+
+/************* generated forward refs ******************/
+
+VOID_FUNC i1_1, i2_1, i2_2;
+
+
+/************* Generated Record types ***************************/
+/*----------- _ts is added to each type ------------------------*/
+
+typedef struct 
+{
+  int  val ;
+  int  _ts ;           /* visible time stamp */
+} count;
+
+typedef struct
+{
+   int b;
+   int _ts;
+} foo;
+
+
+
+/**************** generated container declarations ******************/
+
+container <count> stored_as nostruct_x with {
+   vtimestamp field is _ts counter is global_counter;
+} cont_count;
+
+container <foo> stored_as only_scan_x with {
+   vtimestamp field is _ts counter is global_counter;
+} cont_foo, shadow_foo;
+
+
+/**************** cursor declarations for rules *********************/
+
+/* names given to types are c_rule#_%  where # is the number of the
+   rule and % is the number of the container that is dominant.
+
+   Note: rules that have arity 1 to begin with will generate no 
+   cursors. Such is the case for the sole no_join rule */
+
+/* rule 1: (p r1
+  (count ^val {<x> < 10}) --> */
+
+typedef compcurs < a cont_count >
+        given <a d_count>
+        where "$.val < 10" valid v1
+        curs1_1;
+
+/* rule 2:  (p r2
+  (foo ^b <x>)
+ -(foo ^b > <x>) */
+
+typedef compcurs < a foo >
+        given < a d_foo >
+        valid v1
+        curs2_1;
+
+/* cursors for negated CE */
+
+int v2_x;
+cursor <foo_cont> where "$.b > v2_x" c_2;
+cursor <shadow_foo> where "$.b > v2_x && $._ts > dom_timestamp" s_2;
+
+typedef compcurs <a foo, b shadow_foo>
+        given <b d_shadow_foo>
+        where "$b.b > $a.b" valid v2
+        P_2;
+
+
+
+/****************  utility cursor declarations *********************/
+
+
+typedef cursor <cont_count>    count_cursor;
+typedef cursor <cont_foo>      foo_cursor;
+typedef cursor <shadow_a>      shadow_a_cursor;
+
+count_cursor    d_count,  a_count,  v_count;  
+foo_cursor      d_a,  a_a,  v_a;  
+shadow_a_cursor d_shadow_a,  a_shadow_a,  v_shadow_a;  
+
+
+
+/***************** validation functions ****************************/
+/* a validation function makes sure the the object in the specified
+   container has not yet been deleted.  There's one validation
+   function per container, followed by an operation vector indexed
+   by container number; see #define for test_valid */
+
+
+BOOL valid_count( void *o ) {
+   pos(v_count, o);
+   return( valid(v_count) );
+}
+
+BOOL valid_foo( void *o ) {
+   pos(v_foo, o);
+   return( valid(v_foo) );
+}
+
+BOOL_FUNC  valid_vect[ ] =
+   { 0, valid_count, valid_foo };
+
+
+/***************************** i procedures *********************/
+
+/* rule 1 :(p r1
+  (count ^val {<x> < 10}) --> */
+
+void i1_1()
+{
+   stand( curs1_1, d_count, pop_ws, frule1_1, fire_rule1 );
+}
+
+/* rule 2 : (p r2
+  (foo ^b <x>)
+ -(foo ^b > <x>) --> */
+
+
+void i2_1()
+{
+   first_stand( curs2_1, d_foo, i2_2, frule1_1, fire_rule2 );
+   v2_x = d_foo.b;
+   meta( c_2, s_2 );
+   last_stand( curs2_1, d_foo, i2_2, frule1_1, fire_rule2 );
+}
+
+void i2_2()
+{
+   first_stand( P_2, d_shadow_foo, pop_ws, frule2_2, fire_rule2 );
+   v2_x = c->a.b;
+   meta( c_2, s_2 );
+   last_stand( P_2, d_shadow_foo, pop_ws, frule2_2, fire_rule2 );
+}
+
+
+
+VOID_FUNC first_rule[] =
+  { 0, i2_1, i1_1, i2_2 };
+
+
+/************** actions ***************************/
+
+#define make_a ( b ) \
+{ a r = { b }; \
+  insert(a_a,r); \
+  push_wl( a_a.obj, a_a._ts, cont_a_num );
+} \
+
+#define modify_count( curs, field, val ) \
+{  count r; \
+   getrec(curs, r); \
+   insert(a_shadow_count, r); \
+   push_wl( a_shadow_count.obj, a_shadow_count._ts, shadow_count_num ); \
+   upd(curs,field,val); \
+   push_wl( curs.obj, curs._ts, count_num ); \
+}
+
+
+/* rule 1:  (p r1
+  (count ^val {<x> < 10})
+-->
+  (make a ^b <x>)
+  (modify 1 ^val (compute <x> + 1))) */
+
+void fire_rule1( count_cursor *c1 )
+{
+     printf("firing rule 1\n") ;
+     make_a(c1->val);
+     modify_count(*c1, val, c1->val + 1);
+}
+
+void fire_rule2( foo_cursor *c1 )
+{
+     printf("firing rule 2\n") ;
+     printf("%d is the biggest number", c1->b);
+}
+
+
+void init_all()
+{
+   init_cont( cont_foo );
+   init_cont( cont_count );
+   init_cont( shadow_foo );
+
+   init_curs( d_foo );
+   init_curs( a_foo );
+   init_curs( v_foo );
+
+   init_curs( d_count );
+   init_curs( a_count );
+   init_curs( v_count );
+
+   init_curs( d_shadow_foo );
+   init_curs( a_shadow_foo );
+   init_curs( v_shadow_foo );
+
+   init_curs( c_2 );
+   init_curs( s_2 );
+}
+
+#include "ops5.c"

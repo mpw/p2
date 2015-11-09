@@ -1,0 +1,61 @@
+@c $Id: p2-adv.top.texinfo,v 45.0 1997/09/19 05:42:08 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@ifinfo
+@node Top, Agreement, (dir), (dir)
+@top The Advanced P2 System
+
+This document describes advanced features of the P2 system. 
+
+This document applies to version @value{VERSION} 
+of the program system @code{P2}. This manual 
+is Edition @value{EDITION}, updated @value{UPDATED}.
+
+@end ifinfo
+
+@c =================================================
+
+@menu
+* Agreement::                   Copyright License Agreement.
+* Introduction::                Brief description of this file.
+* xp Manual::                   How to interpret and write xp files.
+* xp Operations::               Operations available in xp files. 
+* Invoking the P2 Programs::    Options for the programs xp, pb, and ddl.
+* Layer Composition Checks::    Semantic checking of type expressions.
+* Concept Index::               
+* Functions and Variables Index::
+* dlist.xp program::
+@end menu
+
+@c =================================================
+
+@iftex
+@unnumbered Preface
+
+    This manual documents advanced usage of the P2 system and is the
+companion document to @file{Introductory P2 System Manual}.
+It also outlines how experts can customize the system for sophisticated
+applications. 
+
+In addition to the usual index of concepts, this manual provides
+indices of all functions and variables. 
+
+This manual is available in both a printed format and on on-line
+format. The on-line format can be browsed by the using the GNU "info"
+program or the GNU emacs "info" command.
+@end iftex
+
+@c =================================================
+
+@include adv-agreement.texi
+@include adv-introduction.texi
+@include xp-manual.texi
+@include xp-operations.texi
+@include adv-invoking.texi
+@include drc.texi
+
+@include adv-concept-index.texi
+@include adv-function-index.texi
+@include dlist.xp.texi
+
+@c =================================================

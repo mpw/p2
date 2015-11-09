@@ -1,0 +1,29 @@
+/* $Id: varchar02.p2,v 45.0 1997/09/19 05:44:45 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test variable length elements. */
+
+#include "P2_paces.h"
+
+/* Type expression. */
+typex {
+  t = top2ds[dlist[malloc[transient]]];
+}
+
+/* Element. */
+typedef struct {
+  varchar c[10];
+} E;
+
+/* Container. */
+container <E> stored_as t with {
+} cont;
+
+/* Cursor. */
+cursor <cont> curs;
+
+int
+main()
+{
+  exit(0);
+}

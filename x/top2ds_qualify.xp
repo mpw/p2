@@ -1,0 +1,104 @@
+// $Id: top2ds_qualify.xp,v 45.0 1997/09/19 05:46:53 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer top top2ds_qualify[ ds ] stable no annotation retrieval_always
+
+!#include "type.h"    /* new_label_name(), enable_continue_labels */
+!#include "xmalloc.h" /* xfree() */
+
+// (Like top2ds.xp), this layer:
+//   1. Translates {for,rof}each
+//   2. Maintains {schema,container}.initialized
+// And (Like qualify), this layer:
+//   3. Adds qualification.
+
+#define QUALIFY(NAME, ADV, END_ADV) \
+{ \
+  %{ \
+     NAME(cursor); \
+     while (!(END_ADV(cursor)) && !(query(cursor))) { \
+       ADV(cursor); \
+     } \
+  %} \
+}
+
+foreach(cursor, expr)
+{
+  char *label = new_label_name(loop_id_counter, cursor_id);
+  %{
+     reset_start(cursor);
+     while(!(end_adv(cursor))) {
+       if (query(cursor))
+       {
+         expr
+       }
+  %}
+  if (enable_continue_labels)
+  %{
+        %v.label:;
+  %}
+  %{     
+       adv(cursor);
+     }
+  %}
+  xfree(label);
+}
+
+rofeach(cursor, expr)
+{
+  char *label = new_label_name(loop_id_counter, cursor_id);
+  %{
+     reset_end(cursor);
+     while(!(end_rev(cursor))) {
+       if (query(cursor))
+       {
+         expr
+       }
+  %}
+  if (enable_continue_labels)
+  %{
+        %v.label:;
+  %}
+  %{     
+       rev(cursor);
+     }
+  %}
+  xfree(label);
+}
+
+#include "top2ds.xph"
+
+adv(cursor)
+{
+  QUALIFY(adv, adv, end_adv)
+}
+
+rev(cursor)
+{
+  QUALIFY(rev, rev, end_rev)
+}
+
+end_adv(cursor)
+%{
+   end_adv(cursor)
+%}
+
+end_rev(cursor)
+%{
+   end_rev(cursor)
+%}
+
+query(cursor)
+%{
+   query(cursor)
+%}
+
+reset_start(cursor)
+{
+  QUALIFY(reset_start, adv, end_adv)
+}
+
+reset_end(cursor)
+{
+  QUALIFY(reset_end, rev, end_rev)
+}

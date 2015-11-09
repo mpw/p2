@@ -1,0 +1,29 @@
+/* $Id: refcount01.p2,v 45.0 1997/09/19 05:44:09 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+   int   i;
+} S;
+
+typex {
+  t = top2ds[inbetween[qualify[odlist[refcount[malloc[transient]]]]]];
+}
+
+container <S> stored_as t with {
+  odlist key is i;
+} cont;
+
+cursor <cont> c;
+
+int
+main (void) 
+{
+  open_cont(cont);
+  init_curs(c);
+  delete_curs(c);
+  close_cont(cont);
+  exit(0);
+}

@@ -1,0 +1,33 @@
+@c $Id: agreement.texi,v 45.0 1997/09/19 05:42:01 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@chapter Agreement
+@cindex P2, agreement
+@cindex agreement
+
+Copyright (C) 1994, The University of Texas at Austin, @emph{UTA}.
+All rights reserved.
+
+By using this software, you, the @emph{user}, indicate you have read,
+understood, and will comply with the following:
+
+1. Nonexclusive permission to use, copy and/or modify this software for
+internal, noncommercial, research purposes is granted. Any distribution,
+including commercial sale, of this software, copies, associated
+documentation and/or modifications is strictly prohibited without the
+prior written consent of @emph{UTA}.  Appropriate copyright notice shall
+be placed on software copies, and a full copy of this license in
+associated documentation. No right is granted to use in advertising,
+publicity or otherwise any trademark of @emph{UTA}.  Any software and/or
+associated documentation identified as "confidential" will be
+protected from unauthorized use/disclosure with the same degree of care
+@emph{user} regularly employs to safeguard its own such information.
+
+2. This software is provided "as is", and @emph{UTA} makes no
+representations or warranties, express or implied, including those of
+merchantability or fitness for a particular purpose, or that use of the
+software, modifications, or associated documentation will not infringe
+on any patents, copyrights, trademarks or other rights.  @emph{UTA} shall
+not be held liable for any liability nor for any direct, indirect or
+consequential damages with respect to any claim by @emph{user} or any
+third party on account of or arising from this Agreement.

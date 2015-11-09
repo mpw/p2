@@ -1,0 +1,50 @@
+/* $Id: schema11.p2,v 45.0 1997/09/19 05:44:16 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Schema Regression Test. */
+/* COMPLEX schema program with COMPLEX typex. */
+
+/* Analogous to paces/schema02.p2 (SIMPLE program) */
+
+#include "P2_paces.h"
+#include <stdio.h>
+#define N 10
+
+typedef struct {
+  int i;
+} E;
+
+typex
+{
+  t = P2_XACT_TYPEX(null, array[transient]);
+}
+
+schema {
+  container <E> k;
+}
+stored_as t with {
+  array size of k is N;
+} s;
+
+cursor <s.k> c;
+
+int main()
+{
+  int i;
+  E e;
+  open_schema(s);
+  open_cont(s.k);
+  init_curs(c);
+
+  for (e.i = 0; e.i < N; e.i++)
+    insert(c, e);
+  foreach(c)
+  {
+    printf("%d\n", c.i);
+  }
+
+  delete_curs(c);
+  close_cont(s.k);
+  close_schema(s);
+  return 0;
+}

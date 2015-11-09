@@ -1,0 +1,38 @@
+(literalize foo 
+            bar integer)
+(literalize counter 
+            result integer)
+(literalize rel1 
+            val integer)
+(literalize rel2 
+            val integer)
+(literalize marker 
+            foo integer)
+
+(p generate-data
+  (foo ^bar {<x> < 1000})
+  -->
+  (make rel1 ^val <x>)
+  (make rel2 ^val <x>)
+  (modify 1 ^bar (compute <x> + 1)))
+
+(p do-join
+  (rel1 ^val <x>)
+  (rel2 ^val <x>)
+  -->
+  (make marker ^foo 0))
+
+(p count-result
+  (marker ^foo 0)
+  (counter ^result <x>)
+  -->
+  (modify 2 ^result (compute <x> + 1))
+  (remove 1))
+
+(p pr-result
+  (foo ^bar 1000)
+  (counter ^result <y>)
+  -->
+  (write tuples in join <y> (crlf))
+  )
+

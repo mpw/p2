@@ -1,0 +1,163 @@
+/* $Id: xact10.p2,v 45.0 1997/09/19 05:45:33 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* TID and swap */
+
+/* This file will actually generate different output with TID_HACK
+   (correct) than without TID_HACK (incorrect).  This is because
+   (unlike the other xact layers, which delete all of the elements),
+   this file only deletes some of the elements. (JAT) */
+
+#include <assert.h>
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+EMP_TYPE rawdata[] = {
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10070,22,"Biology","Andrews, Kay" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10010,40,"Biology","Akin, Monica" },
+   { 10050,42,"Biology","Akerson, Suzanne" },
+   { 10040,53,"Biology","Akerson, Mary" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10030,23,"Biology","Akerson, Gwyn" },
+   { -1 }
+};
+
+typex {
+#if 1
+  /* This program uses the cardinality() and swap() special operations:
+     the cardinality layer implements cardinality(), the array layer
+     supports swap(). */
+  t = conceptual[P2_LOG_LAYER[
+        xact[cardinality[avail[array[transient]]]]]];
+#else
+  t = P2_XACT_TYPEX(cardinality, array[transient]);
+#endif /* P2_XACT_TYPEX */
+}
+schema {
+  container <EMP_TYPE> emp_cont;
+} stored_as t with {
+  array size of emp_cont is 10;
+} emp_schema;
+
+cursor <emp_schema.emp_cont>
+  orderby P2_ASCENDING empno
+all_emp;
+
+cursor <emp_schema.emp_cont>
+  where "$.age > 40"
+old_emp;
+
+cursor <emp_schema.emp_cont> c1, c2;
+
+void print_all_emp (void)
+{
+  printf("cardinality = %d\n", cardinality(emp_schema.emp_cont));
+  P2_ITERATOR(all_emp)
+  {
+    printf("%d %d %s %s\n", all_emp.empno, all_emp.age, all_emp.dept_name, all_emp.name);
+  }
+}
+
+int main (void) 
+{
+  int n;
+  int i;
+
+#if 0
+  /* Initialize xact manager. */
+  P2_init_xact_manager();
+#endif
+
+  open_schema(emp_schema);
+  open_cont(emp_schema.emp_cont);
+  init_curs(all_emp);
+  init_curs(old_emp);
+
+  /* Count. */
+
+  i = 0;
+  while (rawdata[i].empno != -1)
+    i++;
+  n = i;
+
+  /* Insert and begin_xact. */
+
+  i = 0;
+  while (rawdata[i].empno != -1) {
+    insert(all_emp, rawdata[i]);
+    if (i == n/2) {
+      begin_xact(emp_schema);
+    }
+    i++;
+  }
+
+  /* Print. */
+  /* Performs a reset_start(), thus sorting the array,
+     thus an element's address cannot be used as it's TID. (JAT) */
+
+  printf("after insert:\n");
+  print_all_emp();
+
+  /* Swap. */
+
+  init_curs(c1);
+  init_curs(c2);
+  reset_start(c1);
+  reset_end(c2);
+  for (i = 0; i < n/2; i++)
+  {
+    assert(!end_adv(c1));
+    assert(!end_rev(c2));
+    upd(c1, dept_name, "Updated");
+    upd(c2, dept_name, "Updated");
+#if 1
+    swap(c1, c2);
+#endif
+    adv(c1);
+    rev(c2);
+  }
+
+  /* Print. */
+
+  printf("after updates and swap:\n");
+  print_all_emp();
+
+#if 1
+  /* Abort transaction. */
+
+  abort_xact(emp_schema);
+
+  /* Begin transaction. */
+
+  begin_xact(emp_schema);
+#endif
+
+  /* Print. */
+
+  printf("after abort:\n");
+  print_all_emp();
+
+  /* Commit transaction. */
+
+  commit_xact(emp_schema);
+
+  close_cont(emp_schema.emp_cont);
+  close_schema(emp_schema);
+
+#if 0
+  /* Delete xact manager. */
+  P2_delete_xact_manager();
+#endif
+
+  /* Exit. */
+  exit(0);
+}

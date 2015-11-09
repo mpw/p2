@@ -1,0 +1,225 @@
+/* $Id: hash01.p2,v 45.0 1997/09/19 05:43:27 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test P2_int_hash with integers 0, 1, 2, ..., N*M.
+   Test P2_str_hash with strings from file WORD_FILE_NAME. */
+
+/************************************************************************/
+/*              Includes.                                               */
+/************************************************************************/
+
+#include <assert.h> /* assert() */
+#include <stdio.h>  /* fprintf(), fgets() */
+#include <string.h> /* strlen() */
+#include <limits.h> /* INT_MAX */
+
+/************************************************************************/
+/*              Defines.                                                */
+/************************************************************************/
+
+#define N 100       /* Number of buckets. */
+#define M 1000      /* Multiplier aka Average aka Mean. */
+
+#define MAX_WORD_SIZE 32
+#ifndef WORD_FILE_NAME
+#define WORD_FILE_NAME "words1.txt"
+#endif /* WORD_FILE_NAME */
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/************************************************************************/
+/*              Globals.                                                */
+/************************************************************************/
+
+int r = 0;          /* Return value. */
+int b[N];           /* Number of keys in each bucket. */
+int k;              /* Total number of keys. */
+
+/************************************************************************/
+/*              Check.                                                  */
+/************************************************************************/
+
+#define UNINITIALIZED -1
+#define UNEQUAL -2
+
+void
+check(char *label)
+{
+  int i;            /* Index. */
+  int min_b, max_b; /* Minimum and maximum number of keys in buckets. */
+  int min_i, max_i; /* Buckets with Minimum and Maximum number of keys. */
+
+  /* Number of keys in ALL buckets, UNINITIALIZED, or UNEQUAL. */
+  int m; 
+
+  /* Minimun and maximum number of keys in buckets for
+     values to be considered (reasonably) uniformly distributed. */
+  int legal_min_b;
+  int legal_max_b;
+
+#ifdef DEBUG
+  /* Print label */
+  printf("*** %s ***\n", label);
+#endif /* DEBUG */
+
+  /* Make sure values are (resonably) uniformly distributed. */
+  min_b = k+1;
+  min_i = -1;
+  max_b = -1;
+  max_i = -1;
+  m = UNINITIALIZED;
+  for (i = 0; i < N; i++)
+  {
+    assert(b[i] >= 0 && b[i] <= k);
+#ifdef DEBUG
+    printf("b[%d] = %d\n", i, b[i]);
+#endif /* DEBUG */
+    if (b[i] < min_b)
+    {
+      min_b = b[i];
+      min_i = i;
+    }
+    if (b[i] > max_b)
+    {
+      max_b = b[i];
+      max_i = i;
+    }
+    /* m must must UNINITIALIZED, UNEQUAL, or equal to a number of keys
+       (greater than or equal to zero) in ALL buckets
+       b[0], b[1], b[2], ..., b[i] (JAT) */
+    assert(m == UNINITIALIZED || m == UNEQUAL || m >= 0);
+    if (m != UNEQUAL)
+    {
+      if (m == UNINITIALIZED)
+	m = b[i];
+      else if (m != b[i])
+	m = UNEQUAL;
+    }
+  }
+
+  /* {min,max}_b must be within 10 of the mean {divided,multipled} by 2. */
+  legal_min_b = (k/2)/N - 10;
+  if (legal_min_b < 0)
+    legal_min_b = 0;
+  legal_max_b = (k*2)/N + 10;
+  if (legal_max_b > k)
+    legal_max_b = k;
+
+#ifdef DEBUG
+  /* Print debugging output. */
+  printf("N = %d\n", N);
+  printf("M = %d\n", M);
+  printf("k = %d\n", k);
+  printf("legal_min_b = %d\n", legal_min_b);
+  printf("legal_max_b = %d\n", legal_max_b);
+  printf("min_b = %d\n", min_b);
+  printf("max_b = %d\n", max_b);
+  if (m < 0)
+  {
+    assert(m == -2);
+    printf("bucket %d contains the fewest keys %d\n", min_i, min_b);
+    printf("bucket %d contains the most keys %d\n", max_i, max_b);
+  }
+  else
+  {
+    assert(m == k/N);
+    printf("All buckets contain exactly %d keys!\n", m);
+  }
+#endif /* DEBUG */
+
+  /* On average, there should be M keys in each bucket. */
+  if (min_b < legal_min_b)
+  {
+    fprintf(stderr, "bucket %d contains too few keys %d < %d\n",
+	    min_i, min_b, legal_min_b);
+    r = 1;
+  }
+  if (max_b > legal_max_b)
+  {
+    fprintf(stderr, "bucket %d contains too many keys %d > %d\n",
+	    max_i, max_b, legal_max_b);
+    r = 1;
+  }
+}
+
+/************************************************************************/
+/*              Main.                                                   */
+/************************************************************************/
+
+main()
+{
+  int i; /* Index */
+  int x; /* Hash of i or w */
+
+  char w[MAX_WORD_SIZE];
+  FILE *word_file;
+
+  /*** int ***/
+
+  /* Initialize array. */
+  for (i = 0; i < N; i++)
+    b[i] = 0;
+  /* Fill array with integers 0, 1, 2, ..., N*M. */
+  k = N*M;
+  assert(INT_MAX >= k);
+  for (i = 0; i < k; i++)
+  {
+    x = P2_int_hash(i, N);
+    assert(x >= 0 && x < N);
+    b[x]++;
+  }
+  /* Check array. */
+  check("P2_int_hash");
+
+#ifdef DEBUG
+  /* Print a blank line. */
+  printf("\n");
+#endif /* DEBUG */
+
+  /*** str ***/
+
+  /* Initialize array. */
+  for (i = 0; i < N; i++)
+    b[i] = 0;
+  /* Fill array with strings from file WORD_FILE_NAME. */
+  k = 0;
+  word_file = fopen(WORD_FILE_NAME, "r");
+  if (word_file == NULL)
+  {
+    perror("Could not open file " WORD_FILE_NAME);
+    r = 1;
+    goto EXIT;
+  }
+  while (1)
+  {
+    fgets(w, MAX_WORD_SIZE, word_file);
+    w[strlen(w) - 1] = '\0';
+    if (feof(word_file))
+      break;
+    else
+    {
+      x = P2_str_hash(w, N);
+      assert(x >= 0 && x < N);
+      b[x]++;
+      k++;
+    }
+  }
+  if (fclose(word_file) == EOF)
+  {
+    perror("Could not close file " WORD_FILE_NAME);
+    r = 1;
+    goto EXIT;
+  }
+  /* Check array. */
+  check("P2_str_hash");
+
+  /*** Return 0 for success, 0 for error. ***/
+
+EXIT:
+   exit(r);
+}

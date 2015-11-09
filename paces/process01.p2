@@ -1,0 +1,50 @@
+/* $Id: process01.p2,v 45.0 1997/09/19 05:44:02 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test semaphores. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <stdio.h>    /* fprintf */
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+main()
+{
+  int i;
+  P2_PROCESS_ID child_pid;
+
+  /* Initialize process manager. */
+  P2_init_process();
+
+  for (i = 0; i < 10; i++)
+  {
+    child_pid = P2_fork_process();
+    if (child_pid == -1)
+    {
+      /* This is an error. */
+      fprintf(stderr, "Can't fork child %d", i);
+      exit(1);
+    }
+    else if (child_pid == 0)
+    {
+      /* This is the child. */
+      exit(0);
+    }
+    else
+    {
+      /* This is the parent. */
+    }
+  }
+
+  /* Delete process manager. */
+  P2_delete_process();
+
+  exit(0);
+}

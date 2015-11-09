@@ -1,0 +1,2 @@
+mmap_persistent.o: mmap_persistent.xp mmap_persistent.h mmap.xph xact.xph \
+  verbatim.xph

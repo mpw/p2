@@ -1,0 +1,1 @@
+array.o: array.xp ../common/qopt.h array.h adhoc.xph

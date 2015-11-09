@@ -1,0 +1,4286 @@
+%!
+%%BoundingBox: (atend)
+%%Pages: (atend)
+%%DocumentFonts: (atend)
+%%EndComments
+%
+% FrameMaker PostScript Prolog 3.0, for use with FrameMaker 3.0
+% Copyright (c) 1986,87,89,90,91 by Frame Technology Corporation.
+% All rights reserved.
+%
+% Known Problems:
+%	Due to bugs in Transcript, the 'PS-Adobe-' is omitted from line 1
+/FMversion (3.0) def 
+% Set up Color vs. Black-and-White
+	/FMPrintInColor systemdict /colorimage known
+		systemdict /currentcolortransfer known or def
+% Uncomment this line to force b&w on color printer
+%   /FMPrintInColor false def
+/FrameDict 195 dict def 
+systemdict /errordict known not {/errordict 10 dict def
+		errordict /rangecheck {stop} put} if
+% The readline in 23.0 doesn't recognize cr's as nl's on AppleTalk
+FrameDict /tmprangecheck errordict /rangecheck get put 
+errordict /rangecheck {FrameDict /bug true put} put 
+FrameDict /bug false put 
+mark 
+% Some PS machines read past the CR, so keep the following 3 lines together!
+currentfile 5 string readline
+00
+0000000000
+cleartomark 
+errordict /rangecheck FrameDict /tmprangecheck get put 
+FrameDict /bug get { 
+	/readline {
+		/gstring exch def
+		/gfile exch def
+		/gindex 0 def
+		{
+			gfile read pop 
+			dup 10 eq {exit} if 
+			dup 13 eq {exit} if 
+			gstring exch gindex exch put 
+			/gindex gindex 1 add def 
+		} loop
+		pop 
+		gstring 0 gindex getinterval true 
+		} def
+	} if
+/FMVERSION {
+	FMversion ne {
+		/Times-Roman findfont 18 scalefont setfont
+		100 100 moveto
+		(FrameMaker version does not match postscript_prolog!)
+		dup =
+		show showpage
+		} if
+	} def 
+/FMLOCAL {
+	FrameDict begin
+	0 def 
+	end 
+	} def 
+	/gstring FMLOCAL
+	/gfile FMLOCAL
+	/gindex FMLOCAL
+	/orgxfer FMLOCAL
+	/orgproc FMLOCAL
+	/organgle FMLOCAL
+	/orgfreq FMLOCAL
+	/yscale FMLOCAL
+	/xscale FMLOCAL
+	/manualfeed FMLOCAL
+	/paperheight FMLOCAL
+	/paperwidth FMLOCAL
+/FMDOCUMENT { 
+	array /FMfonts exch def 
+	/#copies exch def
+	FrameDict begin
+	0 ne dup {setmanualfeed} if
+	/manualfeed exch def
+	/paperheight exch def
+	/paperwidth exch def
+	/yscale exch def
+	/xscale exch def
+	currenttransfer cvlit /orgxfer exch def
+	currentscreen cvlit /orgproc exch def
+	/organgle exch def /orgfreq exch def
+	setpapername 
+	manualfeed {true} {papersize} ifelse 
+	{manualpapersize} {false} ifelse 
+	{desperatepapersize} if
+	end 
+	} def 
+	/pagesave FMLOCAL
+	/orgmatrix FMLOCAL
+	/landscape FMLOCAL
+/FMBEGINPAGE { 
+	FrameDict begin 
+	/pagesave save def
+	3.86 setmiterlimit
+	/landscape exch 0 ne def
+	landscape { 
+		90 rotate 0 exch neg translate pop 
+		}
+		{pop pop}
+		ifelse
+	xscale yscale scale
+	/orgmatrix matrix def
+	gsave 
+	} def 
+/FMENDPAGE {
+	grestore 
+	pagesave restore
+	end 
+	showpage
+	} def 
+/FMFONTDEFINE { 
+	FrameDict begin
+	findfont 
+	ReEncode 
+	1 index exch 
+	definefont 
+	FMfonts 3 1 roll 
+	put
+	end 
+	} def 
+/FMFILLS {
+	FrameDict begin
+	array /fillvals exch def
+	end 
+	} def 
+/FMFILL {
+	FrameDict begin
+	 fillvals 3 1 roll put
+	end 
+	} def 
+/FMNORMALIZEGRAPHICS { 
+	newpath
+	0.0 0.0 moveto
+	1 setlinewidth
+	0 setlinecap
+	0 0 0 sethsbcolor
+	0 setgray 
+	} bind def
+	/fx FMLOCAL
+	/fy FMLOCAL
+	/fh FMLOCAL
+	/fw FMLOCAL
+	/llx FMLOCAL
+	/lly FMLOCAL
+	/urx FMLOCAL
+	/ury FMLOCAL
+/FMBEGINEPSF { 
+	end 
+	/FMEPSF save def 
+	/showpage {} def 
+	FMNORMALIZEGRAPHICS 
+	[/fy /fx /fh /fw /ury /urx /lly /llx] {exch def} forall 
+	fx fy translate 
+	rotate
+	fw urx llx sub div fh ury lly sub div scale 
+	llx neg lly neg translate 
+	} bind def
+/FMENDEPSF {
+	FMEPSF restore
+	FrameDict begin 
+	} bind def
+FrameDict begin 
+/setmanualfeed {
+%%BeginFeature *ManualFeed True
+	 statusdict /manualfeed true put
+%%EndFeature
+	} def
+/max {2 copy lt {exch} if pop} bind def
+/min {2 copy gt {exch} if pop} bind def
+/inch {72 mul} def
+/pagedimen { 
+	paperheight sub abs 16 lt exch 
+	paperwidth sub abs 16 lt and
+	{/papername exch def} {pop} ifelse
+	} def
+	/papersizedict FMLOCAL
+/setpapername { 
+	/papersizedict 14 dict def 
+	papersizedict begin
+	/papername /unknown def 
+		/Letter 8.5 inch 11.0 inch pagedimen
+		/LetterSmall 7.68 inch 10.16 inch pagedimen
+		/Tabloid 11.0 inch 17.0 inch pagedimen
+		/Ledger 17.0 inch 11.0 inch pagedimen
+		/Legal 8.5 inch 14.0 inch pagedimen
+		/Statement 5.5 inch 8.5 inch pagedimen
+		/Executive 7.5 inch 10.0 inch pagedimen
+		/A3 11.69 inch 16.5 inch pagedimen
+		/A4 8.26 inch 11.69 inch pagedimen
+		/A4Small 7.47 inch 10.85 inch pagedimen
+		/B4 10.125 inch 14.33 inch pagedimen
+		/B5 7.16 inch 10.125 inch pagedimen
+	end
+	} def
+/papersize {
+	papersizedict begin
+		/Letter {lettertray letter} def
+		/LetterSmall {lettertray lettersmall} def
+		/Tabloid {11x17tray 11x17} def
+		/Ledger {ledgertray ledger} def
+		/Legal {legaltray legal} def
+		/Statement {statementtray statement} def
+		/Executive {executivetray executive} def
+		/A3 {a3tray a3} def
+		/A4 {a4tray a4} def
+		/A4Small {a4tray a4small} def
+		/B4 {b4tray b4} def
+		/B5 {b5tray b5} def
+		/unknown {unknown} def
+	papersizedict dup papername known {papername} {/unknown} ifelse get
+	end
+	/FMdicttop countdictstack 1 add def 
+	statusdict begin stopped end 
+	countdictstack -1 FMdicttop {pop end} for 
+	} def
+/manualpapersize {
+	papersizedict begin
+		/Letter {letter} def
+		/LetterSmall {lettersmall} def
+		/Tabloid {11x17} def
+		/Ledger {ledger} def
+		/Legal {legal} def
+		/Statement {statement} def
+		/Executive {executive} def
+		/A3 {a3} def
+		/A4 {a4} def
+		/A4Small {a4small} def
+		/B4 {b4} def
+		/B5 {b5} def
+		/unknown {unknown} def
+	papersizedict dup papername known {papername} {/unknown} ifelse get
+	end
+	stopped 
+	} def
+/desperatepapersize {
+	statusdict /setpageparams known
+		{
+		paperwidth paperheight 0 1 
+		statusdict begin
+		{setpageparams} stopped pop 
+		end
+		} if
+	} def
+/savematrix {
+	orgmatrix currentmatrix pop
+	} bind def
+/restorematrix {
+	orgmatrix setmatrix
+	} bind def
+/dmatrix matrix def
+/dpi    72 0 dmatrix defaultmatrix dtransform
+    dup mul exch   dup mul add   sqrt def
+/freq dpi 18.75 div 8 div round dup 0 eq {pop 1} if 8 mul dpi exch div def
+/sangle 1 0 dmatrix defaultmatrix dtransform exch atan def
+/DiacriticEncoding [
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/.notdef /.notdef /.notdef /.notdef /space /exclam /quotedbl
+/numbersign /dollar /percent /ampersand /quotesingle /parenleft
+/parenright /asterisk /plus /comma /hyphen /period /slash /zero /one
+/two /three /four /five /six /seven /eight /nine /colon /semicolon
+/less /equal /greater /question /at /A /B /C /D /E /F /G /H /I /J /K
+/L /M /N /O /P /Q /R /S /T /U /V /W /X /Y /Z /bracketleft /backslash
+/bracketright /asciicircum /underscore /grave /a /b /c /d /e /f /g /h
+/i /j /k /l /m /n /o /p /q /r /s /t /u /v /w /x /y /z /braceleft /bar
+/braceright /asciitilde /.notdef /Adieresis /Aring /Ccedilla /Eacute
+/Ntilde /Odieresis /Udieresis /aacute /agrave /acircumflex /adieresis
+/atilde /aring /ccedilla /eacute /egrave /ecircumflex /edieresis
+/iacute /igrave /icircumflex /idieresis /ntilde /oacute /ograve
+/ocircumflex /odieresis /otilde /uacute /ugrave /ucircumflex
+/udieresis /dagger /.notdef /cent /sterling /section /bullet
+/paragraph /germandbls /registered /copyright /trademark /acute
+/dieresis /.notdef /AE /Oslash /.notdef /.notdef /.notdef /.notdef
+/yen /.notdef /.notdef /.notdef /.notdef /.notdef /.notdef
+/ordfeminine /ordmasculine /.notdef /ae /oslash /questiondown
+/exclamdown /logicalnot /.notdef /florin /.notdef /.notdef
+/guillemotleft /guillemotright /ellipsis /.notdef /Agrave /Atilde
+/Otilde /OE /oe /endash /emdash /quotedblleft /quotedblright
+/quoteleft /quoteright /.notdef /.notdef /ydieresis /Ydieresis
+/fraction /currency /guilsinglleft /guilsinglright /fi /fl /daggerdbl
+/periodcentered /quotesinglbase /quotedblbase /perthousand
+/Acircumflex /Ecircumflex /Aacute /Edieresis /Egrave /Iacute
+/Icircumflex /Idieresis /Igrave /Oacute /Ocircumflex /.notdef /Ograve
+/Uacute /Ucircumflex /Ugrave /dotlessi /circumflex /tilde /macron
+/breve /dotaccent /ring /cedilla /hungarumlaut /ogonek /caron
+] def
+/ReEncode { 
+	dup 
+	length 
+	dict begin 
+	{
+	1 index /FID ne 
+		{def} 
+		{pop pop} ifelse 
+	} forall 
+	0 eq {/Encoding DiacriticEncoding def} if 
+	currentdict 
+	end 
+	} bind def
+/graymode true def
+	/bwidth FMLOCAL
+	/bpside FMLOCAL
+	/bstring FMLOCAL
+	/onbits FMLOCAL
+	/offbits FMLOCAL
+	/xindex FMLOCAL
+	/yindex FMLOCAL
+	/x FMLOCAL
+	/y FMLOCAL
+/setpattern {
+	 /bwidth  exch def
+	 /bpside  exch def
+	 /bstring exch def
+	 /onbits 0 def  /offbits 0 def
+	 freq sangle landscape {90 add} if 
+		{/y exch def
+		 /x exch def
+		 /xindex x 1 add 2 div bpside mul cvi def
+		 /yindex y 1 add 2 div bpside mul cvi def
+		 bstring yindex bwidth mul xindex 8 idiv add get
+		 1 7 xindex 8 mod sub bitshift and 0 ne
+		 {/onbits  onbits  1 add def 1}
+		 {/offbits offbits 1 add def 0}
+		 ifelse
+		}
+		setscreen
+	 {} settransfer
+	 offbits offbits onbits add div FMsetgray
+	/graymode false def
+	} bind def
+/grayness {
+	FMsetgray
+	graymode not {
+		/graymode true def
+		orgxfer cvx settransfer
+		orgfreq organgle orgproc cvx setscreen
+		} if
+	} bind def
+	/HUE FMLOCAL
+	/SAT FMLOCAL
+	/BRIGHT FMLOCAL
+	/Colors FMLOCAL
+FMPrintInColor 
+	
+	{
+	/HUE 0 def
+	/SAT 0 def
+	/BRIGHT 0 def
+	% array of arrays Hue and Sat values for the separations [HUE BRIGHT]
+	/Colors   
+	[[0    0  ]    % black
+	 [0    0  ]    % white
+	 [0.00 1.0]    % red
+	 [0.37 1.0]    % green
+	 [0.60 1.0]    % blue
+	 [0.50 1.0]    % cyan
+	 [0.83 1.0]    % magenta
+	 [0.16 1.0]    % comment / yellow
+	 ] def
+      
+	/BEGINBITMAPCOLOR { 
+		BITMAPCOLOR} def
+	/BEGINBITMAPCOLORc { 
+		BITMAPCOLORc} def
+	/BEGINBITMAPTRUECOLOR { 
+		BITMAPTRUECOLOR } def
+	/BEGINBITMAPTRUECOLORc { 
+		BITMAPTRUECOLORc } def
+	/K { 
+		Colors exch get dup
+		0 get /HUE exch store 
+		1 get /BRIGHT exch store
+		  HUE 0 eq BRIGHT 0 eq and
+			{1.0 SAT sub setgray}
+			{HUE SAT BRIGHT sethsbcolor} 
+		  ifelse
+		} def
+	/FMsetgray { 
+		/SAT exch 1.0 exch sub store 
+		  HUE 0 eq BRIGHT 0 eq and
+			{1.0 SAT sub setgray}
+			{HUE SAT BRIGHT sethsbcolor} 
+		  ifelse
+		} bind def
+	}
+	
+	{
+	/BEGINBITMAPCOLOR { 
+		BITMAPGRAY} def
+	/BEGINBITMAPCOLORc { 
+		BITMAPGRAYc} def
+	/BEGINBITMAPTRUECOLOR { 
+		BITMAPTRUEGRAY } def
+	/BEGINBITMAPTRUECOLORc { 
+		BITMAPTRUEGRAYc } def
+	/FMsetgray {setgray} bind def
+	/K { 
+		pop
+		} def
+	}
+ifelse
+/normalize {
+	transform round exch round exch itransform
+	} bind def
+/dnormalize {
+	dtransform round exch round exch idtransform
+	} bind def
+/lnormalize { 
+	0 dtransform exch cvi 2 idiv 2 mul 1 add exch idtransform pop
+	} bind def
+/H { 
+	lnormalize setlinewidth
+	} bind def
+/Z {
+	setlinecap
+	} bind def
+	/fillvals FMLOCAL
+/X { 
+	fillvals exch get
+	dup type /stringtype eq
+	{8 1 setpattern} 
+	{grayness}
+	ifelse
+	} bind def
+/V { 
+	gsave eofill grestore
+	} bind def
+/N { 
+	stroke
+	} bind def
+/M {newpath moveto} bind def
+/E {lineto} bind def
+/D {curveto} bind def
+/O {closepath} bind def
+	/n FMLOCAL
+/L { 
+ 	/n exch def
+	newpath
+	normalize
+	moveto 
+	2 1 n {pop normalize lineto} for
+	} bind def
+/Y { 
+	L 
+	closepath
+	} bind def
+	/x1 FMLOCAL
+	/x2 FMLOCAL
+	/y1 FMLOCAL
+	/y2 FMLOCAL
+	/rad FMLOCAL
+/R { 
+	/y2 exch def
+	/x2 exch def
+	/y1 exch def
+	/x1 exch def
+	x1 y1
+	x2 y1
+	x2 y2
+	x1 y2
+	4 Y 
+	} bind def
+/RR { 
+	/rad exch def
+	normalize
+	/y2 exch def
+	/x2 exch def
+	normalize
+	/y1 exch def
+	/x1 exch def
+	newpath
+	x1 y1 rad add moveto
+	x1 y2 x2 y2 rad arcto
+	x2 y2 x2 y1 rad arcto
+	x2 y1 x1 y1 rad arcto
+	x1 y1 x1 y2 rad arcto
+	closepath
+	16 {pop} repeat
+	} bind def
+/C { 
+	grestore
+	gsave
+	R 
+	clip
+	} bind def
+	/FMpointsize FMLOCAL
+/F { 
+	FMfonts exch get
+	FMpointsize scalefont
+	setfont
+	} bind def
+/Q { 
+	/FMpointsize exch def
+	F 
+	} bind def
+/T { 
+	moveto show
+	} bind def
+/RF { 
+	rotate
+	0 ne {-1 1 scale} if
+	} bind def
+/TF { 
+	gsave
+	moveto 
+	RF
+	show
+	grestore
+	} bind def
+/P { 
+	moveto
+	0 32 3 2 roll widthshow
+	} bind def
+/PF { 
+	gsave
+	moveto 
+	RF
+	0 32 3 2 roll widthshow
+	grestore
+	} bind def
+/S { 
+	moveto
+	0 exch ashow
+	} bind def
+/SF { 
+	gsave
+	moveto
+	RF
+	0 exch ashow
+	grestore
+	} bind def
+/B { 
+	moveto
+	0 32 4 2 roll 0 exch awidthshow
+	} bind def
+/BF { 
+	gsave
+	moveto
+	RF
+	0 32 4 2 roll 0 exch awidthshow
+	grestore
+	} bind def
+/G { 
+	gsave
+	newpath
+	normalize translate 0.0 0.0 moveto 
+	dnormalize scale 
+	0.0 0.0 1.0 5 3 roll arc 
+	closepath fill
+	grestore
+	} bind def
+/A { 
+	gsave
+	savematrix
+	newpath
+	2 index 2 div add exch 3 index 2 div sub exch 
+	normalize 2 index 2 div sub exch 3 index 2 div add exch 
+	translate 
+	scale 
+	0.0 0.0 1.0 5 3 roll arc 
+	restorematrix
+	stroke
+	grestore
+	} bind def
+	/x FMLOCAL
+	/y FMLOCAL
+	/w FMLOCAL
+	/h FMLOCAL
+	/xx FMLOCAL
+	/yy FMLOCAL
+	/ww FMLOCAL
+	/hh FMLOCAL
+	/FMsaveobject FMLOCAL
+	/FMoptop FMLOCAL
+	/FMdicttop FMLOCAL
+/BEGINPRINTCODE { 
+	/FMdicttop countdictstack 1 add def 
+	/FMoptop count 4 sub def 
+	/FMsaveobject save def
+	userdict begin 
+	/showpage {} def 
+	FMNORMALIZEGRAPHICS 
+	3 index neg 3 index neg translate
+	} bind def
+/ENDPRINTCODE {
+	count -1 FMoptop {pop pop} for 
+	countdictstack -1 FMdicttop {pop end} for 
+	FMsaveobject restore 
+	} bind def
+/gn { 
+	0 
+	{	46 mul 
+		cf read pop 
+		32 sub 
+		dup 46 lt {exit} if 
+		46 sub add 
+		} loop
+	add 
+	} bind def
+	/str FMLOCAL
+/cfs { 
+	/str sl string def 
+	0 1 sl 1 sub {str exch val put} for 
+	str def 
+	} bind def
+/ic [ 
+	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0223
+	0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0223
+	0
+	{0 hx} {1 hx} {2 hx} {3 hx} {4 hx} {5 hx} {6 hx} {7 hx} {8 hx} {9 hx}
+	{10 hx} {11 hx} {12 hx} {13 hx} {14 hx} {15 hx} {16 hx} {17 hx} {18 hx}
+	{19 hx} {gn hx} {0} {1} {2} {3} {4} {5} {6} {7} {8} {9} {10} {11} {12}
+	{13} {14} {15} {16} {17} {18} {19} {gn} {0 wh} {1 wh} {2 wh} {3 wh}
+	{4 wh} {5 wh} {6 wh} {7 wh} {8 wh} {9 wh} {10 wh} {11 wh} {12 wh}
+	{13 wh} {14 wh} {gn wh} {0 bl} {1 bl} {2 bl} {3 bl} {4 bl} {5 bl} {6 bl}
+	{7 bl} {8 bl} {9 bl} {10 bl} {11 bl} {12 bl} {13 bl} {14 bl} {gn bl}
+	{0 fl} {1 fl} {2 fl} {3 fl} {4 fl} {5 fl} {6 fl} {7 fl} {8 fl} {9 fl}
+	{10 fl} {11 fl} {12 fl} {13 fl} {14 fl} {gn fl}
+	] def
+	/sl FMLOCAL
+	/val FMLOCAL
+	/ws FMLOCAL
+	/im FMLOCAL
+	/bs FMLOCAL
+	/cs FMLOCAL
+	/len FMLOCAL
+	/pos FMLOCAL
+/ms { 
+	/sl exch def 
+	/val 255 def 
+	/ws cfs 
+	/im cfs 
+	/val 0 def 
+	/bs cfs 
+	/cs cfs 
+	} bind def
+400 ms 
+/ip { 
+	is 
+	0 
+	cf cs readline pop 
+	{	ic exch get exec 
+		add 
+		} forall 
+	pop 
+	
+	} bind def
+/wh { 
+	/len exch def 
+	/pos exch def 
+	ws 0 len getinterval im pos len getinterval copy pop
+	pos len 
+	} bind def
+/bl { 
+	/len exch def 
+	/pos exch def 
+	bs 0 len getinterval im pos len getinterval copy pop
+	pos len 
+	} bind def
+/s1 1 string def
+/fl { 
+	/len exch def 
+	/pos exch def 
+	/val cf s1 readhexstring pop 0 get def
+	pos 1 pos len add 1 sub {im exch val put} for
+	pos len 
+	} bind def
+/hx { 
+	3 copy getinterval 
+	cf exch readhexstring pop pop 
+	} bind def
+	/h FMLOCAL
+	/w FMLOCAL
+	/d FMLOCAL
+	/lb FMLOCAL
+	/bitmapsave FMLOCAL
+	/is FMLOCAL
+	/cf FMLOCAL
+/wbytes { 
+	dup 
+	8 eq {pop} {1 eq {7 add 8 idiv} {3 add 4 idiv} ifelse} ifelse
+	} bind def
+/BEGINBITMAPBWc { 
+	1 {} COMMONBITMAPc
+	} bind def
+/BEGINBITMAPGRAYc { 
+	8 {} COMMONBITMAPc
+	} bind def
+/BEGINBITMAP2BITc { 
+	2 {} COMMONBITMAPc
+	} bind def
+/COMMONBITMAPc { 
+	/r exch def
+	/d exch def
+	gsave
+	translate rotate scale /h exch def /w exch def
+	/lb w d wbytes def 
+	sl lb lt {lb ms} if 
+	/bitmapsave save def 
+	r                    
+	/is im 0 lb getinterval def 
+	ws 0 lb getinterval is copy pop 
+	/cf currentfile def 
+	w h d [w 0 0 h neg 0 h] 
+	{ip} image 
+	bitmapsave restore 
+	grestore
+	} bind def
+/BEGINBITMAPBW { 
+	1 {} COMMONBITMAP
+	} bind def
+/BEGINBITMAPGRAY { 
+	8 {} COMMONBITMAP
+	} bind def
+/BEGINBITMAP2BIT { 
+	2 {} COMMONBITMAP
+	} bind def
+/COMMONBITMAP { 
+	/r exch def
+	/d exch def
+	gsave
+	translate rotate scale /h exch def /w exch def
+	/bitmapsave save def 
+	r                    
+	/is w d wbytes string def
+	/cf currentfile def 
+	w h d [w 0 0 h neg 0 h] 
+	{cf is readhexstring pop} image
+	bitmapsave restore 
+	grestore
+	} bind def
+	/proc1 FMLOCAL
+	/proc2 FMLOCAL
+	/newproc FMLOCAL
+/Fmcc {
+    /proc2 exch cvlit def
+    /proc1 exch cvlit def
+    /newproc proc1 length proc2 length add array def
+    newproc 0 proc1 putinterval
+    newproc proc1 length proc2 putinterval
+    newproc cvx
+} bind def
+/ngrayt 256 array def
+/nredt 256 array def
+/nbluet 256 array def
+/ngreent 256 array def
+	/gryt FMLOCAL
+	/blut FMLOCAL
+	/grnt FMLOCAL
+	/redt FMLOCAL
+	/indx FMLOCAL
+	/cynu FMLOCAL
+	/magu FMLOCAL
+	/yelu FMLOCAL
+	/k FMLOCAL
+	/u FMLOCAL
+/colorsetup {
+	currentcolortransfer
+	/gryt exch def
+	/blut exch def
+	/grnt exch def
+	/redt exch def
+	0 1 255 {
+		/indx exch def
+		/cynu 1 red indx get 255 div sub def
+		/magu 1 green indx get 255 div sub def
+		/yelu 1 blue indx get 255 div sub def
+		/k cynu magu min yelu min def
+		/u k currentundercolorremoval exec def
+		nredt indx 1 0 cynu u sub max sub redt exec put
+		ngreent indx 1 0 magu u sub max sub grnt exec put
+		nbluet indx 1 0 yelu u sub max sub blut exec put
+		ngrayt indx 1 k currentblackgeneration exec sub gryt exec put
+	} for
+	{255 mul cvi nredt exch get}
+	{255 mul cvi ngreent exch get}
+	{255 mul cvi nbluet exch get}
+	{255 mul cvi ngrayt exch get}
+	setcolortransfer
+	{pop 0} setundercolorremoval
+	{} setblackgeneration
+	} bind def
+	/tran FMLOCAL
+/fakecolorsetup {
+	/tran 256 string def
+	0 1 255 {/indx exch def 
+		tran indx
+		red indx get 77 mul
+		green indx get 151 mul
+		blue indx get 28 mul
+		add add 256 idiv put} for
+	currenttransfer
+	{255 mul cvi tran exch get 255.0 div}
+	exch Fmcc settransfer
+} bind def
+/BITMAPCOLOR { 
+	/d 8 def
+	gsave
+	translate rotate scale /h exch def /w exch def
+	/bitmapsave save def 
+	colorsetup
+	/is w d wbytes string def
+	/cf currentfile def 
+	w h d [w 0 0 h neg 0 h] 
+	{cf is readhexstring pop} {is} {is} true 3 colorimage 
+	bitmapsave restore 
+	grestore
+	} bind def
+/BITMAPCOLORc { 
+	/d 8 def
+	gsave
+	translate rotate scale /h exch def /w exch def
+	/lb w d wbytes def 
+	sl lb lt {lb ms} if 
+	/bitmapsave save def 
+	colorsetup
+	/is im 0 lb getinterval def 
+	ws 0 lb getinterval is copy pop 
+	/cf currentfile def 
+	w h d [w 0 0 h neg 0 h] 
+	{ip} {is} {is} true 3 colorimage
+	bitmapsave restore 
+	grestore
+	} bind def
+/BITMAPTRUECOLORc { 
+        gsave
+        translate rotate scale /h exch def /w exch def
+        /bitmapsave save def 
+        
+        /is w string def
+        
+        ws 0 w getinterval is copy pop 
+        /cf currentfile def 
+        w h 8 [w 0 0 h neg 0 h] 
+        {ip} {gip} {bip} true 3 colorimage
+        bitmapsave restore 
+        grestore
+        } bind def
+/BITMAPTRUECOLOR { 
+        gsave
+        translate rotate scale /h exch def /w exch def
+        /bitmapsave save def 
+        /is w string def
+        /gis w string def
+        /bis w string def
+        /cf currentfile def 
+        w h 8 [w 0 0 h neg 0 h] 
+        { cf is readhexstring pop } 
+        { cf gis readhexstring pop } 
+        { cf bis readhexstring pop } 
+        true 3 colorimage 
+        bitmapsave restore 
+        grestore
+        } bind def
+/BITMAPTRUEGRAYc { 
+        gsave
+        translate rotate scale /h exch def /w exch def
+        /bitmapsave save def 
+        
+        /is w string def
+        
+        ws 0 w getinterval is copy pop 
+        /cf currentfile def 
+        w h 8 [w 0 0 h neg 0 h] 
+        {ip gip bip w gray} image
+        bitmapsave restore 
+        grestore
+        } bind def
+/ww FMLOCAL
+/r FMLOCAL
+/g FMLOCAL
+/b FMLOCAL
+/i FMLOCAL
+/gray { 
+        /ww exch def
+        /b exch def
+        /g exch def
+        /r exch def
+        0 1 ww 1 sub { /i exch def r i get .299 mul g i get .587 mul
+			b i get .114 mul add add r i 3 -1 roll floor cvi put } for
+        r
+        } bind def
+/BITMAPTRUEGRAY { 
+        gsave
+        translate rotate scale /h exch def /w exch def
+        /bitmapsave save def 
+        /is w string def
+        /gis w string def
+        /bis w string def
+        /cf currentfile def 
+        w h 8 [w 0 0 h neg 0 h] 
+        { cf is readhexstring pop 
+          cf gis readhexstring pop 
+          cf bis readhexstring pop w gray}  image
+        bitmapsave restore 
+        grestore
+        } bind def
+/BITMAPGRAY { 
+	8 {fakecolorsetup} COMMONBITMAP
+	} bind def
+/BITMAPGRAYc { 
+	8 {fakecolorsetup} COMMONBITMAPc
+	} bind def
+/ENDBITMAP {
+	} bind def
+end 
+	/ALDsave FMLOCAL
+	/ALDmatrix matrix def ALDmatrix currentmatrix pop
+/StartALD {
+	/ALDsave save def
+	 savematrix
+	 ALDmatrix setmatrix
+	} bind def
+/InALD {
+	 restorematrix
+	} bind def
+/DoneALD {
+	 ALDsave restore
+	} bind def
+%%EndProlog
+%%BeginSetup
+(3.0) FMVERSION
+1 1 612 792 0 1 23 FMDOCUMENT
+0 0 /Times-Roman FMFONTDEFINE
+1 0 /Helvetica-Bold FMFONTDEFINE
+2 0 /Times-Italic FMFONTDEFINE
+3 0 /Courier-Bold FMFONTDEFINE
+4 0 /Times-Bold FMFONTDEFINE
+5 0 /Helvetica FMFONTDEFINE
+6 1 /Symbol FMFONTDEFINE
+7 0 /Courier FMFONTDEFINE
+32 FMFILLS
+0 0 FMFILL
+1 .1 FMFILL
+2 .3 FMFILL
+3 .5 FMFILL
+4 .7 FMFILL
+5 .9 FMFILL
+6 .97 FMFILL
+7 1 FMFILL
+8 <0f1e3c78f0e1c387> FMFILL
+9 <0f87c3e1f0783c1e> FMFILL
+10 <cccccccccccccccc> FMFILL
+11 <ffff0000ffff0000> FMFILL
+12 <8142241818244281> FMFILL
+13 <03060c183060c081> FMFILL
+14 <8040201008040201> FMFILL
+16 1 FMFILL
+17 .9 FMFILL
+18 .7 FMFILL
+19 .5 FMFILL
+20 .3 FMFILL
+21 .1 FMFILL
+22 0.03 FMFILL
+23 0 FMFILL
+24 <f0e1c3870f1e3c78> FMFILL
+25 <f0783c1e0f87c3e1> FMFILL
+26 <3333333333333333> FMFILL
+27 <0000ffff0000ffff> FMFILL
+28 <7ebddbe7e7dbbd7e> FMFILL
+29 <fcf9f3e7cf9f3f7e> FMFILL
+30 <7fbfdfeff7fbfdfe> FMFILL
+%%EndSetup
+%%Page: "15" 15
+%%BeginPaperSize: Letter
+%%EndPaperSize
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(15) 301 41.28 T
+1 F
+1.41 (Acknowledgments) 72 712.67 P
+0 11 Q
+1.4 (. I am grateful to the Applied Research Laboratories for supporting this research. I) 160.3 712.67 P
+-0 (thank Dan Miranker and Bernie Lafaso for their patience in explaining the LEAPS algorithms to me, and I) 72 699.67 P
+(also thank Jef) 72 686.67 T
+(f Thomas for his invaluable help in designing and implementing composite cursors.) 132.22 686.67 T
+1 12 Q
+(6  References) 72 649 T
+0 11 Q
+([Bat93]) 72 627.67 T
+0.85 (D. Batory) 126 627.67 P
+0.85 (, V) 169.46 627.67 P
+0.85 (. Singhal, M. Sirkin, and J. Thomas, \322Scalable Software Libraries\323,) 182.32 627.67 P
+2 F
+0.85 (Pr) 489.52 627.67 P
+0.85 (oc. ACM) 500.1 627.67 P
+(SIGSOFT) 126 614.67 T
+(,) 168.52 614.67 T
+0 F
+( December 1993.) 171.26 614.67 T
+([Bat94]) 72 596.67 T
+-0.14 (D. Batory) 126 596.67 P
+-0.14 (, J. Thomas, and M. Sirkin, \322Reengineering a Complex Application Using a Scalable) 168.48 596.67 P
+(Data Structure Compiler\323, submitted for publication.) 126 583.67 T
+([Big94]) 72 565.67 T
+0.23 (T) 126 565.67 P
+0.23 (. Biggerstaf) 131.9 565.67 P
+0.23 (f. \322The Library Scaling Problem and the Limits of Concrete Component Reuse\323,) 183.2 565.67 P
+2 F
+(IEEE International Confer) 126 552.67 T
+(ence on Softwar) 243.39 552.67 T
+(e Reuse) 313.78 552.67 T
+0 F
+(, November 1994.) 347.64 552.67 T
+([Bra91]) 72 534.67 T
+1.34 (D. Brant, T) 126 534.67 P
+1.34 (.Grose, B. Lofaso, and D. Miranker) 177.91 534.67 P
+1.34 (, \322Ef) 340.4 534.67 P
+1.34 (fects of Database Size on Rule System) 362.29 534.67 P
+(Performance: Five Case Studies\323,) 126 521.67 T
+2 F
+(Pr) 277.04 521.67 T
+(oc. V) 287.62 521.67 T
+(ery Lar) 308.98 521.67 T
+(ge Databases) 341.22 521.67 T
+0 F
+(, 1991.) 400.72 521.67 T
+([Bra93a]) 72 503.67 T
+0.48 (D. Brant and D. Miranker) 126 503.67 P
+0.48 (, \322Index Support for Rule Activiation\323,) 240.99 503.67 P
+2 F
+0.48 (Pr) 418.44 503.67 P
+0.48 (oc. ACM SIGMOD) 429.02 503.67 P
+0 F
+0.48 (, May) 513.89 503.67 P
+(1993.) 126 490.67 T
+([Bra93b]) 72 472.67 T
+3.04 (D. Brant, \322Inferencing on Lar) 126 472.67 P
+3.04 (ge Data Sets\323, Ph.D., Department of Computer Sciences,) 268.53 472.67 P
+(University of T) 126 459.67 T
+(exas at Austin, 1993.) 192.97 459.67 T
+([Bro94]) 72 441.67 T
+0.28 (J. Browne, et al. \322A New Approach to Modularity in Rule-Based Programming\323, Department) 126 441.67 P
+(of Computer Sciences, University of T) 126 428.67 T
+(exas at Austin, April 1994.) 295.5 428.67 T
+([For81]) 72 410.67 T
+4.09 (C. For) 126 410.67 P
+4.09 (gy) 157.97 410.67 P
+4.09 (,) 168.24 410.67 P
+2 F
+4.09 (OPS5 User) 177.82 410.67 P
+4.09 (\325) 232.05 410.67 P
+4.09 (s Manual) 234.29 410.67 P
+0 F
+4.09 (, T) 279.58 410.67 P
+4.09 (echnical Report CMU-CS-81-135, Carnegie Mellon) 295.1 410.67 P
+(University) 126 397.67 T
+(, 1981.) 171.67 397.67 T
+([For82]) 72 379.67 T
+0.58 (C. For) 126 379.67 P
+0.58 (gy) 154.46 379.67 P
+0.58 (, \322A Fast Algorithm for the Many Pattern/Many Object Pattern Matching Problem\323,) 164.73 379.67 P
+(Arti\336cial Intelligence, vol. 19 \0501982\051, 17-37.) 126 366.67 T
+([McD78]) 72 348.67 T
+1.59 (J. McDermott, A. Newall, and J. Moore, \322The Ef) 126 348.67 P
+1.59 (\336ciency of Certain Production Systems\323,) 353.91 348.67 P
+2 F
+-0.08 (Pattern Dir) 126 335.67 P
+-0.08 (ected Infer) 176.48 335.67 P
+-0.08 (ence Systems) 223.28 335.67 P
+0 F
+-0.08 (, W) 280.85 335.67 P
+-0.08 (aterman, Hayes, Roth \050ed\051, Academic Press, New Y) 295.76 335.67 P
+-0.08 (ork,) 522.61 335.67 P
+(1978.) 126 322.67 T
+([Mir90]) 72 304.67 T
+0.15 (D. Miranker) 126 304.67 P
+0.15 (, D. Brant, B. Lofaso, and D. Gadbois, \322On the Performance of Lazy Matching in) 180.01 304.67 P
+(Production Systems\323,) 126 291.67 T
+2 F
+(Pr) 223.96 291.67 T
+(oc. National Confer) 234.54 291.67 T
+(ence on Arti\336cial Intelligence) 321.73 291.67 T
+0 F
+(, 1990.) 452.02 291.67 T
+([Mir91]) 72 273.67 T
+4.02 (D. Miranker and B. Lofaso, \322The Or) 126 273.67 P
+4.02 (ganization and Performance of a TREA) 310.7 273.67 P
+4.02 (T) 503.79 273.67 P
+4.02 (-Based) 509.49 273.67 P
+2.56 (Production System Compiler\323,) 126 260.67 P
+2 F
+2.56 (IEEE T) 271.63 260.67 P
+2.56 (ransactions on Knowledge and Data Engineering) 306.24 260.67 P
+0 F
+2.56 (,) 537.25 260.67 P
+(1991.) 126 247.67 T
+([Sir93]) 72 229.67 T
+5.03 (M. Sirkin, D. Batory) 126 229.67 P
+5.03 (, and V) 231.31 229.67 P
+5.03 (. Singhal, \322Software Components in a Data Structure) 271.99 229.67 P
+(Precompiler\323,) 126 216.67 T
+2 F
+(Pr) 190.07 216.67 T
+(oc. 15th International Confer) 200.65 216.67 T
+(ence on Softwar) 329.64 216.67 T
+(e Engineering) 400.03 216.67 T
+0 F
+(, May 1993.) 461.97 216.67 T
+FMENDPAGE
+%%EndPage: "15" 14
+%%Page: "14" 14
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(14) 301 41.28 T
+0 11 Q
+0.28 (A great deal of time is spent evaluating predicates of negated condition elements. In the case that a domi-) 72 712.67 P
+-0.13 (nant object can seed multiple n-tuples \050as in the above \336gure where object) 72 699.67 P
+2 F
+-0.13 ( e) 396.28 699.67 P
+0 F
+-0.13 ( seeds 4 n-tuples\051, it is possible) 403.77 699.67 P
+1.65 (to optimize the processing of predicates of negated CEs. The idea is simple: when the negated CE is) 72 686.67 P
+0.54 (applied to tuple at time) 72 673.67 P
+2 F
+0.54 (t) 178.74 673.67 P
+2 7 Q
+0.34 (2) 181.8 671.42 P
+0 11 Q
+0.54 (, the truth value of its predicate must be determined for the interval [) 185.29 673.67 P
+2 F
+0.54 (t) 493.11 673.67 P
+2 7 Q
+0.34 (0) 496.17 671.42 P
+2 11 Q
+0.54 (,t) 499.66 673.67 P
+2 7 Q
+0.34 (2) 505.46 671.42 P
+0 11 Q
+0.54 (]. Note) 508.95 673.67 P
+-0.11 (that the predicate must have been true for all previously tested intervals, e.g., [) 72 660.67 P
+2 F
+-0.11 (t) 415.07 660.67 P
+2 7 Q
+-0.07 (0) 418.12 658.42 P
+2 11 Q
+-0.11 (,t) 421.61 660.67 P
+2 7 Q
+-0.07 (1) 427.42 658.42 P
+0 11 Q
+-0.11 (], since had the predicate) 430.91 660.67 P
+-0.04 (failed, it would not be possible to seed further tuples. The optimization is to avoid replicate evaluation of a) 72 647.67 P
+0.12 (negated predicate over the same interval. T) 72 634.67 P
+0.12 (o test the validity of a predicate in interval [) 261.41 634.67 P
+2 F
+0.12 (t) 455.02 634.67 P
+2 7 Q
+0.08 (0) 458.08 632.42 P
+2 11 Q
+0.12 (,t) 461.57 634.67 P
+2 7 Q
+0.08 (2) 467.37 632.42 P
+0 11 Q
+0.12 (], it is suf) 470.87 634.67 P
+0.12 (\336cient) 512.53 634.67 P
+-0.08 (to test the validity only over the interval [) 72 621.67 P
+2 F
+-0.08 (t) 253.87 621.67 P
+2 7 Q
+-0.05 (1) 256.93 619.42 P
+2 11 Q
+-0.08 (,t) 260.42 621.67 P
+2 7 Q
+-0.05 (2) 266.22 619.42 P
+0 11 Q
+-0.08 (], as the truth of the predicate in [) 269.72 621.67 P
+2 F
+-0.08 (t) 415.86 621.67 P
+2 7 Q
+-0.05 (0) 418.92 619.42 P
+2 11 Q
+-0.08 (,t) 422.41 621.67 P
+2 7 Q
+-0.05 (1) 428.21 619.42 P
+0 11 Q
+-0.08 (] has already been estab-) 431.7 621.67 P
+(lished.) 72 608.67 T
+0.21 (As mentioned above, experience has shown that a dominant object typically seeds at most one n-tuple per) 72 583.67 P
+(rule. Consequently) 72 570.67 T
+(, the conditions for the above optimization don\325) 154.29 570.67 T
+(t seem to arise.) 363.42 570.67 T
+1 10 Q
+-0.12 (Malloc optimization) 72 545.67 P
+0 11 Q
+-0.12 (. The Unix) 164.62 545.67 P
+3 10 Q
+-0.26 (malloc) 214.3 545.67 P
+0 11 Q
+-0.12 ( optimization is very slow) 250.28 545.67 P
+-0.12 (. LEAPS relied on its own memory allo-) 363.23 545.67 P
+0.44 (cation scheme. W) 72 532.67 P
+0.44 (e tried to do something similar with a layer in P2 which performs the duties of) 150.4 532.67 P
+3 10 Q
+0.95 (malloc) 504.02 532.67 P
+0 11 Q
+0.01 (on our own, home-grown memory allocation scheme. As it turns out,) 72 519.67 P
+3 10 Q
+0.02 (gnu) 378.46 519.67 P
+0.02 (malloc) 399.21 519.67 P
+0 11 Q
+0.01 ( is more ef) 435.19 519.67 P
+0.01 (\336cient, so we) 481.7 519.67 P
+(did not pursue) 72 506.67 T
+3 10 Q
+(malloc) 137.61 506.67 T
+0 11 Q
+( optimization further) 173.59 506.67 T
+(.) 263.92 506.67 T
+1 12 Q
+(5  RL Implementation) 72 469 T
+0 11 Q
+0.38 (Of course, there are lots of details of LEAPS that are not explained in this paper) 72 443.67 P
+0.38 (. W) 428.6 443.67 P
+0.38 (e recommend that the) 443.97 443.67 P
+-0.17 (interested readers examine the P2 \336les that are generated by RL. These \336les have embedded comments and) 72 430.67 P
+(are fairly easy to understand with this paper) 72 417.67 T
+(.) 263.92 417.67 T
+(When RL is run without command line ar) 72 392.67 T
+(guments, the following options are shown:) 255.2 392.67 T
+3 10 Q
+(Usage: rl [options] file) 108 374.33 T
+( file.ops read; file.p2 is generated \050see -s option\051) 108 362.33 T
+(Options:) 108 350.33 T
+( -a active rule optimization) 108 338.33 T
+( -c string constant enumeration optimization) 108 326.33 T
+( -d debugging mode for op code generation) 108 314.33 T
+( -e leaps debugging mode) 108 302.33 T
+( -h shadow stacking optimization) 108 290.33 T
+( -i inline insert and delete operations) 108 278.33 T
+( -l standard leaps options \050-achmp\051) 108 266.33 T
+( -m malloc optimization) 108 254.33 T
+( -n negation optimization) 108 242.33 T
+( -p predicate indexing included) 108 230.33 T
+( -s print to standard output, not file.p2) 108 218.33 T
+( -t include timestamp layer) 108 206.33 T
+( -x add attribute indices) 108 194.33 T
+( -1 no explicit shadow container) 108 182.33 T
+0 11 Q
+1.7 (The) 72 157.67 P
+3 10 Q
+3.71 (-achlmnp) 93.53 157.67 P
+0 11 Q
+1.7 ( options were discussed as optimizations in Section 4. The) 141.5 157.67 P
+3 10 Q
+3.71 (-de) 417.58 157.67 P
+0 11 Q
+1.7 ( options are purely for) 435.57 157.67 P
+1.88 (debugging RL. Options) 72 144.67 P
+3 10 Q
+4.1 (-x1) 183.83 144.67 P
+0 11 Q
+1.88 ( are not fully implemented. The) 201.82 144.67 P
+3 10 Q
+4.1 (-t) 354.97 144.67 P
+0 11 Q
+1.88 ( option has not been fully tested, but) 366.96 144.67 P
+0.18 (whether or not it is selected should make little or no dif) 72 131.67 P
+0.18 (ference in performance. \050RL generates timestamps) 317 131.67 P
+-0.19 (to match those of LEAPS when) 72 118.67 P
+3 10 Q
+-0.41 (-t) 212.48 118.67 P
+0 11 Q
+-0.19 ( is not selected; if) 224.47 118.67 P
+3 10 Q
+-0.41 (-t) 303.8 118.67 P
+0 11 Q
+-0.19 ( is selected, a timestamp layer assigns timestamps\051.) 315.79 118.67 P
+FMENDPAGE
+%%EndPage: "14" 13
+%%Page: "13" 13
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(13) 301 41.28 T
+0 11 Q
+0.81 (the predicate index becomes nonempty) 72 712.67 P
+0.81 (. The procedures themselves merely increment a counter for each) 245.98 712.67 P
+0.38 (rule that uses the predicate index. If the counter for a rule is nonzero \050meaning that there are one or more) 72 699.67 P
+-0.11 (predicate indices that are null\051, we know that the rule can be skipped for seeding. If the count is zero, seed-) 72 686.67 P
+(ing the rule may produce n-tuples.) 72 673.67 T
+0 10 Q
+-0.2 (In RL, we examine the counter for every rule that could be seeded by a dominant object. Thus, if there are n rules,) 85.75 655.33 P
+(there are n tests. In general, the number of rules that are active at any one time is rather small. Thus, if the list) 85.75 643.33 T
+(\050container?\051 of active rules is maintained dynamically) 85.75 631.33 T
+(, performance of LEAPS should be enhanced. In particular) 300.49 631.33 T
+(,) 534.9 631.33 T
+-0.12 (we conjecture that as the number of rules per rule set increases, a scheme to maintain dynamically the list of rules) 85.75 619.33 P
+(may of) 85.75 607.33 T
+(fer signi\336cant performance advantages.) 113.6 607.33 T
+1 F
+0.86 (Symbol T) 72 582.67 P
+0.86 (ables) 117.11 582.67 P
+0 11 Q
+0.85 (. String comparisons are always costly) 142.66 582.67 P
+0.85 (. A more ef) 315.24 582.67 P
+0.85 (\336cient way to perform string compari-) 367.63 582.67 P
+0.36 (sons is to enter strings into a symbol table and to compare handles to strings. Since OPS5 allows only) 72 569.67 P
+3 10 Q
+0.78 (==) 528.01 569.67 P
+0 11 Q
+0.64 (and) 72 556.67 P
+3 10 Q
+1.39 (!=) 91.25 556.67 P
+0 11 Q
+0.64 ( operations on strings, handle comparisons work well. This optimization is also called) 103.24 556.67 P
+2 F
+0.64 (string con-) 491.45 556.67 P
+(stant enumeration) 72 543.67 T
+0 F
+(.) 151.65 543.67 T
+1 10 Q
+0.63 (Shadow Stacking) 72 518.67 P
+0 11 Q
+0.62 (. W) 155.38 518.67 P
+0.62 (e explained earlier that the uni\336ed stack maintains a timestamp ordering of its ele-) 170.99 518.67 P
+1.5 (ments; the top element has the most recent timestamp and the bottom element has the oldest. Deleted) 72 505.67 P
+0.43 (objects are called) 72 492.67 P
+2 F
+0.43 (shadows) 152.29 492.67 P
+0 F
+0.43 (. Experience has shown that shadows rarely succeed in seeding rules \050i.e., pro-) 190.14 492.67 P
+0.22 (ducing n-tuples to \336re\051. As there can be many shadows on the stack at any given moment, a lar) 72 479.67 P
+0.22 (ge fraction) 492.5 479.67 P
+(of LEAPS run time is consumed processing shadows.) 72 466.67 T
+0.32 (A way to minimize the processing time for shadows is to place them at) 72 441.67 P
+2 F
+0.32 (bottom) 390.73 441.67 P
+0 F
+0.32 ( of the stack, rather than at) 421.25 441.67 P
+0.08 (the top. This invalidates the property that the stack maintains elements in descending timestamp order) 72 428.67 P
+0.08 (, but) 520.38 428.67 P
+1.65 (has the advantage that shadow processing becomes more ef) 72 415.67 P
+1.65 (\336cient \050i.e., particularly in the presence of) 346.14 415.67 P
+(active rule optimizations\051. The increase in LEAPS performance can be dramatic with shadow stacking.) 72 402.67 T
+1 10 Q
+2.04 (Hashed T) 72 377.67 P
+2.04 (imestamp Ordered Lists) 118.84 377.67 P
+0 11 Q
+2.01 (. The standard LEAPS data structure is a timestamp ordered list,) 237.33 377.67 P
+0.38 (described above. The standard LEAPS join algorithm is nested loops. A way to improve the performance) 72 364.67 P
+1.23 (of LEAPS dramatically would be to use hashed timestamp ordered lists. The idea is simple: instead of) 72 351.67 P
+0.13 (maintaining a single list of timestamp ordered elements, b lists are maintained, one list per bucket. Bucket) 72 338.67 P
+-0.07 (assignments of elements are based on a hash key) 72 325.67 P
+-0.07 (, which should also be a join key) 284.92 325.67 P
+-0.07 (. As a result, search times) 427.76 325.67 P
+0.29 (for elements on inner loops of joins are reduced by a factor of b \050i.e., a fraction of \050b-1\051/b of the elements) 72 312.67 P
+0.23 (have been eliminated as they don\325) 72 299.67 P
+0.23 (t hash to the right join key\051. Hashed timestamp ordered lists \050) 222.74 299.67 P
+3 10 Q
+0.49 (hlist[]) 494.36 299.67 P
+0 11 Q
+0.23 (\051) 536.34 299.67 P
+0.78 (is a simple variation on timestamp ordered lists \050) 72 286.67 P
+3 10 Q
+1.7 (tlist[]) 292.45 286.67 P
+0 11 Q
+0.78 (\051; hashed timestamp ordered predicate indices) 334.43 286.67 P
+(\050) 72 273.67 T
+3 10 Q
+(hpredindx[]) 75.66 273.67 T
+0 11 Q
+(\051 is a simple variation on predicate indices \050) 141.62 273.67 T
+3 10 Q
+(predindx[]) 333.85 273.67 T
+0 11 Q
+(\051.) 393.82 273.67 T
+-0.22 (In general, the idea of using \322hash\323 joins to obtain improved performance is an obvious consequence of the) 72 248.67 P
+(work of Brant and Miranker [Bra93a].) 72 235.67 T
+1 10 Q
+-0.03 (Negation Optimization) 72 210.67 P
+0 11 Q
+-0.03 (. Experience has shown that the following is not an ef) 178.04 210.67 P
+-0.03 (fective optimization, but it is) 413.45 210.67 P
+(an interesting idea never) 72 197.67 T
+(-the-less. Recall Figure 9 that helps illustrate the meaning of negation:) 179.48 197.67 T
+142.99 81 469.01 194 C
+448.08 132.21 453.28 129.21 448.08 126.21 448.08 129.21 4 Y
+0 X
+0 K
+V
+169.11 129.21 448.08 129.21 2 L
+1 H
+2 Z
+N
+221.98 137.64 221.98 120.79 2 L
+N
+175.72 137.64 175.72 120.79 2 L
+N
+314.5 137.64 314.5 120.79 2 L
+N
+354.15 137.64 354.15 120.79 2 L
+N
+413.63 137.64 413.63 120.79 2 L
+N
+1 8 Q
+(time) 446.67 136.65 T
+(object e created) 145.89 90.77 T
+161.83 111.36 172.89 116.02 165.98 106.21 163.9 108.79 4 Y
+10 X
+V
+150.39 98.02 163.9 108.79 2 L
+0.5 H
+N
+0 X
+(CC advanced) 275.48 92.34 T
+238.8 110.28 228.59 116.58 240.59 116.65 239.7 113.46 4 Y
+10 X
+V
+274.85 103.93 239.7 113.46 2 L
+N
+322.4 107.55 314.5 116.58 325.98 113.11 324.19 110.33 4 Y
+V
+334.33 103.93 324.2 110.33 2 L
+N
+336.91 111.02 347.54 116.57 341.47 106.23 339.19 108.62 4 Y
+V
+334.33 103.93 339.19 108.62 2 L
+N
+395.08 117.84 407.01 116.58 396.23 111.32 395.65 114.58 4 Y
+V
+334.33 103.93 395.66 114.58 2 L
+N
+0 X
+(t) 180.23 120.19 T
+2 7 Q
+(0) 182.89 117.94 T
+1 8 Q
+(t) 226.89 120.71 T
+2 7 Q
+(1) 229.55 118.46 T
+1 8 Q
+(t) 316.89 121.52 T
+2 7 Q
+(2) 319.55 119.27 T
+1 8 Q
+(t) 357.39 121.52 T
+2 7 Q
+(3) 360.05 119.27 T
+1 8 Q
+(t) 418.73 120.19 T
+2 7 Q
+(4) 421.39 117.94 T
+214.3 183.5 219.49 180.5 214.3 177.5 214.3 180.5 4 Y
+V
+174.49 180.5 214.3 180.5 2 L
+N
+308.8 174.5 313.99 171.5 308.8 168.5 308.8 171.5 4 Y
+V
+174.49 171.5 308.8 171.5 2 L
+N
+349.3 165.5 354.49 162.5 349.3 159.5 349.3 162.5 4 Y
+V
+174.49 162.5 349.3 162.5 2 L
+N
+403.3 156.5 408.49 153.5 403.3 150.5 403.3 153.5 4 Y
+V
+174.49 153.5 403.3 153.5 2 L
+N
+174.49 171.5 219.49 171.5 2 L
+10 X
+N
+174.49 162.5 313.99 162.5 2 L
+N
+174.49 153.5 354.49 153.5 2 L
+N
+0 11 Q
+0 X
+([) 223.84 180.5 T
+2 F
+(t) 227.5 180.5 T
+2 7 Q
+(0) 230.55 178.25 T
+2 11 Q
+(,t) 234.05 180.5 T
+2 7 Q
+(1) 239.85 178.25 T
+0 11 Q
+(]) 243.34 180.5 T
+([) 318.49 171.5 T
+2 F
+(t) 322.15 171.5 T
+2 7 Q
+(0) 325.2 169.25 T
+2 11 Q
+(,t) 328.7 171.5 T
+2 7 Q
+(2) 334.5 169.25 T
+0 11 Q
+(]) 337.99 171.5 T
+([) 358.99 158 T
+2 F
+(t) 362.65 158 T
+2 7 Q
+(0) 365.7 155.75 T
+2 11 Q
+(,t) 369.2 158 T
+2 7 Q
+(3) 375 155.75 T
+0 11 Q
+(]) 378.49 158 T
+([) 412.99 149 T
+2 F
+(t) 416.65 149 T
+2 7 Q
+(0) 419.7 146.75 T
+2 11 Q
+(,t) 423.2 149 T
+2 7 Q
+(4) 429 146.75 T
+0 11 Q
+(]) 432.49 149 T
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "13" 12
+%%Page: "12" 12
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(12) 301 41.28 T
+1 12 Q
+(4  Optimizations) 72 603.5 T
+0 11 Q
+0.26 (LEAPS \050and RL\051 include a variety of optimizations than enhance the basic algorithms outlined in Section) 72 578.16 P
+(3. W) 72 565.16 T
+(e explain the major optimizations in this section.) 92.48 565.16 T
+1 10 Q
+0.84 (T) 72 540.16 P
+0.84 (imestamp Ordered Lists) 77.93 540.16 P
+0 11 Q
+0.83 (. A timestamp ordered list is a doubly-linked list where \050undeleted\051 elements) 194.02 540.16 P
+0.74 (are maintained in descending timestamp order) 72 527.16 P
+0.74 (. Unlike \322standard\323 doubly-linked lists, timestamp ordered) 278.01 527.16 P
+-0.22 (lists perform query modi\336cations for optimizations. For example, a typical rule selection predicate requires) 72 514.16 P
+0.74 (element timestamps to be less than or equal to the dominant timestamp. A timestamp ordered list would) 72 501.16 P
+0.28 (use this requirement to optimize the) 72 488.16 P
+3 10 Q
+0.6 (reset_start) 234.16 488.16 P
+0 11 Q
+0.28 ( operation, which positions a cursor on the \336rst record) 300.13 488.16 P
+-0.22 (that satis\336es the selection predicate. What happens is that the timestamp predicate is applied to the \336rst ele-) 72 475.16 P
+0.37 (ments of the list until an element quali\336es. From that point on, there is no need for qualifying subsequent) 72 462.16 P
+0.3 (elements due to timestamp ordering. Thus, predicates applied to subsequent elements do not involve tem-) 72 449.16 P
+0.7 (poral quali\336cation. Other types of query optimizations with timestamp ordered lists are possible; readers) 72 436.16 P
+(are encouraged to see the) 72 423.16 T
+3 10 Q
+(tlist[]) 185.79 423.16 T
+0 11 Q
+( component in the P2 library) 227.76 423.16 T
+(.) 352.47 423.16 T
+1 10 Q
+0.25 (Predicate Indices) 72 398.16 P
+0 11 Q
+0.25 (. A) 154.47 398.16 P
+2 F
+0.25 (pr) 171.14 398.16 P
+0.25 (edicate index) 180.5 398.16 P
+0 F
+0.25 ( is a list of elements of a container that satisfy a given predicate. \050In) 239.02 398.16 P
+2.44 (the AI literature, predicate indices are called) 72 385.16 P
+2 F
+2.44 (alpha memories) 286.76 385.16 P
+0 F
+2.44 (\051. Predicate indices are quite useful in) 359.69 385.16 P
+0.97 (LEAPS/RL, as the selection predicates of rules are static. For example, to minimize the search time for) 72 372.16 P
+1.64 (\336nding) 72 359.16 P
+3 10 Q
+3.58 (stage) 107.52 359.16 P
+0 11 Q
+1.64 ( elements whose) 137.5 359.16 P
+3 10 Q
+3.58 (value) 217.78 359.16 P
+0 11 Q
+1.64 ( \336eld has \322) 247.76 359.16 P
+3 10 Q
+3.58 (labeling) 299.97 359.16 P
+0 11 Q
+1.64 (\323 \050in) 347.95 359.16 P
+3 10 Q
+3.58 (rule14) 373.8 359.16 P
+0 11 Q
+1.64 ( of Figures 5-8\051, a predicate) 409.78 359.16 P
+0.81 (index for) 72 346.16 P
+3 10 Q
+1.76 (stage) 116.33 346.16 P
+0 11 Q
+0.81 ( using predicate \322) 146.31 346.16 P
+3 10 Q
+1.76 ($.value == \324labeling\325) 225.92 346.16 P
+0 11 Q
+0.81 (\323 is used. In general, a predicate index is) 355.37 346.16 P
+0.28 (created for each positive \050and negative\051 condition element of a rule that references constants. Again look-) 72 333.16 P
+(ing at rule14 as an example, the following predicate indices would be created:) 72 320.16 T
+(A predicate index component in P2,) 72 187.16 T
+3 10 Q
+(predindx[]) 232.81 187.16 T
+0 11 Q
+(, is a minor modi\336cation of) 292.77 187.16 T
+3 10 Q
+(tlist[]) 415.15 187.16 T
+0 11 Q
+(.) 457.13 187.16 T
+1 10 Q
+0.51 (Active Rule Optimization) 72 162.16 P
+0 11 Q
+0.51 (. k-way joins can lead to O\050n) 190.76 162.16 P
+0 9 Q
+0.41 (k) 321.03 166.56 P
+0 11 Q
+0.51 (\051 execution times, where n is the number of ele-) 325.52 162.16 P
+0.3 (ments in a container) 72 149.16 P
+0.3 (. Eliminating costly searches that are known, a priori, not to yield n-tuples, often pro-) 161.09 149.16 P
+1.38 (vides great performance advantages. The) 72 136.16 P
+2 F
+1.38 (active rule optimization) 261.94 136.16 P
+0 F
+1.38 (is the skipping of rules to be seeded) 373.2 136.16 P
+-0.02 (because it is known that the rule cannot generate n-tuples. This optimization requires the presence of pred-) 72 123.16 P
+0.34 (icate indices. When a predicate index is an empty list \050i.e., there are no elements in the container that sat-) 72 110.16 P
+1.45 (isfy the given selection predicate\051, we know that a seeded rule cannot produce n-tuples. It is a simple) 72 97.16 P
+0.63 (matter to augment the de\336nition of the predicate index layer to accept as a further annotation two proce-) 72 84.16 P
+-0.04 (dures. One procedure is called when the predicate index becomes empty; another procedure is called when) 72 71.16 P
+4 10 Q
+(Condition) 180.64 289.83 T
+(Element #) 180.64 277.83 T
+(Container) 241.14 277.83 T
+(Pr) 301.64 289.83 T
+(edicate to index) 312 289.83 T
+(\050empty if no index cr) 301.64 277.83 T
+(eated\051) 390.29 277.83 T
+0 F
+(#1) 180.64 261.83 T
+3 F
+(stage) 241.14 261.83 T
+($.value == \324labeling\325) 301.64 261.83 T
+0 F
+(#2) 180.64 245.83 T
+3 F
+(junction) 241.14 245.83 T
+($.type == \324tee\325) 301.64 245.83 T
+0 F
+(#3) 180.64 229.83 T
+3 F
+(edge) 241.14 229.83 T
+0 F
+(#4) 180.64 213.83 T
+3 F
+(edge) 241.14 213.83 T
+($.label == \324nil\325) 301.64 213.83 T
+174.64 304.5 445.14 304.5 2 L
+V
+0.5 H
+0 Z
+N
+156.49 611.5 455.51 720 C
+223.99 661.5 250.99 675 R
+0.5 H
+2 Z
+0 X
+0 K
+N
+178.99 661.5 205.99 675 R
+N
+268.99 634.5 295.99 648 R
+5 X
+V
+0 X
+N
+313.99 661.5 340.99 675 R
+N
+358.99 661.5 385.99 675 R
+N
+403.99 661.5 430.99 675 R
+N
+218.8 669 223.99 666 218.8 663 218.8 666 4 Y
+V
+205.99 666 218.8 666 2 L
+N
+308.8 669 313.99 666 308.8 663 308.8 666 4 Y
+V
+250.99 666 308.8 666 2 L
+N
+308.39 659.34 313.99 661.5 313.07 655.57 310.73 657.45 4 Y
+V
+295.99 639 310.73 657.45 2 L
+N
+353.8 669 358.99 666 353.8 663 353.8 666 4 Y
+V
+340.99 666 353.8 666 2 L
+N
+398.8 669 403.99 666 398.8 663 398.8 666 4 Y
+V
+385.99 666 398.8 666 2 L
+N
+173.8 669 178.99 666 173.8 663 173.8 666 4 Y
+V
+169.99 684 169.99 688.5 169.99 666 173.8 666 4 L
+N
+335.27 634.05 M
+ 335.27 639.7 335.27 639.7 334.08 639.63 D
+ 332.9 639.53 332.9 639.53 331.57 639.58 D
+ 330.21 639.63 330.21 639.63 328.32 640.91 D
+ 326.44 642.22 326.44 642.22 325.18 642.38 D
+ 323.9 642.55 323.9 642.55 322.74 642.62 D
+ 321.56 642.69 321.56 642.69 320.25 643.1 D
+ 318.95 643.5 318.95 643.5 318.5 642.95 D
+ 318.03 642.38 318.03 642.38 318.53 641.72 D
+ 319.05 641.08 319.05 641.08 320.55 640.44 D
+ 322.05 639.79 322.05 639.79 320.55 639.91 D
+ 319.05 640.03 319.05 640.03 317.44 639.82 D
+ 315.84 639.63 315.84 639.63 313.79 639.68 D
+ 311.72 639.7 311.72 639.7 310.05 639.58 D
+ 308.37 639.46 308.37 639.46 307.24 639.53 D
+ 306.1 639.63 306.1 639.63 305.63 639.39 D
+ 305.17 639.13 305.17 639.13 305.09 638.54 D
+ 304.99 637.92 304.99 637.92 305.26 637.47 D
+ 305.51 637.04 305.51 637.04 307.68 636.87 D
+ 309.87 636.71 309.87 636.71 310.81 636.64 D
+ 311.72 636.59 311.72 636.59 312.78 636.59 D
+ 313.82 636.59 313.82 636.59 315 636.28 D
+ 316.18 635.97 316.18 635.97 315.42 635.57 D
+ 314.66 635.16 314.66 635.16 314.41 634.47 D
+ 314.16 633.79 314.16 633.79 314.41 633.21 D
+ 314.66 632.67 314.66 632.67 315.17 632.34 D
+ 315.67 632 315.67 632 315.45 631.77 D
+ 315.22 631.53 315.22 631.53 315.08 631.01 D
+ 314.95 630.48 314.95 630.48 315.32 629.65 D
+ 315.67 628.84 315.67 628.84 315.94 628.58 D
+ 316.21 628.32 316.21 628.32 316.33 627.61 D
+ 316.43 626.92 316.43 626.92 316.78 626.35 D
+ 317.1 625.78 317.1 625.78 318.06 625.57 D
+ 319.05 625.38 319.05 625.38 319.88 625.28 D
+ 320.72 625.21 320.72 625.21 321.56 625.45 D
+ 322.4 625.69 322.4 625.69 323.16 625.73 D
+ 323.9 625.78 323.9 625.78 325.9 625.95 D
+ 327.87 626.09 327.87 626.09 329.84 626.99 D
+ 331.82 627.87 331.82 627.87 332.41 627.73 D
+ 333 627.56 333 627.56 333.71 627.87 D
+ 334.43 628.2 334.43 628.2 334.85 628.3 D
+ 335.27 628.37 335.27 628.37 335.27 634.05 D
+O
+7 X
+V
+0.2 H
+0 Z
+0 X
+N
+306.3 639.01 M
+ 307.11 638.84 307.11 638.84 307.06 638.3 D
+ 307.01 637.73 307.01 637.73 306.23 637.63 D
+ 305.41 637.56 305.41 637.56 305.46 638.37 D
+ 305.51 639.18 305.51 639.18 306.3 639.01 D
+O
+7 X
+V
+0 X
+N
+321.9 639.79 323.24 640.03 2 L
+7 X
+V
+2 Z
+0 X
+N
+320.89 642.69 319.71 642.22 318.7 642.62 3 L
+7 X
+V
+0 X
+N
+316.09 632.57 315.25 633.07 314.95 633.95 3 L
+7 X
+V
+0 X
+N
+317.27 628.61 316.36 628.94 316.09 629.65 3 L
+7 X
+V
+0 X
+N
+317.52 626.09 316.78 626.76 2 L
+7 X
+V
+0 X
+N
+315.79 632.05 315.94 632.22 315.74 632.38 3 L
+7 X
+V
+0 X
+N
+315.03 636.61 316.43 636.23 316.41 635.73 315.96 635.57 4 L
+7 X
+V
+0 X
+N
+312.73 638.99 312.07 639.22 311.6 639.06 311.18 639.3 4 L
+7 X
+V
+0 X
+N
+312.73 637.28 312.07 637.04 311.6 637.21 311.18 636.94 4 L
+7 X
+V
+0 X
+N
+330.56 628.01 M
+ 331.67 628.37 331.67 628.37 332.01 628.28 D
+ 332.33 628.18 332.33 628.18 333.15 628.18 D
+7 X
+V
+0 X
+N
+333.54 639.96 334.33 636.83 334.65 633.69 334.33 629.98 333.71 627.25 338.18 627.25 339.36 629.91
+ 339.63 633.52 339.46 637.32 338.69 640.13 10 Y
+7 X
+V
+0 Z
+0 X
+N
+242.45 706.63 M
+ 236.79 706.63 236.79 706.63 236.86 705.45 D
+ 236.96 704.27 236.96 704.27 236.91 702.93 D
+ 236.86 701.58 236.86 701.58 235.58 699.68 D
+ 234.27 697.81 234.27 697.81 234.11 696.55 D
+ 233.94 695.27 233.94 695.27 233.87 694.11 D
+ 233.8 692.92 233.8 692.92 233.4 691.62 D
+ 232.99 690.31 232.99 690.31 233.54 689.87 D
+ 234.11 689.4 234.11 689.4 234.77 689.89 D
+ 235.41 690.41 235.41 690.41 236.06 691.91 D
+ 236.7 693.42 236.7 693.42 236.58 691.91 D
+ 236.46 690.41 236.46 690.41 236.67 688.81 D
+ 236.86 687.21 236.86 687.21 236.82 685.16 D
+ 236.79 683.09 236.79 683.09 236.91 681.41 D
+ 237.03 679.73 237.03 679.73 236.96 678.6 D
+ 236.86 677.47 236.86 677.47 237.1 677 D
+ 237.36 676.53 237.36 676.53 237.96 676.46 D
+ 238.57 676.36 238.57 676.36 239.02 676.63 D
+ 239.45 676.88 239.45 676.88 239.62 679.04 D
+ 239.79 681.24 239.79 681.24 239.86 682.18 D
+ 239.9 683.09 239.9 683.09 239.9 684.15 D
+ 239.9 685.18 239.9 685.18 240.21 686.37 D
+ 240.52 687.55 240.52 687.55 240.93 686.79 D
+ 241.33 686.02 241.33 686.02 242.02 685.78 D
+ 242.71 685.53 242.71 685.53 243.28 685.78 D
+ 243.82 686.02 243.82 686.02 244.15 686.54 D
+ 244.49 687.03 244.49 687.03 244.73 686.81 D
+ 244.96 686.59 244.96 686.59 245.49 686.44 D
+ 246.01 686.32 246.01 686.32 246.84 686.69 D
+ 247.65 687.03 247.65 687.03 247.91 687.3 D
+ 248.17 687.58 248.17 687.58 248.88 687.7 D
+ 249.57 687.8 249.57 687.8 250.14 688.14 D
+ 250.71 688.46 250.71 688.46 250.93 689.42 D
+ 251.12 690.41 251.12 690.41 251.21 691.25 D
+ 251.28 692.09 251.28 692.09 251.04 692.92 D
+ 250.81 693.76 250.81 693.76 250.76 694.53 D
+ 250.71 695.27 250.71 695.27 250.54 697.26 D
+ 250.4 699.24 250.4 699.24 249.5 701.21 D
+ 248.62 703.18 248.62 703.18 248.76 703.77 D
+ 248.93 704.36 248.93 704.36 248.62 705.08 D
+ 248.29 705.79 248.29 705.79 248.19 706.21 D
+ 248.12 706.63 248.12 706.63 242.45 706.63 D
+O
+7 X
+V
+0 X
+N
+237.48 677.66 M
+ 237.65 678.48 237.65 678.48 238.19 678.43 D
+ 238.76 678.38 238.76 678.38 238.86 677.59 D
+ 238.93 676.78 238.93 676.78 238.12 676.83 D
+ 237.32 676.88 237.32 676.88 237.48 677.66 D
+O
+7 X
+V
+0 X
+N
+236.7 693.27 236.46 694.6 2 L
+7 X
+V
+2 Z
+0 X
+N
+233.8 692.26 234.27 691.08 233.87 690.07 3 L
+7 X
+V
+0 X
+N
+243.92 687.45 243.42 686.61 242.54 686.32 3 L
+7 X
+V
+0 X
+N
+247.88 688.64 247.55 687.72 246.84 687.45 3 L
+7 X
+V
+0 X
+N
+250.4 688.88 249.74 688.14 2 L
+7 X
+V
+0 X
+N
+244.44 687.16 244.27 687.3 244.11 687.11 3 L
+7 X
+V
+0 X
+N
+239.88 686.39 240.26 687.8 240.76 687.77 240.93 687.33 4 L
+7 X
+V
+0 X
+N
+237.51 684.1 237.27 683.43 237.43 682.96 237.2 682.55 4 L
+7 X
+V
+0 X
+N
+239.21 684.1 239.45 683.43 239.29 682.96 239.55 682.55 4 L
+7 X
+V
+0 X
+N
+248.48 701.92 M
+ 248.12 703.03 248.12 703.03 248.22 703.38 D
+ 248.31 703.7 248.31 703.7 248.31 704.51 D
+7 X
+V
+0 X
+N
+236.53 704.91 239.67 705.7 242.8 706.02 246.51 705.7 249.24 705.08 249.24 709.54 246.58 710.73
+ 242.97 711 239.17 710.82 236.37 710.06 10 Y
+7 X
+V
+0 Z
+0 X
+N
+3 10 Q
+(A) 239.99 693.5 T
+(B) 321.49 632 T
+(1) 411.49 666 T
+(2) 364.99 666.5 T
+(5) 321.49 665.5 T
+(7) 275.99 639 T
+(8) 231.49 666.5 T
+(12) 184.49 666.5 T
+0 11 Q
+(\050deleted records) 172.49 637 T
+(are shaded\051) 172.49 626 T
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "12" 11
+%%Page: "11" 11
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(1) 301.19 41.28 T
+(1) 305.82 41.28 T
+1 12 Q
+(3.5  Notes on Data Structures) 72 411 T
+0 11 Q
+0.85 (W) 72 385.67 P
+0.85 (e stated earlier that elements are not updated, but rather deleted and then reinserted. While this seems) 81.49 385.67 P
+0.34 (odd, it actually plays an integral role in the design of the LEAPS data structures for containers. The basic) 72 372.67 P
+1.87 (idea is that composite cursors on the uni\336ed stack may point to elements that have been deleted. T) 72 359.67 P
+1.87 (o) 534.51 359.67 P
+2.57 (advance a composite cursor in such situations, elements can only be logically deleted \050i.e., \337agged) 72 346.67 P
+0.27 (deleted\051; their storage space cannot be physically reclaimed. \050Or more accurately) 72 333.67 P
+0.27 (, their storage space can-) 430.02 333.67 P
+0.61 (not be reclaimed until no cursor is referencing it\051. Hence the need for modeling updates as deletions fol-) 72 320.67 P
+(lowed by insertions.) 72 307.67 T
+0 10 Q
+(LEAPS performed rudimentary garbage collection, where the physical space of elements is reclaimed. W) 85.75 289.33 T
+(e noted) 506 289.33 T
+(that maintaining reference counts \050or whatever LEAPS actually does\051 adds considerable run-time overhead. For) 85.75 277.33 T
+-0.28 (the applications of LEAPS that we have seen, garbage collection at \336x-point time of) 85.75 265.33 P
+-0.28 (fers a much faster and simpler) 418.42 265.33 P
+(way to accomplish garbage collection.) 85.75 253.33 T
+0 11 Q
+1.64 (Another unusual requirement for a LEAPS container data structure is that elements must be stored in) 72 228.67 P
+0.5 (descending timestamp order) 72 215.67 P
+0.5 (. One reason is to maintain OPS5 semantics. Another is to be consistent with) 196.28 215.67 P
+0.57 (the general expert-system philosophy that the n-tuple that is selected for rule \336ring should have the most) 72 202.67 P
+0.77 (recent timestamps. The simplest data structure that LEAPS could use as a container implementation is a) 72 189.67 P
+0.2 (doubly-linked list, where deleted elements are still \322connected\323 in that cursors on deleted elements can be) 72 176.67 P
+0.52 (advanced to nondeleted elements. The \336gure below shows two cursors on a container \050implemented by a) 72 163.67 P
+0.16 (list\051. Cursor) 72 150.67 P
+3 10 Q
+0.34 (A) 127.55 150.67 P
+0 11 Q
+0.16 ( points to an element with timestamp 8; cursor) 133.55 150.67 P
+3 10 Q
+0.34 (B) 341.56 150.67 P
+0 11 Q
+0.16 ( points to a deleted element with timestamp) 347.56 150.67 P
+0.21 (7\051. When cursor) 72 137.67 P
+3 10 Q
+0.45 (B) 146.45 137.67 P
+0 11 Q
+0.21 ( is advanced, it will be positioned on the next undeleted element of the container whose) 152.44 137.67 P
+0.43 (timestamp is less than 7. In general, it is possible that) 72 124.67 P
+3 10 Q
+0.94 (B) 313.83 124.67 P
+0 11 Q
+0.43 ( may need to traverse a chain of deleted elements) 319.83 124.67 P
+(before the \336rst undeleted element is reached.) 72 111.67 T
+75.74 450 536.26 720 C
+79.49 529 302.49 712 R
+7 X
+0 K
+V
+3 8 Q
+0 X
+(execute_production_system\050\051) 79.49 706.67 T
+({) 79.49 696.67 T
+(while\0501\051 {) 89.09 686.67 T
+(// Get the top of the stack.) 98.68 676.67 T
+(reset_start\050top\051;) 98.68 666.67 T
+(if \050end_of_container\050top\051\051 {) 98.68 656.67 T
+(// The stack is empty.) 108.28 646.67 T
+(// We\325re at a f) 108.28 636.67 T
+(ix-point.) 180.24 636.67 T
+(break;) 108.28 626.67 T
+(}) 98.68 616.67 T
+(else {) 98.68 606.67 T
+(// The stack is not empty.) 108.28 596.67 T
+(fresh = !top.curs;) 108.28 586.67 T
+(dom_timestamp = top.time_stamp;) 108.28 576.67 T
+(\050*top.current_rule\051\050\051;) 108.28 566.67 T
+(}) 98.68 556.67 T
+(}) 89.09 546.67 T
+(}) 79.49 536.67 T
+309.99 471.5 528.49 711.5 R
+7 X
+V
+0 X
+(void seed_rule14_a \050 void \051) 309.99 706.17 T
+({  curs14_a *c;) 309.99 696.17 T
+(   if \050fresh\051 {) 309.99 676.17 T
+-0.27 (      c = \050curs14_a*\051malloc\050sizeof\050curs14_a\051\051;) 309.99 666.17 P
+(      top.curs = \050void*\051 c;) 309.99 656.17 T
+(      initk\050*c\051;) 309.99 646.17 T
+(      position\050c->a,top.cursor_position\051;) 309.99 636.17 T
+(   } else {) 309.99 626.17 T
+(      c = \050curs14_a *\051 top.curs;) 309.99 616.17 T
+(      goto cnt;) 309.99 606.17 T
+(   }) 309.99 596.17 T
+(   foreachk\050*c\051 {) 309.99 576.17 T
+( fire_rule14_a\050 c \051;) 333.98 566.17 T
+(      return;) 309.99 556.17 T
+(   cnt: ;       // perform valid tests here) 309.99 546.17 T
+(   }) 309.99 536.17 T
+(   free\050c\051;) 309.99 516.17 T
+(   fresh = TRUE;) 309.99 506.17 T
+(   top.current_rule = nextrule;) 309.99 496.17 T
+(   nextrule\050\051; // call seed_rule proc for) 309.99 486.17 T
+(}) 309.99 476.17 T
+(// next rule firing) 381.95 476.17 T
+5 10 Q
+(Figure 12a-b. Execution Cycle and Rule Seeding Procedures) 144.39 457.45 T
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "11" 10
+%%Page: "10" 10
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(10) 301 41.28 T
+0 11 Q
+0.09 (Finally) 72 712.67 P
+0.09 (, it is possible for shadow container elements to become dominant. The idea here is that a container) 102.42 712.67 P
+-0.12 (element may block the quali\336cation of n-tuples because it satis\336ed a negated CE \336lter) 72 699.67 P
+-0.12 (. W) 447.25 699.67 P
+-0.12 (ith the deletion of) 462.55 699.67 P
+1.39 (this element, previously disquali\336ed \050or) 72 686.67 P
+2 F
+1.39 ( blocked) 252.42 686.67 P
+0 F
+1.39 (\051 n-tuples may now be quali\336ed \050) 290.73 686.67 P
+2 F
+1.39 (unblocked) 444.93 686.67 P
+0 F
+1.39 (\051. T) 490.09 686.67 P
+1.39 (ests for) 506.57 686.67 P
+0.66 (unblocked tuples are created by \050a\051 modifying the original OPS5 rule by replicating the negated CE as a) 72 673.67 P
+-0.24 (positive CE, \050b\051 converting the resulting rule via the translation steps we have just outlined, and \050c\051 seeding) 72 660.67 P
+-0.05 (the resultant composite cursor with the shadow object. Figure 1) 72 647.67 P
+-0.05 (1a shows the result of step \050a\051 to the rule of) 350.07 647.67 P
+(Figure 10a; Figure 1) 72 634.67 T
+(1b shows the translation resulting from \050b\051 and \050c\051.) 161.62 634.67 T
+1 12 Q
+(3.4  Other Issues) 72 265 T
+0 11 Q
+1.18 (There are additional issues regarding the translation of OPS5 rule sets into P2 programs that are worth) 72 239.67 P
+0.03 (mentioning. First, when an element is inserted in LEAPS, it is pushed onto a wait-list stack for subsequent) 72 226.67 P
+0.22 (seeding. Composite cursors, whose execution was suspended, are placed on a join-stack. The stack whose) 72 213.67 P
+-0.16 (top element has the most recent timestamp is chosen to be the dominant object on the next execution cycle.) 72 200.67 P
+0.78 (In RL \050and in other versions of LEAPS\051, the wait-list stack and join stack are uni\336ed. This gives a very) 72 187.67 P
+1.3 (compact and elegant representation of the primary cycle loop \050see Figure 12a\051. Note that the \322uni\336ed\323) 72 174.67 P
+(stack is represented as a container) 72 161.67 T
+(, and) 220.74 161.67 T
+3 10 Q
+(top) 244.85 161.67 T
+0 11 Q
+( is a cursor that references the top element of the stack.) 262.84 161.67 T
+0.05 (The procedures for rule \336rings are also compact \050see Figure 12b\051. If a cursor has not yet been created \050i.e.,) 72 136.67 P
+6 14 Q
+0.2 (\330) 72 123.67 P
+3 10 Q
+0.34 (fresh) 81.98 123.67 P
+0 11 Q
+0.16 (\051, one is malloced from the heap, initialized, and positioned on the seeding element. Control then) 111.96 123.67 P
+0.73 (falls to the) 72 110.67 P
+3 10 Q
+1.6 (foreach) 123.33 110.67 P
+0 11 Q
+0.73 ( statement. If a cursor has been created \050and whose execution has been suspended\051,) 165.3 110.67 P
+0.1 (control continues at the end of the) 72 97.67 P
+3 10 Q
+0.22 (foreach) 224.96 97.67 P
+0 11 Q
+0.1 ( statement \050where validation tests are performed by P2\051. Once) 266.94 97.67 P
+-0.02 (an n-tuple is generated, the rule is \336red and the procedure is exited. After all n-tuples have been generated,) 72 84.67 P
+(control passes to the next rule for possible \336ring.) 72 71.67 T
+72 63 540 720 C
+72 293 540 631 C
+81.58 517 297.58 620.5 R
+7 X
+0 K
+V
+3 8 Q
+0 X
+(\050p rule5) 81.58 615.17 T
+(\050stage ^value detect_junctions \051) 91.17 605.17 T
+(  \050edge ^p1 <bp> ^p2 <p2>) 81.58 595.17 T
+(^joined  false \051) 206.31 595.17 T
+(  \050edge ^p1  <bp> ^p2 <p3> ^p2 <> <p2>) 81.58 585.17 T
+(       ^joined false \051) 81.58 575.17 T
+(\050edge ^p1 <bp> ^p2 <> <p2> ^p2 <> <p3> \051) 91.17 555.17 T
+(   -\050edge ^p1 <bp> ^p2 <> <p2> ^p2 <> <p3> \051) 81.58 535.17 T
+0 F
+(    -->) 81.58 525.17 T
+306.58 316 536.08 620.5 R
+7 X
+V
+3 F
+0 X
+(#def) 306.58 615.17 T
+(ine query5d) 325.77 615.17 T
+(\322$a.value == \325detect_junctions\325 &&) 344.95 605.17 T
+(         $b.joined == \325false\325 &&) 306.58 595.17 T
+($c.p1 == $b.p1 &&) 349.75 585.17 T
+($c.p2 != $b.p2 &&) 349.75 575.17 T
+( $c.joined == \325false\325 &&) 344.95 565.17 T
+($d.p1 == $b.p1 &&) 349.75 555.17 T
+($d.p2 != $b.p2 &&) 349.75 545.17 T
+($d.p2 != $c.p2 &&) 349.75 535.17 T
+(         N5_4\050&$b,&$c\051\323) 306.58 525.17 T
+(#def) 306.58 503.17 T
+(ine temporal_query5d) 325.77 503.17 T
+(\322$a._ts <= dominant_timestamp &&) 344.95 493.17 T
+($b._ts <= dominant_timestamp &&) 349.75 483.17 T
+($c._ts <= dominant_timestamp &&) 349.75 473.17 T
+($d._ts <= dominant_timestamp\323) 349.75 463.17 T
+(#def) 306.58 441.17 T
+(ine valid_query5d) 325.77 441.17 T
+(\322!is_deleted\050$a\051 &&) 349.75 431.17 T
+(!is_deleted\050$b\051 &&) 354.55 421.17 T
+(!is_deleted\050$c\051 &&) 354.55 411.17 T
+(!is_deleted\050$d\051 &&) 354.55 401.17 T
+(N5_4\050&$b,&$c\051\323) 354.55 391.17 T
+(typedef compcurs < a cont_stage, b cont_edge,) 306.58 369.17 T
+(c cont_edge, d shadow_edge >) 392.93 359.17 T
+(   given < d >) 306.58 349.17 T
+(   where query5d && temporal_query5d) 306.58 339.17 T
+( valid valid_query5d) 316.17 329.17 T
+(curs5_d;) 320.97 319.17 T
+5 10 Q
+(Figure 1) 140.08 300.19 T
+(1a-b. Rule T) 176 300.19 T
+(ranslation Step 6: Seeding of Shadow Elements) 230.62 300.19 T
+88.58 550 291.08 563.5 R
+0.5 H
+2 Z
+N
+341.58 532 442.58 561 R
+N
+342.58 459 493.58 469 R
+N
+347 397.5 449.5 408 R
+N
+72 63 540 720 C
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "10" 9
+%%Page: "9" 9
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(9) 303.5 41.28 T
+0 11 Q
+0.18 (Negated CEs are disquali\336cation \336lters. The LEAPS interpretation of negation is depicted in Figure 9. An) 72 712.67 P
+0.16 (element) 72 699.67 P
+2 F
+0.16 (e) 109.69 699.67 P
+0 F
+0.16 ( is created at time t) 114.57 699.67 P
+2 7 Q
+0.1 (0) 198.66 697.42 P
+0 11 Q
+0.16 ( and seeds an n-tuple by advancing a composite cursor at times t) 202.15 699.67 P
+2 7 Q
+0.1 (1) 486.6 697.42 P
+0 11 Q
+0.16 ( ... t) 490.09 699.67 P
+2 7 Q
+0.1 (4) 507.2 697.42 P
+0 11 Q
+0.16 (. Let P) 510.69 699.67 P
+0.05 (be the predicate of a negated CE and) 72 686.67 P
+2 F
+0.05 (t) 236.52 686.67 P
+0 F
+0.05 ( be the time of a composite cursor advancement. LEAPS determines) 239.58 686.67 P
+(if P is true at time) 72 673.67 T
+2 F
+(t) 153.18 673.67 T
+0 F
+( or at any time since) 156.23 673.67 T
+2 F
+(e) 247.77 673.67 T
+0 F
+( has been created.) 252.65 673.67 T
+-0.14 (This interpretation has two signi\336cant consequences. First, LEAPS must maintain a history of all container) 72 567.17 P
+-0.26 (elements so that time can be \322rolled back\323 to evaluate P) 72 554.17 P
+-0.26 (. This is realized by creating a) 313.49 554.17 P
+2 F
+-0.26 (shadow container) 446.53 554.17 P
+0 F
+-0.26 ( for) 524.7 554.17 P
+0.62 (each container to be is a repository of the versions of elements that have since been modi\336ed or deleted.) 72 541.17 P
+0.48 (Because shadow elements are tagged with the timestamp of their removal from the primary \050nonshadow\051) 72 528.17 P
+0.09 (container) 72 515.17 P
+0.09 (, time travel is possible. Shadow containers are a major source of complexity in LEAPS. Second,) 112.44 515.17 P
+0.03 (because predicate P may be valid at some time t does not mean that P is valid at later times. Consequently) 72 502.17 P
+0.03 (,) 537.25 502.17 P
+1.36 (predicate P must be used to \336lter elements both in the) 72 489.17 P
+3 10 Q
+2.96 (where) 325.25 489.17 P
+0 11 Q
+1.36 ( clause of a composite cursor and in the) 355.23 489.17 P
+3 10 Q
+-0.51 (valid) 72 476.17 P
+0 11 Q
+-0.23 ( clause as well. Figure 10a shows a rule with negation and Figure 10b shows one of its P2 composite) 101.98 476.17 P
+0.13 (cursor counterparts \050i.e., the one seeding in position) 72 463.17 P
+3 10 Q
+0.29 (a) 303.43 463.17 P
+0 11 Q
+0.13 (\051. Note that) 309.43 463.17 P
+3 10 Q
+0.29 (N5_4\050..\051) 362.31 463.17 P
+0 11 Q
+0.13 ( is a boolean function \050gener-) 410.28 463.17 P
+(ated by RL\051 that expresses the \336lter of the negated CE.) 72 450.17 T
+0 9 Q
+(8) 312.74 454.57 T
+72 126 540 146 C
+72 134 204 134 2 L
+0.25 H
+2 Z
+0 X
+0 K
+N
+0 0 612 792 C
+0 10 Q
+0 X
+0 K
+0.63 (8.  Negated CE \336lters, like) 72 119.33 P
+3 F
+1.52 (N5_4\050..\051) 184.61 119.33 P
+0 F
+0.63 ( have a simple realization in P2. The \336lter is \0501\051 to test the container of the) 232.59 119.33 P
+-0.23 (negated CE for any element that satis\336es predicate P of the negated CE, and \0502\051 to examine the corresponding shadow) 72 107.33 P
+0.88 (container if any element satis\336es P and whose timestamp is greater than the dominant timestamp. If quali\336ed ele-) 72 95.33 P
+0.29 (ments are found in either container) 72 83.33 P
+0.29 (,) 212.66 83.33 P
+3 F
+0.69 (N5_4\050..\051) 217.95 83.33 P
+0 F
+0.29 ( returns false. Both quali\336cations can be easily expressed using cur-) 265.92 83.33 P
+(sors with the obvious selection predicates over the container and shadow container) 72 71.33 T
+(.) 402.04 71.33 T
+72 63 540 720 C
+81 588.5 531 670 C
+432.7 650.72 437.89 647.72 432.7 644.72 432.7 647.72 4 Y
+0 X
+0 K
+V
+153.73 647.72 432.7 647.72 2 L
+1 H
+2 Z
+N
+206.59 656.15 206.59 639.3 2 L
+N
+160.33 656.15 160.33 639.3 2 L
+N
+299.11 656.15 299.11 639.3 2 L
+N
+338.76 656.15 338.76 639.3 2 L
+N
+398.24 656.15 398.24 639.3 2 L
+N
+1 8 Q
+(time) 431.28 655.16 T
+(object e created) 130.5 609.28 T
+146.44 629.87 157.5 634.53 150.59 624.72 148.51 627.3 4 Y
+10 X
+V
+135 616.53 148.52 627.3 2 L
+0.5 H
+N
+0 X
+(CC advanced) 260.09 610.85 T
+223.41 628.79 213.2 635.09 225.2 635.16 224.3 631.97 4 Y
+10 X
+V
+259.46 622.45 224.31 631.97 2 L
+N
+307.01 626.06 299.11 635.09 310.6 631.62 308.8 628.84 4 Y
+V
+318.94 622.45 308.81 628.84 2 L
+N
+321.52 629.53 332.15 635.09 326.08 624.74 323.8 627.13 4 Y
+V
+318.94 622.45 323.8 627.13 2 L
+N
+379.69 636.35 391.62 635.09 380.83 629.83 380.26 633.09 4 Y
+V
+318.94 622.45 380.27 633.09 2 L
+N
+0 X
+(t) 164.84 638.7 T
+2 7 Q
+(0) 167.51 636.45 T
+1 8 Q
+(t) 211.5 639.22 T
+2 7 Q
+(1) 214.16 636.97 T
+1 8 Q
+(t) 301.5 640.03 T
+2 7 Q
+(2) 304.16 637.78 T
+1 8 Q
+(t) 342 640.03 T
+2 7 Q
+(3) 344.66 637.78 T
+1 8 Q
+(t) 403.34 638.7 T
+2 7 Q
+(4) 406.01 636.45 T
+5 10 Q
+(Figure 9. Interpretation of Negation) 214.01 592.72 T
+72 63 540 720 C
+0 0 612 792 C
+68.08 158.5 543.92 446.5 C
+306.58 181 536.08 437.5 R
+7 X
+0 K
+V
+3 8 Q
+0 X
+(#def) 306.58 432.17 T
+(ine query5) 325.77 432.17 T
+(\322$a.value == \325detect_junctions\325 &&) 344.95 422.17 T
+(         $b.joined == \325false\325 &&) 306.58 412.17 T
+($c.p1 == $b.p1 &&) 349.75 402.17 T
+($c.p2 != $b.p2 &&) 349.75 392.17 T
+( $c.joined == \325false\325 &&) 344.95 382.17 T
+(         N5_4\050&$b,&$c\051\323) 306.58 372.17 T
+(#def) 306.58 350.17 T
+(ine temporal_query5) 325.77 350.17 T
+(\322$a._ts <= dominant_timestamp &&) 344.95 340.17 T
+($b._ts <= dominant_timestamp &&) 349.75 330.17 T
+($c._ts <= dominant_timestamp\323) 349.75 320.17 T
+(#def) 306.58 298.17 T
+(ine valid_query5) 325.77 298.17 T
+(\322!is_deleted\050$a\051 &&) 349.75 288.17 T
+(!is_deleted\050$b\051 &&) 354.55 278.17 T
+(!is_deleted\050$c\051 &&) 354.55 268.17 T
+(N5_4\050&$b,&$c\051\323) 354.55 258.17 T
+(typedef compcurs < a cont_stage, b cont_edge,) 306.58 236.17 T
+(c cont_edge >) 392.93 226.17 T
+(   given < a >) 306.58 216.17 T
+(   where query5 && temporal_query5) 306.58 206.17 T
+( valid valid_query5) 316.17 196.17 T
+(curs5_a;) 320.97 186.17 T
+81.58 361 297.58 437.5 R
+7 X
+V
+0 X
+(\050p rule5) 81.58 432.17 T
+(\050stage ^value detect_junctions \051) 91.17 422.17 T
+(  \050edge ^p1 <bp> ^p2 <p2>) 81.58 412.17 T
+(^joined  false \051) 206.31 412.17 T
+(  \050edge ^p1  <bp> ^p2 <p3> ^p2 <> <p2>) 81.58 402.17 T
+(       ^joined false \051) 81.58 392.17 T
+(   -\050edge ^p1 <bp> ^p2 <> <p2> ^p2 <> <p3> \051) 81.58 382.17 T
+0 F
+(    -->) 81.58 372.17 T
+5 10 Q
+(Figure 10a-b. Rule T) 127.38 165.19 T
+(ranslation Step 5: Placement of Negated Predicate Filters) 218.66 165.19 T
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "9" 8
+%%Page: "8" 8
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(8) 303.5 41.28 T
+0 11 Q
+0.09 (elements of the last n-tuple it produced could have been modi\336ed or deleted. Consequently) 72 389.69 P
+0.09 (, advancements) 472.18 389.69 P
+0.74 (of composite cursors must be validated. This is accomplished by adding a valid predicate to each cursor) 72 376.69 P
+0.71 (declaration. Figure 8a shows a cursor de\336nition produced in Step 3; Figure 8b shows the addition of the) 72 363.69 P
+(valid predicates.) 72 350.7 T
+0 9 Q
+(7) 144 355.09 T
+72 189 540 209 C
+72 197 204 197 2 L
+0.25 H
+2 Z
+0 X
+0 K
+N
+0 0 612 792 C
+0 10 Q
+0 X
+0 K
+0.05 (6.  Things are actually a bit more complicated. In the case where a container C is being joined with itself, we want to) 72 182.33 P
+0.3 (eliminate pairs of the same object \050c,c\051 which could be generated more than once. T) 72 170.33 P
+0.3 (o avoid such duplication, times-) 410.81 170.33 P
+0.4 (tamp quali\336cations on containers \322to the left\323 of the container of the seeding dominant object to have timestamps) 72 158.33 P
+6 F
+0.4 (\243) 534.51 158.33 P
+0 F
+-0.14 (the timestamp of the DO and quali\336cations on containers \322to the right\323 of the seeding container to be < the timestamp) 72 146.33 P
+0.42 (of the DO [Bra93b]. The notion of \322left\323 and \322right\323 is determined by the order in which containers are listed to be) 72 134.33 P
+(joined. Note that LEAPS) 72 122.33 T
+2 F
+(did) 174.44 122.33 T
+0 F
+( generate multiple tuples as it did not enforce the ideas outlined in this footnote.) 187.22 122.33 T
+1.13 (7.  T) 72 107.33 P
+1.13 (echnically) 92.17 107.33 P
+1.13 (, cursors are not popped of) 132.6 107.33 P
+1.13 (f the stack; pointers to cursors are overwritten. A stack item contains a) 244.66 107.33 P
+0.75 (pointer to an element, the identi\336er of the container to which the element belongs, a pointer to a composite cursor) 72 95.33 P
+-0.25 (whose execution has been suspended, and an identi\336er of the rule to which the composite cursor belongs. When a cur-) 72 83.33 P
+(sor is popped, the cursor pointer is set to null. A stack item is popped only when all rules have been seeded.) 72 71.33 T
+72 63 540 720 C
+72 523.98 540 720 C
+81.58 586 297.58 707.5 R
+7 X
+0 K
+V
+3 8 Q
+0 X
+(typedef compcurs < a .., b .., c .., d .. >) 81.58 702.17 T
+(where query14) 119.96 692.17 T
+(curs14;) 191.91 692.17 T
+306.58 550 531.58 707.5 R
+7 X
+V
+0 X
+(typedef compcurs < a .., b .., c .., d .. >) 306.58 702.17 T
+(given < a >) 344.95 692.17 T
+(where query14) 344.95 682.17 T
+(curs14_a;) 416.92 682.17 T
+(typedef compcurs < a .., b .., c .., d .. >) 306.58 660.17 T
+(given < b >) 344.95 650.17 T
+(where query14) 344.95 640.17 T
+(curs14_b;) 416.92 640.17 T
+(typedef compcurs < a .., b .., c .., d .. >) 306.58 618.17 T
+(given < c >) 344.95 608.17 T
+(where query14) 344.95 598.17 T
+(curs14_c;) 416.92 598.17 T
+(typedef compcurs < a .., b .., c .., d) 306.58 576.17 T
+3 10 Q
+(.. >) 493.67 576.17 T
+3 8 Q
+(given < d >) 344.95 566.17 T
+(where query14) 344.95 556.17 T
+(curs14_d;) 416.92 556.17 T
+5 10 Q
+(Figure 6a-b. Rule T) 142.26 533.71 T
+(ranslation Step 2: Replication of Composite Cursors by Seeding) 227.99 533.71 T
+72 63 540 720 C
+0 0 612 792 C
+72 63 540 720 C
+72 397.03 540 523.98 C
+81.58 433.98 297.58 510.48 R
+7 X
+0 K
+V
+3 8 Q
+0 X
+(typedef compcurs < a .., b .., c .., d .. >) 81.58 505.15 T
+(given < a >) 119.96 495.15 T
+(where query14) 119.96 485.15 T
+(curs14_a;) 191.91 485.15 T
+306.58 417.48 531.58 510.48 R
+7 X
+V
+0 X
+(#def) 306.58 505.15 T
+(ine temporal_query14) 325.77 505.15 T
+(\322$b._ts <= dominant_timestamp &&) 340.16 495.15 T
+($c._ts <= dominant_timestamp &&) 344.95 485.15 T
+( $d._ts <= dominant_timestamp\323) 340.16 475.15 T
+(typedef compcurs < a .., b .., c .., d .. >) 306.58 453.15 T
+(given < a >) 344.95 443.15 T
+(where query14 \322&&\323 temporal_query14) 344.95 433.15 T
+(curs14_a;) 344.95 423.15 T
+5 10 Q
+(Figure 7a-b. Rule T) 138.71 406.69 T
+(ranslation Step 3: Addition of T) 224.43 406.69 T
+(emporal Predicates) 359.98 406.69 T
+72 63 540 720 C
+0 0 612 792 C
+72 63 540 720 C
+72 214.54 540 347.03 C
+81.58 259.53 297.58 336.03 R
+7 X
+0 K
+V
+3 8 Q
+0 X
+(typedef compcurs < a .., b .., c .., d .. >) 81.58 330.7 T
+(given < a >) 119.96 320.7 T
+(where query1 \322&&\323 temporal_query14) 119.96 310.7 T
+(curs14_a;) 119.96 300.7 T
+306.58 232.53 531.58 336.03 R
+7 X
+V
+0 X
+(#def) 306.58 330.7 T
+(ine valid_query \322!is_deleted\050$a\051 &&) 325.77 330.7 T
+(!is_deleted\050$b\051 &&) 402.52 320.7 T
+(!is_deleted\050$c\051 &&) 402.52 310.7 T
+(!is_deleted\050$d\051\323) 402.52 300.7 T
+(typedef compcurs < a .., b .., c .., d .. >) 306.58 278.7 T
+(given < a >) 344.95 268.7 T
+(where query14 \322&&\323 temporal_query14) 344.95 258.7 T
+(valid valid_query14) 344.95 248.7 T
+(curs14_a;) 344.95 238.7 T
+5 10 Q
+(Figure 8a-b. Rule T) 137.58 220.72 T
+(ranslation Step 4: Addition of V) 223.3 220.72 T
+(alidation Predicates) 359.78 220.72 T
+72 63 540 720 C
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "8" 7
+%%Page: "7" 7
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(7) 303.5 41.28 T
+0 11 Q
+1.03 (The seeding of rule selection predicates by nondeleted elements has its obvious meaning. However) 72 712.67 P
+1.03 (, the) 520.05 712.67 P
+0.05 (seeding of rule predicates by deleted elements is not intuitively obvious, and its meaning is closely associ-) 72 699.67 P
+-0.09 (ated with the semantics of negation. Associated with every container C is a shadow container S. Every ele-) 72 686.67 P
+1.04 (ment that is deleted from C is inserted in S. The timestamp of an element e in C indicates when e was) 72 673.67 P
+0.77 (inserted; the timestamp of an element s in S indicates when s was deleted. Elements in S never under) 72 660.67 P
+0.77 (go) 529.01 660.67 P
+0.78 (changes; they simply de\336ne the legacy of elements in C that previously existed. The purpose of shadow) 72 647.67 P
+0.47 (containers is to support time travel. The evaluation of negated CEs involves evaluating its predicate P on) 72 634.67 P
+-0.13 (its container C over a period of time. That is, LEAPS asks questions like: is predicate P true from time t) 72 621.67 P
+2 7 Q
+-0.08 (0) 525.34 619.42 P
+0 11 Q
+-0.13 ( to) 528.83 621.67 P
+(time t) 72 608.67 T
+2 7 Q
+(1) 97.33 606.42 T
+0 11 Q
+(? The reason for this will become evident once the evaluation of negation is explained more fully) 100.83 608.67 T
+(.) 527.28 608.67 T
+(In the following sections, we will give more technical precision to the above description.) 72 583.67 T
+1 12 Q
+(3.3  Rule T) 72 552 T
+(ranslation) 131.33 552 T
+0 11 Q
+0.07 (The dif) 72 526.67 P
+0.07 (\336cult part of converting OPS5 rules into P2 code is the translation of rule predicates to P2 compos-) 103.91 526.67 P
+0.28 (ite cursor declarations; translating the actions of rules is straightforward. There are six steps in rule predi-) 72 513.67 P
+0.44 (cate translation. The \336rst is to convert quali\336cations of positive CEs to P2 predicates. Figure 5 shows the) 72 500.67 P
+1.37 (correspondence of a nonnegated rule predicate \050Fig. 5a\051 with a composite cursor declaration \050Fig. 5b\051.) 72 487.67 P
+0.03 (Note that each CE of the rule corresponds directly to a container that is to be joined. Also note that the use) 72 474.67 P
+(of) 72 461.67 T
+3 10 Q
+(compcurs) 83.9 461.67 T
+0 11 Q
+( aliases permit containers to be joined with themselves in an unambiguous way) 131.87 461.67 T
+(.) 478.41 461.67 T
+0.52 (Recall that a central concept of rule processing in LEAPS is the seeding of rules by dominant objects. In) 72 290.14 P
+0.39 (order to support seeding, multiple copies of an OPS5 rule are spawned, one copy of each dif) 72 277.14 P
+0.39 (ferent condi-) 483.18 277.14 P
+-0.09 (tion element that is being seeded. The second step in the rule translation process is to replicate a composite) 72 264.14 P
+-0.06 (cursor de\336nition, one copy for each possible seed position. Figure 6a shows the format of a cursor declara-) 72 251.14 P
+1.07 (tion produced in Step 1; Figure 6b shows the replication of this rule with dif) 72 238.14 P
+1.07 (ferent seeds. Note that the) 421.29 238.14 P
+(ef) 72 225.14 T
+(fect of this rewrite is to translate an n-way join to a more ef) 80.34 225.14 T
+(\336cient \050n-1\051-way join.) 341.01 225.14 T
+1.22 (OPS5 semantics imposes a fairness criterion that no n-tuple can \336re a rule more than once. Fairness is) 72 200.14 P
+-0.05 (achieved in LEAPS through the use of timestamps and temporal quali\336cations. Every element has a times-) 72 187.14 P
+1.22 (tamp that indicates when it was last updated \050i.e., inserted or deleted\051. OPS5 semantics are realized by) 72 174.14 P
+1.08 (requiring all elements of an n-tuple to have their timestamps less than or equal to the timestamp of the) 72 161.14 P
+0.54 (dominant object that seeded the n-tuple.) 72 148.14 P
+0 9 Q
+0.44 (6) 250.44 152.54 P
+0 11 Q
+0.54 ( Figure 7a shows the format of a cursor declaration produced in) 254.93 148.14 P
+0.43 (Step 2; Figure 7b shows the addition of temporal predicates to the) 72 135.14 P
+3 10 Q
+0.93 (where) 369.44 135.14 P
+0 11 Q
+0.43 ( clause of the cursor) 399.42 135.14 P
+0.43 (.) 488.99 135.14 P
+3 10 Q
+0.93 (_ts) 494.91 135.14 P
+0 11 Q
+0.43 ( is the) 512.9 135.14 P
+(name of the timestamp \336eld for every element.) 72 122.14 T
+0.42 (Once a rule is \336red, the composite cursor is placed on a stack, thereby suspending its execution. At some) 72 97.14 P
+-0.15 (later time, when the element that seeded the composite cursor again becomes dominant, the composite cur-) 72 84.14 P
+0.08 (sor is popped and advanced to the next n-tuple. During the time the cursor is on the stack, any or all of the) 72 71.14 P
+72 63 540 720 C
+72 311.47 540 458 C
+81.58 329 297.58 445 R
+7 X
+0 K
+V
+3 8 Q
+0 X
+(\050p rule14) 81.58 439.67 T
+(\050stage ^value labeling\051) 95.97 429.67 T
+(\050junction ^type tee ^base_point <bp>) 95.97 419.67 T
+(^p2 <p1> ^p2 <p2> ^p3 <p3>\051) 129.55 409.67 T
+(\050edge ^p1 <bp> ^p2 <p1>\051) 95.97 399.67 T
+(\050edge ^p1 <bp> ^p2 <p3> ^label nil\051) 95.97 389.67 T
+(-->) 95.97 379.67 T
+306.58 330 531.58 445 R
+7 X
+V
+0 X
+(#def) 306.58 439.67 T
+(ine query14 \322$a.value == \324labeling\325 &&) 325.77 439.67 T
+($b.type == \324tee\325 &&) 383.33 429.67 T
+($c.p1 == $b.base_point &&) 383.33 419.67 T
+($c.p2 == $b.p1 &&) 383.33 409.67 T
+($d.p1 == $b.base_point &&) 383.33 399.67 T
+($d.p2 == $b.p3 &&) 383.33 389.67 T
+($d.label == \324nil\325\323) 383.33 379.67 T
+(typedef compcurs < a stage, b cont_junction,) 306.58 357.67 T
+( c cont_edge, d cont_edge >) 392.93 347.67 T
+(where query14 curs14;) 344.95 337.67 T
+5 10 Q
+(Figure 5a-b. Rule T) 141.08 318.19 T
+(ranslation Step 1: Conversion of Selection Predicates) 226.8 318.19 T
+72 63 540 720 C
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "7" 6
+%%Page: "6" 6
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(6) 303.5 41.28 T
+0 11 Q
+1.6 (of variable) 72 712.67 P
+3 10 Q
+3.48 (n1) 125.22 712.67 P
+0 11 Q
+1.6 ( and whose) 137.22 712.67 P
+3 10 Q
+3.48 (seat) 194.18 712.67 P
+0 11 Q
+1.6 ( \336eld matches the value of) 218.16 712.67 P
+3 10 Q
+3.48 (s) 346.13 712.67 P
+0 11 Q
+1.6 (. In general, there can be any number of) 352.12 712.67 P
+(negated CEs in a rule; however) 72 699.67 T
+(, there must at least one positive CE.) 209.16 699.67 T
+-0.17 (Clauses that follow the arrow) 72 674.67 P
+3 10 Q
+-0.37 (-->) 203.27 674.67 P
+0 11 Q
+-0.17 ( are the actions of the rule. Once an n-tuple has been quali\336ed, it \336res the) 221.26 674.67 P
+1.09 (actions of the rule. Actions of OPS5 rules include element creation, deletion, and modi\336cation; calls to) 72 661.67 P
+1.17 (routines external to OPS5 are possible. In the) 72 648.67 P
+3 10 Q
+2.55 (make_path) 283.03 648.67 P
+0 11 Q
+1.17 ( rule, the sole action is to insert a path tuple) 337 648.67 P
+-0.15 (whose) 72 635.67 P
+3 10 Q
+-0.33 (id) 102.67 635.67 P
+0 11 Q
+-0.15 ( \336eld equals variable) 114.66 635.67 P
+3 10 Q
+-0.33 (id) 208.04 635.67 P
+0 11 Q
+-0.15 (, whose) 220.03 635.67 P
+3 10 Q
+-0.33 (name) 256.04 635.67 P
+0 11 Q
+-0.15 ( \336eld equals variable) 280.03 635.67 P
+3 10 Q
+-0.33 (n1) 373.41 635.67 P
+0 11 Q
+-0.15 (, and whose) 385.4 635.67 P
+3 10 Q
+-0.33 (seat) 439.88 635.67 P
+0 11 Q
+-0.15 ( \336eld equals vari-) 463.86 635.67 P
+(able) 72 622.67 T
+3 10 Q
+(s) 93.05 622.67 T
+0 11 Q
+(.) 99.05 622.67 T
+1 12 Q
+(3.2  LEAPS Overview) 72 591 T
+0 11 Q
+0.23 (Forward-chaining inference engines, including LEAPS, use a match-select-action cycle. Rules that can be) 72 565.67 P
+0.09 (matched \050i.e., tuples found to satisfy their predicates\051 are determined; one n-tuple is selected and its corre-) 72 552.67 P
+0.75 (sponding rule is \336red. This cycle continues until a \336x point has been reached \050i.e., no more rules can be) 72 539.67 P
+-0.17 (\336red\051. RETE-match [For82] and TREA) 72 526.67 P
+-0.17 (T) 243.73 526.67 P
+-0.17 (-match [Mir91] algorithms are inherently slow) 249.43 526.67 P
+-0.17 (, as they materialize) 452.63 526.67 P
+0.86 (all tuples that satisfy the predicate of a rule. Materialized tuples are stored in data structures and have a) 72 513.67 P
+-0.22 (negative impact on performance as they must be updated as a result of executing rule actions. A fundamen-) 72 500.67 P
+0.38 (tal contribution of LEAPS is the lazy evaluation of tuples; i.e., tuples are materialized only when needed.) 72 487.67 P
+2.23 (This approach drastically reduces both the space) 72 474.67 P
+2 F
+2.23 (and) 303.35 474.67 P
+0 F
+2.23 ( time complexity of forward-chaining inference) 319.83 474.67 P
+(engines and provides LEAPS with its phenomenal increase in rule execution ef) 72 461.67 T
+(\336ciency) 419.34 461.67 T
+(.) 453.41 461.67 T
+0.66 (LEAPS assigns a timestamp to every element to indicate when the element was inserted or deleted. \050For) 72 436.67 P
+0.48 (reasons that we will explain later) 72 423.67 P
+0.48 (, elements are not updated. Instead, the old version is deleted and a new) 218.89 423.67 P
+0.88 (version is inserted\051. Whenever an element is inserted or deleted, a handle to that element is placed on a) 72 410.67 P
+0.52 (stack. In general, the stack maintains a timestamp ordering of elements, where the most recently updated) 72 397.67 P
+(element is at the top of the stack and the least recently updated element is at the bottom.) 72 384.67 T
+0 9 Q
+(4) 458.3 389.07 T
+0 11 Q
+0.06 (During a rule execution cycle, the top element of the stack is selected. This element is called the) 72 359.67 P
+2 F
+0.06 (dominant) 498.49 359.67 P
+0.2 (object) 72 346.67 P
+0 F
+0.2 ( \050DO\051. The DO is used to seed the selection predicates of all rules. Rules are considered for seeding) 98.85 346.67 P
+0.93 (in a particular order) 72 333.67 P
+0.93 (. Rules are sorted by their number of positive condition elements; the more positive) 161.13 333.67 P
+0.08 (CEs, the sooner the rule will be seeded. Many rules have the same number of positive CEs; these rules are) 72 320.67 P
+0.32 (seeded in order in which they were de\336ned in the rule set. As soon as it is determined that the DO cannot) 72 307.67 P
+0.09 (seed a n-tuple for a given rule, the next rule is examined.) 72 294.67 P
+0 9 Q
+0.08 (5) 322.92 299.07 P
+0 11 Q
+0.09 ( When all rules have been considered, the DO is) 327.41 294.67 P
+(popped from the stack.) 72 281.67 T
+0.81 (When a DO-seeded n-tuple is found, the corresponding rule is \336red. The actions of the rule may invoke) 72 256.67 P
+0.62 (element insertions, deletions, and updates, which in turn will cause more elements to be pushed onto the) 72 243.67 P
+1.43 (stack. After a rule is \336red, the selection of the next dominant object takes place. This execution cycle) 72 230.67 P
+(repeats; execution terminates when a \336x-point is reached. This occurs when the stack is empty) 72 217.67 T
+(.) 485.94 217.67 T
+-0 (Note that an element may be pushed onto the stack twice: once when it is inserted and a second time when) 72 192.67 P
+0.46 (it is deleted. It is possible that a deleted element may be pushed onto the stack prior to the popping of its) 72 179.67 P
+0.57 (inserted element. That is, the stack may contain zero, one, or two references to any given element at any) 72 166.67 P
+(point in time.) 72 153.67 T
+72 129 540 149 C
+72 137 204 137 2 L
+0.25 H
+2 Z
+0 X
+0 K
+N
+0 0 612 792 C
+0 10 Q
+0 X
+0 K
+1.37 (4.  There is an exception: an important LEAPS optimization violates the timestamp ordering. This optimization,) 72 122.33 P
+(called shadow optimization, is discussed in Section 3.5.) 72 110.33 T
+-0.24 (5.  Actually) 72 95.33 P
+-0.24 (, DOs cannot be used to seed all rules in general. If a DO is from container C and C is not referenced in the) 117.78 95.33 P
+0.34 (selection predicate of rule R, then the DO cannot seed R. Thus, the set of rules that a DO can seed can be pruned at) 72 83.33 P
+(compile time to only those that actually reference the DO\325) 72 71.33 T
+(s container) 304.33 71.33 T
+(.) 347.36 71.33 T
+FMENDPAGE
+%%EndPage: "6" 5
+%%Page: "5" 5
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(5) 303.5 41.28 T
+0 11 Q
+0.41 (Figure 4 shows a relationship between the LEAPS compiler and P2. T) 72 600.68 P
+0.41 (o reengineer LEAPS required us to) 383.89 600.68 P
+0.55 (translate OPS5 rule sets into a P2 program; this translator was called RL \050) 72 587.68 P
+2 F
+0.55 (R) 403.51 587.68 P
+0 F
+0.55 (eengineered) 410.22 587.68 P
+2 F
+0.55 (L) 466.59 587.68 P
+0 F
+0.55 (eaps\051. The RL-) 472.7 587.68 P
+1.5 (generated P2 program would then be translated into a C program by the P2 compiler) 72 574.68 P
+1.5 (, thus ef) 463.66 574.68 P
+1.5 (fectively) 501.56 574.68 P
+1.19 (accomplishing in two translation steps what the LEAPS compiler does in one. All of the LEAPS algo-) 72 561.68 P
+0.99 (rithms are embedded in the generated P2 program. In this section, we show that the LEAPS algorithms) 72 548.68 P
+(have an elegant speci\336cation in P2. W) 72 535.68 T
+(e assume that readers are familiar with the OPS5 language.) 239.24 535.68 T
+1 12 Q
+(3.1) 72 504.01 T
+3 F
+(literalize) 95.34 504.01 T
+1 F
+( Statements and OPS5 T) 167.3 504.01 T
+(erminology) 305.04 504.01 T
+0 11 Q
+(OPS5 rule sets begin with \322container\323 declarations called) 72 478.68 T
+3 10 Q
+(literalize) 327.08 478.68 T
+0 11 Q
+( statements:) 387.05 478.68 T
+3 10 Q
+(\050literalize guest name sex hobby\051) 100.8 460.35 T
+0 11 Q
+1.81 (The above statement declares a container) 72 435.68 P
+3 10 Q
+3.95 (guest) 266.53 435.68 P
+0 11 Q
+1.81 ( whose elements have \336elds) 296.51 435.68 P
+3 10 Q
+3.95 (name) 430.98 435.68 P
+0 11 Q
+1.81 (,) 454.96 435.68 P
+3 10 Q
+3.95 (sex) 462.27 435.68 P
+0 11 Q
+1.81 (, and) 480.26 435.68 P
+3 10 Q
+3.95 (hobby) 507.98 435.68 P
+0 11 Q
+1.81 (.) 537.25 435.68 P
+-0.16 (LEAPS infers the data types of element \336elds; we chose to augment) 72 422.68 P
+3 10 Q
+-0.35 (literalize) 371.56 422.68 P
+0 11 Q
+-0.16 ( statements by supplying) 431.53 422.68 P
+0.28 (the data type for each \336eld. Although this is a minor dif) 72 409.68 P
+0.28 (ference between LEAPS and RL, we note that the) 319 409.68 P
+(next generation of LEAPS \050called VENUS [Bro94]\051, like RL, uses explicit typing of \336elds.) 72 396.68 T
+(An OPS5 rule set is a sequence of rules/productions of the form:) 72 371.68 T
+3 10 Q
+(\050p make_path) 100.8 353.35 T
+(        \050context ^value make_path\051) 100.8 341.35 T
+(        \050seating ^id <id> ^pid <pid> ^path_done no\051) 100.8 329.35 T
+(        \050path ^id <pid> ^name <n1> ^seat <s>\051) 100.8 317.35 T
+(        -\050path ^id <id> ^name <n1>\051) 100.8 305.35 T
+(        -->) 100.8 293.35 T
+(        \050make path ^id <id> ^name <n1> ^seat <s>\051\051) 100.8 281.35 T
+0 11 Q
+0.8 (The name of the above production is) 72 256.68 P
+3 10 Q
+1.74 (make_path) 241.44 256.68 P
+0 11 Q
+0.8 (. Each of the clauses prior to the arrow) 295.41 256.68 P
+3 10 Q
+1.74 (-->) 475.27 256.68 P
+0 11 Q
+0.8 ( are called) 493.26 256.68 P
+2 F
+0.76 (condition elements) 72 243.68 P
+0 F
+0.76 ( \050CEs\051. The \336rst three are) 155.45 243.68 P
+2 F
+0.76 (positive) 274.4 243.68 P
+0 F
+0.76 (; the last \050with the minus sign\051 is) 308.58 243.68 P
+2 F
+0.76 (negative) 461.12 243.68 P
+0 F
+0.76 (. Positive) 498.34 243.68 P
+-0.15 (condition elements serve two purposes: 1\051 to express quali\336cations on containers and 2\051 to declare variable) 72 230.68 P
+-0.08 (bindings. For example, the \336rst CE of the) 72 217.68 P
+3 10 Q
+-0.17 (make_path) 256.32 217.68 P
+0 11 Q
+-0.08 ( rule quali\336es elements from the) 310.29 217.68 P
+3 10 Q
+-0.17 (context) 454.47 217.68 P
+0 11 Q
+-0.08 ( container) 496.45 217.68 P
+0.79 (to those whose) 72 204.68 P
+3 10 Q
+1.73 (value) 142.43 204.68 P
+0 11 Q
+0.79 ( \336eld is \324) 172.41 204.68 P
+3 10 Q
+1.73 (make_path) 213.56 204.68 P
+0 11 Q
+0.79 (\325. The second CE quali\336es elements from the) 267.53 204.68 P
+3 10 Q
+1.73 (seating) 474.96 204.68 P
+0 11 Q
+0.79 ( con-) 516.94 204.68 P
+-0.19 (tainer to those whose) 72 191.68 P
+3 10 Q
+-0.42 (path_done) 167.05 191.68 P
+0 11 Q
+-0.19 ( \336eld is \324) 221.02 191.68 P
+3 10 Q
+-0.42 (no) 259.21 191.68 P
+0 11 Q
+-0.19 (\325; in addition, it sets variable) 271.2 191.68 P
+3 10 Q
+-0.42 (id) 398.53 191.68 P
+0 11 Q
+-0.19 ( to the value of the) 410.53 191.68 P
+3 10 Q
+-0.42 (id) 494.21 191.68 P
+0 11 Q
+-0.19 ( \336eld of) 506.2 191.68 P
+0.52 (the quali\336ed element and sets variable) 72 178.68 P
+3 10 Q
+1.14 (pid) 246 178.68 P
+0 11 Q
+0.52 ( to the value of the) 263.99 178.68 P
+3 10 Q
+1.14 (pid) 351.95 178.68 P
+0 11 Q
+0.52 ( \336eld. The third CE quali\336es elements) 369.94 178.68 P
+0.72 (from the) 72 165.68 P
+3 10 Q
+1.58 (path) 113.72 165.68 P
+0 11 Q
+0.72 ( container whose) 137.71 165.68 P
+3 10 Q
+1.58 (id) 217.06 165.68 P
+0 11 Q
+0.72 ( \336eld equals the value of the variable) 229.06 165.68 P
+3 10 Q
+1.58 (pid) 399.6 165.68 P
+0 11 Q
+0.72 (; in addition, variable) 417.59 165.68 P
+3 10 Q
+1.58 (n1) 517.21 165.68 P
+0 11 Q
+0.72 ( is) 529.2 165.68 P
+0.11 (assigned the value of the) 72 152.68 P
+3 10 Q
+0.25 (name) 183.94 152.68 P
+0 11 Q
+0.11 ( \336eld and variable) 207.93 152.68 P
+3 10 Q
+0.25 (s) 290.16 152.68 P
+0 11 Q
+0.11 ( is assigned the value of the) 296.15 152.68 P
+3 10 Q
+0.25 (seat) 421.14 152.68 P
+0 11 Q
+0.11 ( \336eld. In all, the posi-) 445.13 152.68 P
+0.34 (tive CEs of this rule identify 3-tuples \050) 72 139.68 P
+3 10 Q
+0.75 (context) 243.78 139.68 P
+0 11 Q
+0.34 ( element,) 285.76 139.68 P
+3 10 Q
+0.75 (seating) 329.47 139.68 P
+0 11 Q
+0.34 ( element,) 371.45 139.68 P
+3 10 Q
+0.75 (path) 415.16 139.68 P
+0 11 Q
+0.34 ( element\051 that satisfy a) 439.15 139.68 P
+(simple selection predicate.) 72 126.68 T
+-0.03 (Negated CEs are disquali\336cation \336lters. The negated CE above disquali\336es selected 3-tuples if there exists) 72 101.68 P
+0.27 (a) 72 88.68 P
+3 10 Q
+0.59 (path) 79.9 88.68 P
+0 11 Q
+0.27 ( element whose) 103.88 88.68 P
+3 10 Q
+0.59 (id) 175.79 88.68 P
+0 11 Q
+0.27 ( \336eld matches the value of variable) 187.78 88.68 P
+3 10 Q
+0.59 (id) 346.2 88.68 P
+0 11 Q
+0.27 ( and whose) 358.2 88.68 P
+3 10 Q
+0.59 (name) 411.18 88.68 P
+0 11 Q
+0.27 ( \336eld matches the value) 435.17 88.68 P
+154.12 608.01 457.88 720 C
+5 9 Q
+0 X
+0 K
+(ops5) 190.12 671.45 T
+(rule) 190.12 662.45 T
+(set) 190.12 653.45 T
+(LEAPS Compiler) 271.19 707.45 T
+(C) 408.12 668.68 T
+(\336le) 408.12 659.68 T
+(RL) 235.12 669.39 T
+(translator) 235.12 660.39 T
+(P2) 298.12 668.68 T
+(\336le) 298.12 659.68 T
+(P2) 334.14 668.92 T
+(Compiler) 334.14 659.92 T
+185.62 651.24 212.62 682.74 R
+0.5 H
+2 Z
+N
+293.62 655.5 311.62 682.5 R
+N
+401.62 651 424.12 682.5 R
+N
+223.12 637.74 383.62 696.24 R
+8 X
+N
+230.62 655.74 275.62 682.74 R
+0 X
+N
+329.62 655.74 374.62 682.74 R
+N
+225.42 672.24 230.62 669.24 225.42 666.24 225.42 669.24 4 Y
+V
+212.62 669.24 225.42 669.24 2 L
+N
+288.42 672 293.62 669 288.42 666 288.42 669 4 Y
+V
+280.12 669 288.42 669 2 L
+N
+324.42 672 329.62 669 324.42 666 324.42 669 4 Y
+V
+311.62 669 324.42 669 2 L
+N
+395.7 671.81 400.86 668.75 395.63 665.81 395.67 668.81 4 Y
+V
+379.12 669 395.67 668.81 2 L
+N
+(Figure 4. Relationship between LEAPS and P2) 212.62 619.5 T
+329.62 682.5 338.62 687 2 L
+N
+338.62 687 379.12 687 379.12 660 374.62 655.5 4 L
+N
+374.62 682.5 379.12 687 2 L
+N
+230.62 682.5 239.62 687 2 L
+N
+239.62 687 280.12 687 280.12 660 275.62 655.5 4 L
+N
+275.62 682.5 280.12 687 2 L
+N
+383.62 696 392.62 705 2 L
+9 X
+N
+383.62 637.5 392.62 646.5 2 L
+N
+223.12 696 231.24 705.75 2 L
+N
+231.87 705.25 392.62 705.25 392.62 646.5 3 L
+8 X
+N
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "5" 4
+%%Page: "4" 4
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(4) 303.5 41.28 T
+0 11 Q
+0.28 (P2 supports validation of n-tuples using the) 72 712.67 P
+3 F
+0.67 (valid) 267.74 712.67 P
+0 F
+0.28 ( clause of a composite cursor declaration. The follow-) 300.7 712.67 P
+3 (ing declaration and code fragment eliminates the problems of a blind retrieval of \050) 72 699.67 P
+3 F
+7.2 (department) 471.33 699.67 P
+0 F
+3 (,) 537.25 699.67 P
+3 F
+(employee) 72 686.67 T
+0 F
+(\051 tuples by returning tuples of undeleted elements:) 124.73 686.67 T
+3 10 Q
+(compcurs < d department, e employee >) 108 656.33 T
+(where \322$d.deptno == $e.deptno\323) 108 644.33 T
+(valid \322!deleted\050$d\051 && !deleted\050$e\051\323) 108 632.33 T
+(valid_composite_cursor;) 329.88 632.33 T
+(foreach\050 valid_composite_cursor \051) 108 608.33 T
+(// Skips tuples with deleted elements.) 108 596.33 T
+({) 108 584.33 T
+(delete\050 valid_composite_cursor.d \051;) 125.99 584.33 T
+(}) 347.87 584.33 T
+0 11 Q
+0.36 (Note that tuple validation is more general than merely testing for tuple deletion. P2 permits any predicate) 72 559.67 P
+0.76 (to be used for element validation. For example, the) 72 546.67 P
+3 F
+1.84 (deptno) 305.59 546.67 P
+0 F
+0.76 ( \336eld of a) 345.14 546.67 P
+3 F
+1.84 (department) 392.75 546.67 P
+0 F
+0.76 ( element might be) 458.67 546.67 P
+1.17 (updated within a) 72 533.67 P
+3 F
+2.81 (foreach) 151.5 533.67 P
+0 F
+1.17 ( loop. In this case, the) 197.64 533.67 P
+3 F
+2.81 (department) 303.54 533.67 P
+0 F
+1.17 ( element has not been deleted, but its) 369.46 533.67 P
+0.21 (modi\336cation may af) 72 520.67 P
+0.21 (fect the sequence of \050valid\051 tuples that can be produced. T) 160.71 520.67 P
+0.21 (uple validation is a general-) 417.13 520.67 P
+0.02 (purpose feature that is useful in graph traversal and garbage collection algorithms, where cursor validation) 72 507.67 P
+(is needed to ensure correct executions.) 72 494.67 T
+1 12 Q
+(2.3  T) 72 463 T
+(ype Expressions) 101.78 463 T
+0 11 Q
+0.2 (P2 programs are written in terms of cursor) 72 437.67 P
+0.2 (, composite cursor) 259.37 437.67 P
+0.2 (, and container abstractions without regard to) 340.18 437.67 P
+1.49 (how these abstractions are implemented. The P2 compiler automatically translates P2 declarations and) 72 424.67 P
+1.05 (operations into C code. In order for P2 to accomplish this, P2 users must specify an implementation of) 72 411.67 P
+0.45 (these abstractions by composing building-blocks from the P2 library) 72 398.67 P
+0.45 (. Such a composition is declared in a) 375.75 398.67 P
+3 F
+(typex) 72 385.67 T
+0 F
+( \050) 104.96 385.67 T
+2 F
+(type expr) 111.36 385.67 T
+(ession) 151.53 385.67 T
+0 F
+(\051 declaration:) 179 385.67 T
+3 10 Q
+(typex) 108 367.33 T
+({) 149.98 367.33 T
+(simple_typex) 167.97 367.33 T
+(=) 245.92 367.33 T
+(top2ds[qualify[dlist[malloc[transient]]]];) 257.92 367.33 T
+(}) 521.77 367.33 T
+3 11 Q
+0.03 (simple_typex) 72 342.67 P
+0 F
+0.01 ( is a composition of \336ve P2 components. Each component encapsulates a consistent data) 151.1 342.67 P
+0.23 (and operation re\336nement of the cursor) 72 329.67 P
+0.23 (-container abstraction and is responsible for generating the code for) 241.05 329.67 P
+1.1 (this re\336nement [Sir93]. The) 72 316.67 P
+3 F
+2.64 (top2ds) 201.21 316.67 P
+0 F
+1.1 ( layer) 240.76 316.67 P
+1.1 (, for example, translates) 266.13 316.67 P
+3 F
+2.64 (foreach) 378.55 316.67 P
+0 F
+1.1 ( statements into primitive) 424.69 316.67 P
+0.02 (cursor operations \050) 72 303.67 P
+3 F
+0.04 (reset) 154.41 303.67 P
+0 F
+0.02 (,) 187.37 303.67 P
+3 F
+0.04 (advance) 192.88 303.67 P
+0 F
+0.02 (,) 239.02 303.67 P
+3 F
+0.04 (end_of_container) 244.53 303.67 P
+0 F
+0.02 (\051;) 350 303.67 P
+3 F
+0.04 (qualify) 359.48 303.67 P
+0 F
+0.02 ( translates quali\336ed) 405.62 303.67 P
+3 F
+0.04 (advance) 493.86 303.67 P
+0 F
+-0.19 (operations into) 72 290.67 P
+3 F
+-0.46 (if) 139.98 290.67 P
+0 F
+-0.19 ( tests and unquali\336ed) 153.16 290.67 P
+3 F
+-0.46 (advance) 248.23 290.67 P
+0 F
+-0.19 ( operations;) 294.37 290.67 P
+3 F
+-0.46 (dlist) 348.3 290.67 P
+0 F
+-0.19 ( connects all elements of a container) 381.26 290.67 P
+0.65 (onto a doubly-linked list;) 72 277.67 P
+3 F
+1.56 (malloc) 188.13 277.67 P
+0 F
+0.65 ( allocates space for elements from a heap; and) 227.68 277.67 P
+3 F
+1.56 (transient) 438.84 277.67 P
+0 F
+0.65 ( allocates) 498.16 277.67 P
+-0.02 (heap space from transient memory) 72 264.67 P
+-0.02 (. P2 code generation relies on sophisticated macro expansion and partial) 223.16 264.67 P
+(evaluation techniques [Bat93].) 72 251.67 T
+0.57 (Altering a) 72 226.67 P
+3 F
+1.38 (typex) 120.14 226.67 P
+0 F
+0.57 ( declaration yields a dif) 153.1 226.67 P
+0.57 (ferent implementation of cursors and containers. This powerful) 258.32 226.67 P
+0.02 (feature greatly assists tuning and maintaining P2 programs, as) 72 213.67 P
+3 F
+0.04 (typex) 347.4 213.67 P
+0 F
+0.02 ( declarations generally account for a) 380.36 213.67 P
+(very small fraction of a P2 program.) 72 200.67 T
+1 12 Q
+(3  The LEAPS Algorithms) 72 163 T
+0 11 Q
+1.55 (As mentioned earlier) 72 137.67 P
+1.55 (, LEAPS produces the fastest executables of OPS5 rule sets, often outperforming) 166.81 137.67 P
+2.04 (OPS5 interpreters that use RETE-match or TREA) 72 124.67 P
+2.04 (T) 302.13 124.67 P
+2.04 (-match algorithms by several) 307.83 124.67 P
+2 F
+2.04 (or) 446.6 124.67 P
+2.04 (ders) 455.96 124.67 P
+0 F
+2.04 ( of magnitude) 474.88 124.67 P
+1.83 ([Bra91]. LEAPS translates OPS5 programs into C programs. Besides the expected performance gains) 72 111.67 P
+0.71 (made by compilation, LEAPS relies on special algorithms and sophisticated data structures to make rule) 72 98.67 P
+(processing ef) 72 85.67 T
+(\336cient.) 130.07 85.67 T
+FMENDPAGE
+%%EndPage: "4" 3
+%%Page: "3" 3
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(3) 303.5 41.28 T
+3 F
+(compcurs < d department, e employee > where \322$d.deptno == $e.deptno\323 c;) 108 713.33 T
+3 11 Q
+-0.45 (d) 72 688.67 P
+0 F
+-0.19 ( and) 78.59 688.67 P
+3 F
+-0.45 (e) 99.57 688.67 P
+0 F
+-0.19 ( are aliases for container names. \050As we will see in Section 3.2, aliases are useful for expressing the) 106.17 688.67 P
+-0.26 (joins of containers with themselves in an unambiguous way\051. The) 72 675.67 P
+3 F
+-0.62 (foreach) 360.85 675.67 P
+0 F
+-0.26 ( loop below prints \050) 406.99 675.67 P
+3 10 Q
+-0.56 (employee) 492.03 675.67 P
+0 11 Q
+1.05 (name,) 72 662.67 P
+3 10 Q
+2.29 (department) 102.34 662.67 P
+0 11 Q
+1.05 ( name\051 pairs. Readers may recognize this loop as a natural join between) 162.3 662.67 P
+3 F
+2.52 (depart-) 493.86 662.67 P
+(ment) 72 649.67 T
+0 F
+( and) 98.37 649.67 T
+3 F
+(employee) 119.72 649.67 T
+0 F
+( containers:) 172.46 649.67 T
+3 10 Q
+(foreach\050 c \051) 108 631.33 T
+({) 108 619.33 T
+(printf\050 \322%s %s\134n\323, c.e.name, c.d.name \051;) 125.99 619.33 T
+(}) 377.85 619.33 T
+0 11 Q
+0.67 (Occasionally) 72 594.67 P
+0.67 (, it is useful to retrieve only n-tuples of a relationship that involve speci\336c objects. Suppose) 128.65 594.67 P
+1.63 (we are interested only in the 3-tuples of Figure 2 that involve element) 72 581.67 P
+3 F
+3.9 (b3) 402.25 581.67 P
+0 F
+1.63 ( of container) 415.43 581.67 P
+3 F
+3.9 (B) 478.58 581.67 P
+0 F
+1.63 ( \050i.e., tuples) 485.18 581.67 P
+3 F
+-0.08 (\050a2,b3,c2\051) 72 568.67 P
+0 F
+-0.03 ( and) 137.92 568.67 P
+3 F
+-0.08 (\050a2,b3,c4\051) 159.21 568.67 P
+0 F
+-0.03 (\051. Such a retrieval is called) 225.13 568.67 P
+2 F
+-0.03 (seeding) 344.84 568.67 P
+0 F
+-0.03 ( a relationship with) 378.41 568.67 P
+3 F
+-0.08 (b3) 465.55 568.67 P
+0 F
+-0.03 (. Seedings are) 478.74 568.67 P
+0.02 (expressed in P2 by augmenting the) 72 555.67 P
+3 F
+0.04 (compcurs) 228.34 555.67 P
+0 F
+0.02 ( declaration with a) 281.08 555.67 P
+3 F
+0.04 (given) 365.36 555.67 P
+0 F
+0.02 ( clause \050which lists aliases of all) 398.31 555.67 P
+0.04 (containers that are to be seeded\051. Prior to a) 72 542.67 P
+3 F
+0.1 (foreach) 262.77 542.67 P
+0 F
+0.04 (, the) 308.92 542.67 P
+3 F
+0.1 (given) 330.67 542.67 P
+0 F
+0.04 ( cursors must be positioned on the seed-) 363.63 542.67 P
+0.76 (ing elements. The above example with) 72 529.67 P
+3 F
+1.82 (b3) 248.94 529.67 P
+0 F
+0.76 ( would be expressed by the following) 262.13 529.67 P
+3 F
+1.82 (compcurs) 434.95 529.67 P
+0 F
+0.76 ( declaration) 487.68 529.67 P
+(and) 72 516.67 T
+3 F
+(foreach) 90.61 516.67 T
+0 F
+( code fragment:) 136.75 516.67 T
+3 10 Q
+(// Declare seeded_composite_cursor seeded by b.) 108 498.33 T
+(compcurs < a A, b B, c C > given < b > seeded_composite_cursor;) 108 486.33 T
+(// Position seeded_composite_cursor.b) 108 462.33 T
+(position\050 seeded_composite_cursor.b, address_of\050b3\051 \051;) 108 450.33 T
+(// Iterate over seeded tuples.) 108 426.33 T
+(foreach\050 seeded_composite_cursor \051) 108 414.33 T
+({ ... }) 108 402.33 T
+0 11 Q
+1.61 (Updating elements within a) 72 377.67 P
+3 F
+3.86 (foreach) 202.33 377.67 P
+0 F
+1.61 ( loop is possible. Such updates may af) 248.48 377.67 P
+1.61 (fect the n-tuples that are) 427.39 377.67 P
+0.21 (retrieved by a composite cursor) 72 364.67 P
+0.21 (. Again consider the example of composite cursor) 210.77 364.67 P
+3 F
+0.51 (c) 433.7 364.67 P
+0 F
+0.21 ( which returns pairs of) 440.29 364.67 P
+0.63 (related) 72 351.67 P
+3 F
+1.51 (department) 105.27 351.67 P
+0 F
+0.63 ( and) 171.19 351.67 P
+3 F
+1.51 (employee) 193.8 351.67 P
+0 F
+0.63 ( elements. The) 246.54 351.67 P
+3 F
+1.51 (foreach) 315.55 351.67 P
+0 F
+0.63 ( of Figure 3a deletes the) 361.69 351.67 P
+3 F
+1.51 (department) 474.08 351.67 P
+0 F
+(element for each retrieved ordered pair) 72 338.67 T
+(.) 242.53 338.67 T
+0.18 (Suppose the code fragment of Figure 3a was executed. Figure 3b shows the sequence of tuples that would) 72 180.17 P
+0.62 (be processed by the) 72 167.17 P
+3 F
+1.49 (foreach) 163.58 167.17 P
+0 F
+0.62 ( loop during a \322blind\323 retrieval. Blind or traditional database retrievals do) 209.72 167.17 P
+0.49 (not take into account changes \050e.g., deletions\051 made to elements since the last composite cursor advance-) 72 154.17 P
+-0.13 (ment. What is actually needed is a \322validated\323 retrieval of n-tuples, where tests are performed prior to each) 72 141.17 P
+-0.22 (composite cursor advancement to make sure that the next n-tuple is meaningful. Figure 3c shows the tuples) 72 128.17 P
+(produced during a validated retrieval.) 72 115.17 T
+72 63 540 720 C
+99.04 201.5 512.96 335 C
+130.6 266 252.1 320.07 R
+7 X
+0 K
+V
+3 10 Q
+0 X
+(foreach \050 c \051) 135.1 311.07 T
+({) 135.1 301.07 T
+(delete\050c.d\051;) 153.1 301.07 T
+(}) 237.05 301.07 T
+(\322blind\323 join) 297.29 308.98 T
+(\050 d1, e1 \051) 297.29 293.55 T
+(\050 d1, e2 \051) 297.29 278.98 T
+(\050 d1, e3 \051) 297.29 266.55 T
+(\050 d2, e4 \051) 297.29 253.05 T
+(\050 d2, e5 \051) 297.29 239.55 T
+(\050 d3, e6 \051) 297.29 226.05 T
+(\322valid\323 join) 432.29 308.98 T
+466.79 264.67 463.79 259.48 460.79 264.67 463.79 264.67 4 Y
+V
+463.79 290.98 463.79 264.67 2 L
+0.5 H
+2 Z
+N
+466.79 237.67 463.79 232.48 460.79 237.67 463.79 237.67 4 Y
+V
+463.79 250.48 463.79 237.67 2 L
+N
+(\050 d1, e1 \051) 435.32 293.24 T
+(\050 d2, e4 \051) 435.32 252.74 T
+(\050 d3, e6 \051) 435.32 225.74 T
+7 F
+(skip) 472.79 272.98 T
+(skip) 472.79 241.48 T
+5 9 Q
+(Figure 3. Updating elements within a foreach loop.) 205.84 206.69 T
+(\050a\051) 112.61 311.07 T
+(\050b\051) 274.75 311.21 T
+(\050c\051) 414.25 311.21 T
+72 63 540 720 C
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "3" 2
+%%Page: "2" 2
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(2) 303.5 41.28 T
+0 11 Q
+0.05 (The P2 programming language is a superset of C. P2 introduces statements for cursor and container decla-) 72 604.67 P
+0.13 (rations, along with special operations on cursors and containers. An abbreviated declaration of a container) 72 591.67 P
+0.29 (of) 72 578.67 P
+3 F
+0.7 (EMPLOYEE_TYPE) 84.19 578.67 P
+0 F
+0.29 ( instances is shown below) 169.88 578.67 P
+0.29 (, along with declarations of a cursor \050) 284.46 578.67 P
+3 F
+0.7 (all_employees) 450.65 578.67 P
+0 F
+0.29 (\051) 536.34 578.67 P
+1.2 (that references all elements of this container and another cursor \050) 72 565.67 P
+3 F
+2.88 (selected_employees) 368.93 565.67 P
+0 F
+1.2 (\051 that refer-) 487.58 565.67 P
+(ences only those elements whose) 72 552.67 T
+3 F
+(deptno) 219.99 552.67 T
+0 F
+( \336eld has the value) 259.54 552.67 T
+3 F
+(10) 344.67 552.67 T
+0 F
+(:) 357.85 552.67 T
+3 10 Q
+(// Declaration of the employee container.) 108 534.33 T
+(container <EMPLOYEE_TYPE> employee;) 108 522.33 T
+(// Cursor that references all elements in the employee container.) 108 498.33 T
+(cursor <employee> all_employees;) 108 486.33 T
+(// Cursor that references selected elements of employee container.) 108 462.33 T
+(cursor <employee> where \322$.deptno == 10\323 selected_employees;) 108 450.33 T
+0 11 Q
+0.74 (P2 of) 72 425.67 P
+0.74 (fers an \050extensible\051 set of container and cursor operations. For example, the) 96.04 425.67 P
+3 F
+1.77 (foreach) 439.28 425.67 P
+0 F
+0.74 ( construct is) 485.43 425.67 P
+1.78 (used to iterate over quali\336ed elements of a container) 72 412.67 P
+1.78 (. The) 315.72 412.67 P
+3 F
+4.28 (foreach) 344.61 412.67 P
+0 F
+1.78 ( loop below prints the names of) 390.76 412.67 P
+(selected employees:) 72 399.67 T
+3 10 Q
+(// For each element whose deptno field has the value 10.) 108 381.33 T
+(foreach\050 selected_employees \051) 108 369.33 T
+({) 108 357.33 T
+(// Print the employee name.) 119.99 345.33 T
+(printf\050 \322%s\134n\323, selected_employees.name \051;) 119.99 333.33 T
+(}) 108 321.33 T
+1 12 Q
+(2.2  Composite Cursors) 72 290 T
+0 11 Q
+0.56 (Complex data structures consist of multiple containers whose elements are interconnected by pointers. A) 72 264.67 P
+2 F
+0.08 (r) 72 251.67 P
+0.08 (elationship) 75.87 251.67 P
+0 F
+0.08 ( among containers C) 124.7 251.67 P
+2 7 Q
+0.05 (1) 215.56 249.42 P
+0 11 Q
+0.08 (, C) 219.06 251.67 P
+2 7 Q
+0.05 (2) 231.96 249.42 P
+0 11 Q
+0.08 (,) 235.45 251.67 P
+6 F
+0.08 (...) 241.02 251.67 P
+0 F
+0.08 (, C) 249.26 251.67 P
+2 7 Q
+0.05 (n) 262.16 249.42 P
+0 11 Q
+0.08 ( is a set of n-tuples <e) 265.65 251.67 P
+2 7 Q
+0.05 (1) 362.64 249.42 P
+0 11 Q
+0.08 (, e) 366.13 251.67 P
+2 7 Q
+0.05 (2) 376.58 249.42 P
+0 11 Q
+0.08 (,) 380.07 251.67 P
+6 F
+0.08 (\274) 385.65 251.67 P
+0 F
+0.08 (, e) 396.63 251.67 P
+2 7 Q
+0.05 (n) 407.08 249.42 P
+0 11 Q
+0.08 (> where element e) 410.58 251.67 P
+2 7 Q
+0.05 (i) 491.75 249.42 P
+0 11 Q
+0.08 ( is a mem-) 493.69 251.67 P
+(ber of container C) 72 238.67 T
+2 7 Q
+(i) 151.63 236.42 T
+0 11 Q
+(. Figure 2 depicts a relationship for containers) 153.57 238.67 T
+3 F
+(A) 358.31 238.67 T
+0 F
+(,) 364.9 238.67 T
+3 F
+(B) 370.4 238.67 T
+0 F
+(, and) 376.99 238.67 T
+3 F
+(C) 401.09 238.67 T
+0 F
+( whose 3-tuples are:) 407.68 238.67 T
+3 10 Q
+({\050a3,b1,c1\051,) 108 220.33 T
+(\050a3,b1,c3\051,) 185.96 220.33 T
+(\050a1,b2,c4\051,) 257.92 220.33 T
+(\050a2,b3,c2\051,) 329.88 220.33 T
+(\050a2,b3,c4\051}) 401.84 220.33 T
+0 11 Q
+-0.04 (A) 72 195.67 P
+2 F
+-0.04 (composite cursor) 82.64 195.67 P
+0 F
+-0.04 ( enumerates the n-tuples of a relationship. More speci\336cally) 158.59 195.67 P
+-0.04 (, a composite cursor) 420.91 195.67 P
+2 F
+-0.04 (k) 512 195.67 P
+0 F
+-0.04 ( is an) 516.88 195.67 P
+0.26 (n-tuple of cursors, one cursor per container of a relationship. A particular n-tuple <e) 72 182.67 P
+2 7 Q
+0.16 (1) 444.91 180.42 P
+0 11 Q
+0.26 (, e) 448.4 182.67 P
+2 7 Q
+0.16 (2) 459.03 180.42 P
+0 11 Q
+0.26 (, ..., e) 462.52 182.67 P
+2 7 Q
+0.16 (n) 487.14 180.42 P
+0 11 Q
+0.26 (> of a rela-) 490.64 182.67 P
+0.53 (tionship is encoded by having the) 72 169.67 P
+2 F
+0.53 (i) 225.33 169.67 P
+0 F
+0.53 (th cursor of) 228.38 169.67 P
+2 F
+0.53 (k) 283.37 169.67 P
+0 F
+0.53 ( positioned on element e) 288.25 169.67 P
+2 7 Q
+0.34 (i) 397.79 167.42 P
+0 11 Q
+0.53 (. By advancing) 399.74 169.67 P
+2 F
+0.53 (k) 470.29 169.67 P
+0 F
+0.53 (, successive n-) 475.17 169.67 P
+(tuples of a relationship are retrieved.) 72 156.67 T
+0.07 (As an example, a composite cursor) 72 131.67 P
+3 F
+0.16 (c) 228.93 131.67 P
+0 F
+0.07 ( that joins elements of the) 235.52 131.67 P
+3 F
+0.16 (department) 351.89 131.67 P
+0 F
+0.07 ( and) 417.8 131.67 P
+3 F
+0.16 (employee) 439.3 131.67 P
+0 F
+0.07 ( containers) 492.03 131.67 P
+(that share the same value of the) 72 118.67 T
+3 F
+(deptno) 213.26 118.67 T
+0 F
+( \336eld is speci\336ed in P2 as:) 252.81 118.67 T
+0 9 Q
+(3) 367.57 123.07 T
+72 88 540 108 C
+72 96 204 96 2 L
+0.25 H
+2 Z
+0 X
+0 K
+N
+0 0 612 792 C
+0 9 Q
+0 X
+0 K
+0.23 (3.  Note that predicates in P2 are expressed by strings. Field) 72 82 P
+3 10 Q
+0.61 (F) 292.41 82 P
+0 9 Q
+0.23 ( of the element referenced by a cursor is denoted \322) 298.4 82 P
+3 10 Q
+0.61 ($.F) 481.87 82 P
+0 9 Q
+0.23 (\323. A cursor) 499.86 82 P
+(over container with alias) 72 71 T
+3 10 Q
+(x) 162.85 71 T
+0 9 Q
+( is denoted \322) 168.85 71 T
+3 10 Q
+($x) 214.03 71 T
+0 9 Q
+(\323.) 226.02 71 T
+72 63 540 720 C
+72 612 540 720 C
+0.5 H
+2 Z
+0 X
+0 K
+90 450 27 7.26 317.49 696.26 A
+90 450 27 7.26 316.38 658.33 A
+289.93 696.88 289.93 658.15 2 L
+N
+343.93 696.88 343.93 658.15 2 L
+N
+90 450 27 7.26 407.49 696.26 A
+90 450 27 7.26 406.38 658.33 A
+379.93 696.88 379.93 658.15 2 L
+N
+433.93 696.88 433.93 658.15 2 L
+N
+90 450 27 7.26 496.38 697.06 A
+90 450 27 7.26 495.26 659.13 A
+468.82 697.69 468.82 658.95 2 L
+N
+522.82 697.69 522.82 658.95 2 L
+N
+5 9 Q
+(a1) 308.29 673.49 T
+(a2) 313.04 653.62 T
+(a3) 325.63 680.55 T
+(b1) 386.25 682.08 T
+(b2) 399.13 672.37 T
+(b3) 410.13 653.37 T
+(c1) 476.38 681.55 T
+(c2) 505.38 670.74 T
+(c3) 476.38 671.12 T
+(c4) 505.38 656.21 T
+337.38 684.96 385.38 684.96 2 L
+3 X
+N
+421.38 655.91 503.38 671.64 2 L
+N
+409.38 655.91 325.38 655.91 2 L
+N
+397.38 684.96 475.38 684.96 2 L
+N
+397.38 684.96 475.38 675.27 2 L
+N
+411.38 675.39 504.63 660.39 2 L
+N
+319.38 675.27 397.38 675.27 2 L
+N
+422.63 655.89 505.38 660.75 2 L
+N
+0 X
+(A) 313.38 697.67 T
+(B) 403.38 697.67 T
+(C) 493.38 699.79 T
+(Figure 2. A Multicontainer Relationship) 318.77 632.35 T
+7 X
+90 450 1.35 1.06 162.13 693.14 G
+0.2 H
+0 X
+90 450 1.35 1.06 162.13 693.14 A
+159.88 691.3 M
+ 160.33 692.01 160.33 692.01 161.23 691.95 D
+ 162.13 691.89 162.13 691.89 163.03 691.95 D
+ 163.93 692.01 163.93 692.01 164.38 691.3 D
+ 164.83 690.59 164.83 690.59 165.27 689.18 D
+ 165.73 687.77 165.73 687.77 165.73 687.41 D
+ 165.73 687.06 165.73 687.06 165.27 687.06 D
+ 164.83 687.06 164.83 687.06 164.38 688.47 D
+ 163.93 689.89 163.93 689.89 163.93 688.47 D
+ 163.93 687.06 163.93 687.06 163.93 684.23 D
+ 163.93 681.41 163.93 681.41 163.93 681.06 D
+ 163.93 680.7 163.93 680.7 163.19 680.7 D
+ 162.45 680.7 162.45 680.7 162.45 683.37 D
+ 162.45 686.04 162.45 686.04 162.14 686.04 D
+ 161.83 686.04 161.83 686.04 161.83 683.37 D
+ 161.83 680.7 161.83 680.7 161.08 680.7 D
+ 160.33 680.7 160.33 680.7 160.33 681.06 D
+ 160.33 681.41 160.33 681.41 160.33 684.23 D
+ 160.33 687.06 160.33 687.06 160.33 688.47 D
+ 160.33 689.89 160.33 689.89 159.88 688.47 D
+ 159.43 687.06 159.43 687.06 158.98 687.06 D
+ 158.53 687.06 158.53 687.06 158.53 687.41 D
+ 158.53 687.77 158.53 687.77 158.98 689.18 D
+ 159.43 690.59 159.43 690.59 159.88 691.3 D
+O
+7 X
+V
+0 X
+N
+7 X
+90 450 1.35 1.06 181.39 690.14 G
+0 X
+90 450 1.35 1.06 181.39 690.14 A
+179.14 688.3 M
+ 179.59 689.01 179.59 689.01 180.49 688.95 D
+ 181.39 688.89 181.39 688.89 182.29 688.95 D
+ 183.18 689.01 183.18 689.01 183.63 688.3 D
+ 184.08 687.59 184.08 687.59 184.53 686.18 D
+ 184.98 684.77 184.98 684.77 184.98 684.41 D
+ 184.98 684.06 184.98 684.06 184.53 684.06 D
+ 184.08 684.06 184.08 684.06 183.63 685.47 D
+ 183.18 686.89 183.18 686.89 183.18 685.47 D
+ 183.18 684.06 183.18 684.06 183.18 681.24 D
+ 183.18 678.41 183.18 678.41 183.18 678.06 D
+ 183.18 677.7 183.18 677.7 182.45 677.7 D
+ 181.71 677.7 181.71 677.7 181.71 680.37 D
+ 181.71 683.04 181.71 683.04 181.4 683.04 D
+ 181.09 683.04 181.09 683.04 181.09 680.37 D
+ 181.09 677.7 181.09 677.7 180.34 677.7 D
+ 179.59 677.7 179.59 677.7 179.59 678.06 D
+ 179.59 678.41 179.59 678.41 179.59 681.24 D
+ 179.59 684.06 179.59 684.06 179.59 685.47 D
+ 179.59 686.89 179.59 686.89 179.14 685.47 D
+ 178.69 684.06 178.69 684.06 178.24 684.06 D
+ 177.79 684.06 177.79 684.06 177.79 684.41 D
+ 177.79 684.77 177.79 684.77 178.24 686.18 D
+ 178.69 687.59 178.69 687.59 179.14 688.3 D
+O
+7 X
+V
+0 X
+N
+7 X
+90 450 1.35 1.06 169.68 679.64 G
+0 X
+90 450 1.35 1.06 169.68 679.64 A
+167.44 677.8 M
+ 167.89 678.51 167.89 678.51 168.79 678.45 D
+ 169.69 678.39 169.69 678.39 170.59 678.45 D
+ 171.49 678.51 171.49 678.51 171.93 677.8 D
+ 172.38 677.09 172.38 677.09 172.83 675.68 D
+ 173.28 674.27 173.28 674.27 173.28 673.91 D
+ 173.28 673.56 173.28 673.56 172.83 673.56 D
+ 172.38 673.56 172.38 673.56 171.93 674.97 D
+ 171.49 676.39 171.49 676.39 171.49 674.97 D
+ 171.49 673.56 171.49 673.56 171.49 670.74 D
+ 171.49 667.91 171.49 667.91 171.49 667.56 D
+ 171.49 667.2 171.49 667.2 170.75 667.2 D
+ 170.01 667.2 170.01 667.2 170.01 669.87 D
+ 170.01 672.54 170.01 672.54 169.7 672.54 D
+ 169.39 672.54 169.39 672.54 169.39 669.87 D
+ 169.39 667.2 169.39 667.2 168.64 667.2 D
+ 167.89 667.2 167.89 667.2 167.89 667.56 D
+ 167.89 667.91 167.89 667.91 167.89 670.74 D
+ 167.89 673.56 167.89 673.56 167.89 674.97 D
+ 167.89 676.39 167.89 676.39 167.44 674.97 D
+ 166.99 673.56 166.99 673.56 166.54 673.56 D
+ 166.09 673.56 166.09 673.56 166.09 673.91 D
+ 166.09 674.27 166.09 674.27 166.54 675.68 D
+ 166.99 677.09 166.99 677.09 167.44 677.8 D
+O
+7 X
+V
+0 X
+N
+7 X
+90 450 1.35 1.06 150.95 677.78 G
+0 X
+90 450 1.35 1.06 150.95 677.78 A
+148.71 675.94 M
+ 149.15 676.64 149.15 676.64 150.05 676.58 D
+ 150.95 676.53 150.95 676.53 151.85 676.58 D
+ 152.75 676.64 152.75 676.64 153.2 675.94 D
+ 153.65 675.23 153.65 675.23 154.1 673.82 D
+ 154.55 672.4 154.55 672.4 154.55 672.05 D
+ 154.55 671.7 154.55 671.7 154.1 671.7 D
+ 153.65 671.7 153.65 671.7 153.2 673.11 D
+ 152.75 674.52 152.75 674.52 152.75 673.11 D
+ 152.75 671.7 152.75 671.7 152.75 668.87 D
+ 152.75 666.05 152.75 666.05 152.75 665.69 D
+ 152.75 665.34 152.75 665.34 152.01 665.34 D
+ 151.28 665.34 151.28 665.34 151.28 668.01 D
+ 151.28 670.68 151.28 670.68 150.97 670.68 D
+ 150.65 670.68 150.65 670.68 150.65 668.01 D
+ 150.65 665.34 150.65 665.34 149.9 665.34 D
+ 149.15 665.34 149.15 665.34 149.15 665.69 D
+ 149.15 666.05 149.15 666.05 149.15 668.87 D
+ 149.15 671.7 149.15 671.7 149.15 673.11 D
+ 149.15 674.52 149.15 674.52 148.71 673.11 D
+ 148.26 671.7 148.26 671.7 147.8 671.7 D
+ 147.35 671.7 147.35 671.7 147.35 672.05 D
+ 147.35 672.4 147.35 672.4 147.8 673.82 D
+ 148.26 675.23 148.26 675.23 148.71 675.94 D
+O
+7 X
+V
+0 X
+N
+0.5 H
+90 450 37.79 3.38 173.65 714.45 A
+90 450 37.79 3.38 173.65 653.7 A
+211.44 714.45 211.44 653.71 2 L
+N
+135.85 714.45 135.85 653.71 2 L
+N
+(cursor) 219.21 672.14 T
+(container) 85.75 696.25 T
+245.51 694.5 M
+ 245.51 700.15 245.51 700.15 244.33 700.08 D
+ 243.14 699.99 243.14 699.99 241.81 700.03 D
+ 240.46 700.08 240.46 700.08 238.56 701.36 D
+ 236.68 702.67 236.68 702.67 235.43 702.84 D
+ 234.14 703 234.14 703 232.99 703.07 D
+ 231.8 703.15 231.8 703.15 230.49 703.55 D
+ 229.19 703.95 229.19 703.95 228.74 703.41 D
+ 228.28 702.84 228.28 702.84 228.77 702.17 D
+ 229.29 701.53 229.29 701.53 230.79 700.89 D
+ 232.29 700.25 232.29 700.25 230.79 700.37 D
+ 229.29 700.48 229.29 700.48 227.68 700.27 D
+ 226.08 700.08 226.08 700.08 224.04 700.13 D
+ 221.96 700.15 221.96 700.15 220.29 700.03 D
+ 218.61 699.91 218.61 699.91 217.48 699.99 D
+ 216.34 700.08 216.34 700.08 215.88 699.84 D
+ 215.41 699.58 215.41 699.58 215.33 698.99 D
+ 215.23 698.37 215.23 698.37 215.51 697.92 D
+ 215.75 697.49 215.75 697.49 217.92 697.33 D
+ 220.12 697.16 220.12 697.16 221.05 697.09 D
+ 221.96 697.04 221.96 697.04 223.02 697.04 D
+ 224.06 697.04 224.06 697.04 225.24 696.73 D
+ 226.43 696.42 226.43 696.42 225.66 696.02 D
+ 224.9 695.61 224.9 695.61 224.65 694.93 D
+ 224.4 694.24 224.4 694.24 224.65 693.67 D
+ 224.9 693.12 224.9 693.12 225.42 692.79 D
+ 225.91 692.46 225.91 692.46 225.69 692.22 D
+ 225.46 691.98 225.46 691.98 225.32 691.46 D
+ 225.19 690.94 225.19 690.94 225.56 690.1 D
+ 225.91 689.3 225.91 689.3 226.18 689.04 D
+ 226.45 688.78 226.45 688.78 226.57 688.06 D
+ 226.67 687.37 226.67 687.37 227.02 686.8 D
+ 227.34 686.23 227.34 686.23 228.3 686.02 D
+ 229.29 685.83 229.29 685.83 230.12 685.73 D
+ 230.96 685.66 230.96 685.66 231.8 685.9 D
+ 232.64 686.14 232.64 686.14 233.4 686.19 D
+ 234.14 686.23 234.14 686.23 236.14 686.4 D
+ 238.11 686.54 238.11 686.54 240.09 687.45 D
+ 242.06 688.32 242.06 688.32 242.65 688.18 D
+ 243.24 688.02 243.24 688.02 243.96 688.32 D
+ 244.67 688.66 244.67 688.66 245.09 688.75 D
+ 245.51 688.82 245.51 688.82 245.51 694.5 D
+O
+7 X
+V
+0.2 H
+0 Z
+0 X
+N
+216.54 699.46 M
+ 217.35 699.3 217.35 699.3 217.3 698.75 D
+ 217.26 698.18 217.26 698.18 216.47 698.09 D
+ 215.65 698.01 215.65 698.01 215.7 698.82 D
+ 215.75 699.63 215.75 699.63 216.54 699.46 D
+O
+7 X
+V
+0 X
+N
+232.15 700.25 233.48 700.48 2 L
+7 X
+V
+2 Z
+0 X
+N
+231.14 703.15 229.95 702.67 228.94 703.07 3 L
+7 X
+V
+0 X
+N
+226.33 693.03 225.49 693.53 225.19 694.4 3 L
+7 X
+V
+0 X
+N
+227.51 689.06 226.6 689.39 226.33 690.1 3 L
+7 X
+V
+0 X
+N
+227.76 686.54 227.02 687.21 2 L
+7 X
+V
+0 X
+N
+226.03 692.5 226.18 692.67 225.98 692.84 3 L
+7 X
+V
+0 X
+N
+225.27 697.06 226.67 696.68 226.65 696.18 226.21 696.02 4 L
+7 X
+V
+0 X
+N
+222.98 699.44 222.31 699.68 221.84 699.51 221.42 699.75 4 L
+7 X
+V
+0 X
+N
+222.98 697.73 222.31 697.49 221.84 697.66 221.42 697.4 4 L
+7 X
+V
+0 X
+N
+240.8 688.47 M
+ 241.91 688.82 241.91 688.82 242.26 688.73 D
+ 242.57 688.63 242.57 688.63 243.39 688.63 D
+7 X
+V
+0 X
+N
+243.78 700.41 244.57 697.28 244.89 694.14 244.57 690.44 243.96 687.71 248.42 687.71 249.6 690.37
+ 249.88 693.98 249.7 697.78 248.94 700.58 10 Y
+7 X
+V
+0 Z
+0 X
+N
+136.74 652.83 210.52 657.41 R
+7 X
+V
+0 X
+(elements) 152.48 657.17 T
+(Figure 1. Basic P2 Abstractions) 90.25 632.33 T
+7 X
+90 450 1.35 1.06 147.28 702.27 G
+2 Z
+0 X
+90 450 1.35 1.06 147.28 702.27 A
+145.03 700.42 M
+ 145.48 701.13 145.48 701.13 146.38 701.07 D
+ 147.28 701.01 147.28 701.01 148.18 701.07 D
+ 149.08 701.13 149.08 701.13 149.53 700.42 D
+ 149.98 699.72 149.98 699.72 150.43 698.3 D
+ 150.88 696.89 150.88 696.89 150.88 696.54 D
+ 150.88 696.18 150.88 696.18 150.43 696.18 D
+ 149.98 696.18 149.98 696.18 149.53 697.6 D
+ 149.08 699.01 149.08 699.01 149.08 697.6 D
+ 149.08 696.18 149.08 696.18 149.08 693.36 D
+ 149.08 690.53 149.08 690.53 149.08 690.18 D
+ 149.08 689.83 149.08 689.83 148.34 689.83 D
+ 147.6 689.83 147.6 689.83 147.6 692.5 D
+ 147.6 695.16 147.6 695.16 147.29 695.16 D
+ 146.98 695.16 146.98 695.16 146.98 692.5 D
+ 146.98 689.83 146.98 689.83 146.23 689.83 D
+ 145.48 689.83 145.48 689.83 145.48 690.18 D
+ 145.48 690.53 145.48 690.53 145.48 693.36 D
+ 145.48 696.18 145.48 696.18 145.48 697.6 D
+ 145.48 699.01 145.48 699.01 145.03 697.6 D
+ 144.58 696.18 144.58 696.18 144.13 696.18 D
+ 143.68 696.18 143.68 696.18 143.68 696.54 D
+ 143.68 696.89 143.68 696.89 144.13 698.3 D
+ 144.58 699.72 144.58 699.72 145.03 700.42 D
+O
+7 X
+V
+0 X
+N
+7 X
+90 450 1.35 1.06 176.97 706.77 G
+0 X
+90 450 1.35 1.06 176.97 706.77 A
+174.73 704.92 M
+ 175.18 705.63 175.18 705.63 176.07 705.57 D
+ 176.97 705.51 176.97 705.51 177.87 705.57 D
+ 178.77 705.63 178.77 705.63 179.22 704.92 D
+ 179.67 704.22 179.67 704.22 180.12 702.8 D
+ 180.57 701.39 180.57 701.39 180.57 701.04 D
+ 180.57 700.68 180.57 700.68 180.12 700.68 D
+ 179.67 700.68 179.67 700.68 179.22 702.1 D
+ 178.77 703.51 178.77 703.51 178.77 702.1 D
+ 178.77 700.68 178.77 700.68 178.77 697.86 D
+ 178.77 695.03 178.77 695.03 178.77 694.68 D
+ 178.77 694.33 178.77 694.33 178.04 694.33 D
+ 177.3 694.33 177.3 694.33 177.3 697 D
+ 177.3 699.66 177.3 699.66 176.99 699.66 D
+ 176.67 699.66 176.67 699.66 176.67 697 D
+ 176.67 694.33 176.67 694.33 175.92 694.33 D
+ 175.18 694.33 175.18 694.33 175.18 694.68 D
+ 175.18 695.03 175.18 695.03 175.18 697.86 D
+ 175.18 700.68 175.18 700.68 175.18 702.1 D
+ 175.18 703.51 175.18 703.51 174.73 702.1 D
+ 174.27 700.68 174.27 700.68 173.83 700.68 D
+ 173.38 700.68 173.38 700.68 173.38 701.04 D
+ 173.38 701.39 173.38 701.39 173.83 702.8 D
+ 174.27 704.22 174.27 704.22 174.73 704.92 D
+O
+7 X
+V
+0 X
+N
+7 X
+90 450 1.35 1.06 194.45 677.68 G
+0 X
+90 450 1.35 1.06 194.45 677.68 A
+192.2 675.84 M
+ 192.65 676.54 192.65 676.54 193.55 676.49 D
+ 194.45 676.43 194.45 676.43 195.35 676.49 D
+ 196.25 676.54 196.25 676.54 196.7 675.84 D
+ 197.15 675.13 197.15 675.13 197.6 673.72 D
+ 198.05 672.31 198.05 672.31 198.05 671.95 D
+ 198.05 671.6 198.05 671.6 197.6 671.6 D
+ 197.15 671.6 197.15 671.6 196.7 673.01 D
+ 196.25 674.43 196.25 674.43 196.25 673.01 D
+ 196.25 671.6 196.25 671.6 196.25 668.78 D
+ 196.25 665.95 196.25 665.95 196.25 665.6 D
+ 196.25 665.24 196.25 665.24 195.51 665.24 D
+ 194.77 665.24 194.77 665.24 194.77 667.91 D
+ 194.77 670.58 194.77 670.58 194.46 670.58 D
+ 194.15 670.58 194.15 670.58 194.15 667.91 D
+ 194.15 665.24 194.15 665.24 193.4 665.24 D
+ 192.65 665.24 192.65 665.24 192.65 665.6 D
+ 192.65 665.95 192.65 665.95 192.65 668.78 D
+ 192.65 671.6 192.65 671.6 192.65 673.01 D
+ 192.65 674.43 192.65 674.43 192.2 673.01 D
+ 191.75 671.6 191.75 671.6 191.3 671.6 D
+ 190.85 671.6 190.85 671.6 190.85 671.95 D
+ 190.85 672.31 190.85 672.31 191.3 673.72 D
+ 191.75 675.13 191.75 675.13 192.2 675.84 D
+O
+7 X
+V
+0 X
+N
+4 X
+90 450 1.35 1.06 197.31 701.77 G
+0 X
+90 450 1.35 1.06 197.31 701.77 A
+195.06 699.92 M
+ 195.51 700.63 195.51 700.63 196.41 700.57 D
+ 197.31 700.51 197.31 700.51 198.21 700.57 D
+ 199.11 700.63 199.11 700.63 199.56 699.92 D
+ 200.01 699.22 200.01 699.22 200.46 697.8 D
+ 200.9 696.39 200.9 696.39 200.9 696.04 D
+ 200.9 695.68 200.9 695.68 200.46 695.68 D
+ 200.01 695.68 200.01 695.68 199.56 697.1 D
+ 199.11 698.51 199.11 698.51 199.11 697.1 D
+ 199.11 695.68 199.11 695.68 199.11 692.86 D
+ 199.11 690.03 199.11 690.03 199.11 689.68 D
+ 199.11 689.33 199.11 689.33 198.37 689.33 D
+ 197.63 689.33 197.63 689.33 197.63 692 D
+ 197.63 694.66 197.63 694.66 197.32 694.66 D
+ 197.01 694.66 197.01 694.66 197.01 692 D
+ 197.01 689.33 197.01 689.33 196.26 689.33 D
+ 195.51 689.33 195.51 689.33 195.51 689.68 D
+ 195.51 690.03 195.51 690.03 195.51 692.86 D
+ 195.51 695.68 195.51 695.68 195.51 697.1 D
+ 195.51 698.51 195.51 698.51 195.06 697.1 D
+ 194.61 695.68 194.61 695.68 194.16 695.68 D
+ 193.71 695.68 193.71 695.68 193.71 696.04 D
+ 193.71 696.39 193.71 696.39 194.16 697.8 D
+ 194.61 699.22 194.61 699.22 195.06 699.92 D
+O
+4 X
+V
+0 X
+N
+72 63 540 720 C
+0 0 612 792 C
+FMENDPAGE
+%%EndPage: "2" 1
+%%Page: "1" 1
+612 792 0 FMBEGINPAGE
+0 10 Q
+0 X
+0 K
+(1) 303.5 41.28 T
+1 14 Q
+(The LEAPS Algorithms) 226.37 710.67 T
+1 11 Q
+(1) 379.53 716.27 T
+(Don Batory) 276.4 677.67 T
+(Department of Computer Sciences) 215.96 662.67 T
+(The University of T) 244.74 647.67 T
+(exas) 342.83 647.67 T
+(Austin, T) 253.89 632.67 T
+(exas 78712) 300.08 632.67 T
+1 10 Q
+(Abstract) 294.73 600.33 T
+0 F
+-0.03 (LEAPS is a state-of-the-art production system compiler that produces the fastest sequential execut-) 108 582.33 P
+0.56 (ables of OPS5 rule sets. The performance of LEAPS is due to its reliance on complex data struc-) 108 570.33 P
+2.62 (tures and search algorithms to speed rule processing. In this paper) 108 558.33 P
+2.62 (, we explain the LEAPS) 397.2 558.33 P
+(algorithms in terms of the programming abstractions of the P2 data structure compiler) 108 546.33 T
+(.) 451.11 546.33 T
+1 12 Q
+(1  Introduction) 72 509 T
+0 11 Q
+0.12 (OPS5 is a forward-chaining expert system [McD78, For81]. LEAPS  \050) 72 483.67 P
+2 F
+0.12 (L) 382.66 483.67 P
+0 F
+0.12 (azy) 388.77 483.67 P
+2 F
+0.12 (E) 406.89 483.67 P
+0 F
+0.12 (valuation) 413.6 483.67 P
+2 F
+0.12 (A) 457.36 483.67 P
+0 F
+0.12 (lgorithm for) 464.08 483.67 P
+2 F
+0.12 (P) 520.48 483.67 P
+0 F
+0.12 (ro-) 527.19 483.67 P
+-0.07 (duction) 72 470.67 P
+2 F
+-0.07 (S) 107.64 470.67 P
+0 F
+-0.07 (ystems\051 is a state-of-the-art production system compiler for OPS5 rule sets [Mir90].) 113.13 470.67 P
+0 9 Q
+-0.06 (2) 480.96 475.07 P
+0 11 Q
+-0.07 ( Experimen-) 485.46 470.67 P
+-0.23 (tal results have shown that LEAPS produces the fastest sequential executables of OPS5 rule sets; execution) 72 457.67 P
+0.09 (times can be over two orders of magnitude faster than OPS5 interpreters. This phenomenal speedup is due) 72 444.67 P
+0.49 (to the reliance of LEAPS on complex data structures and search algorithms to greatly increase rule \336ring) 72 431.67 P
+0.27 (rates. It is well-known that LEAPS data structures and algorithms are dif) 72 418.67 P
+0.27 (\336cult to comprehend; this is due,) 394.59 418.67 P
+0.65 (in part, to the inability of relational database concepts \050i.e., relations and select-project-join operators\051 to) 72 405.67 P
+(capture critical lazy-evaluation features of LEAPS algorithms.) 72 392.67 T
+-0.07 (In this paper) 72 367.67 P
+-0.07 (, we explain the LEAPS algorithms in terms of the container) 126.35 367.67 P
+-0.07 (-cursor programming abstractions) 391.24 367.67 P
+0.03 (of the P2 data structure compiler [Sir93, Bat93]. Our speci\336cations of the LEAPS algorithms were used as) 72 354.67 P
+0.02 (the basis for the RL \050Reengineered-LEAPS\051 project [Bat94] and have been validated through implementa-) 72 341.67 P
+0.58 (tion. Thus, this paper describes a reimplementation of LEAPS using P2. W) 72 328.67 P
+0.58 (e begin by reviewing relevant) 407.09 328.67 P
+(P2 abstractions.) 72 315.67 T
+1 12 Q
+(2  P2 Programming Abstractions) 72 278 T
+0 11 Q
+1.04 (There are four programming abstractions that are of) 72 252.67 P
+1.04 (fered by P2 that are critical to the understanding of) 306.99 252.67 P
+3.63 (LEAPS algorithms: cursors, containers, composite cursors, and type expressions. Each concept is) 72 239.67 P
+(explained in the following sections.) 72 226.67 T
+1 12 Q
+(2.1  Cursors and Containers) 72 195 T
+0 11 Q
+-0.17 (Many common data structures\321arrays, binary trees, ordered lists\321implement the container abstraction. A) 72 169.67 P
+2 F
+0.63 (container) 72 156.67 P
+0 F
+0.63 ( is a sequence of elements, where all the elements are instances of a single data type. Elements) 114.11 156.67 P
+(can only be referenced and updated by a run-time object called a) 72 143.67 T
+2 F
+(cursor) 358.78 143.67 T
+0 F
+( \050see Figure 1\051.) 387.46 143.67 T
+72 117 540 137 C
+72 125 204 125 2 L
+0.25 H
+2 Z
+0 X
+0 K
+N
+0 0 612 792 C
+0 10 Q
+0 X
+0 K
+0.04 (1.  This research was supported in part by the Applied Research Laboratories at the University of T) 72 110.33 P
+0.04 (exas and Schlum-) 468.86 110.33 P
+(ber) 72 98.33 T
+(ger) 84.58 98.33 T
+(.) 96.8 98.33 T
+0.24 (2.  Actually) 72 83.33 P
+0.24 (, OPS5c version 5 is the name of the production system compiler; LEAPS is the name of the algorithms.) 118.74 83.33 P
+(W) 72 71.33 T
+(e will use OPS5c/LEAPS and LEAPS interchangably in this paper) 80.64 71.33 T
+(.) 345.76 71.33 T
+FMENDPAGE
+%%EndPage: "1" 0
+%%Trailer
+%%BoundingBox: 0 0 612 792
+%%Pages: 15 -1
+%%DocumentFonts: Times-Roman
+%%+ Helvetica-Bold
+%%+ Times-Italic
+%%+ Courier-Bold
+%%+ Times-Bold
+%%+ Helvetica
+%%+ Symbol
+%%+ Courier

@@ -1,0 +1,177 @@
+/* $Id: hashcmp.p2,v 45.0 1997/09/19 05:43:30 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define MAX_WORD_SIZE	32
+#define DICT_FILE_NAME	"words1.txt"
+#define DOC_FILE_NAME	"decl.txt"
+
+/***************************************************************************/
+/***     PREDATOR container and cursor declarations.                     ***/
+/***************************************************************************/
+
+typedef struct {
+ char w[MAX_WORD_SIZE];
+} WORD;
+
+typex {
+  dict_and_doc_typex = conceptual[hashcmp[bintree[array[transient]]]];
+}
+
+container < WORD > stored_as dict_and_doc_typex with {
+  array size is 25000;
+  bintree key is w;
+  hashcmp field w;
+} dict_container;
+
+container < WORD > stored_as dict_and_doc_typex with {
+  array size is 1000;
+  bintree key is w;
+  hashcmp field w;
+} doc_container;
+
+cursor <dict_container> all_dict_words;
+cursor <doc_container> orderby descending w all_doc_words;
+
+WORD word;
+
+cursor <doc_container> where "$.w == word.w" qualified_doc_words;
+cursor <dict_container> where "$.w == all_doc_words.obj->w" qualified_dict_words;
+
+/***************************************************************************/
+/***     Read in and store the input dictionary.                         ***/
+/***************************************************************************/
+
+void read_in_dict ( void )
+{
+  FILE *dict_file;
+  int  word_count = 0;
+
+  printf( "Initializing" );
+  dict_file = fopen( DICT_FILE_NAME, "r" );
+  if (dict_file == NULL)
+  {
+     printf( "\nCould not open dictionary file %s.\n", DICT_FILE_NAME );
+     exit( 1 );
+  }
+
+  while (1) {
+    fgets( word.w, MAX_WORD_SIZE, dict_file );
+    word.w[strlen(word.w) - 1] = '\0';
+    if (feof(dict_file))
+      break;
+    else {
+      insert( all_dict_words, word );
+      if ((++word_count % 100) == 1) {
+	printf(".");
+	fflush(stdout);
+      }
+    }
+  }
+  fclose( dict_file );
+  printf( "\n" );
+  printf( "Words in dictionary: %d\n", word_count );
+  fflush(stdout);
+}
+
+/***************************************************************************/
+/***     Process the input document and specify any missing words.       ***/
+/***************************************************************************/
+
+void process_input_file ( void )
+{
+  FILE *doc_file;
+  char *p;
+  char c;
+  int  total_word_count = 0;
+  int  unique_word_count = 0;
+
+  doc_file = fopen( DOC_FILE_NAME, "r" );
+  if (doc_file == NULL)
+  {
+     printf( "\nCould not open document file %s.\n", DOC_FILE_NAME );
+     exit( 1 );
+  }
+
+  while (!feof(doc_file)) {
+    p = word.w;
+    *p = '\0';
+
+    while (!feof(doc_file)) {
+      c = fgetc(doc_file);
+      if (isalpha(c))
+         break;
+    }
+
+    if (feof(doc_file))
+       return;
+
+    while (!feof(doc_file)) {
+      if (isalpha(c))
+	*p++ = c;
+      else {
+	*p = '\0';
+	break;
+      }
+      c = fgetc(doc_file);
+    }
+
+    /* Make the word lower case. */
+    for (p = word.w; *p; p++)
+      if (isupper(*p))
+	*p = tolower(*p);
+
+    total_word_count++;
+    reset_start( qualified_doc_words );
+    if (end_adv( qualified_doc_words )) {
+      /* Word not found in document.  Add it to document container. */
+      insert( qualified_doc_words, word );
+      unique_word_count++;
+    }
+  }
+  fclose( doc_file );
+  printf( "Total words in document: %d\n", total_word_count );
+  printf( "Unique words in document: %d\n", unique_word_count );
+  fflush(stdout);
+}
+
+/***************************************************************************/
+/***     Print the results in the document container.                    ***/
+/***************************************************************************/
+
+void print_output_data ( void )
+{
+  int word_count = 0;
+  foreach (all_doc_words) {
+    reset_start( qualified_dict_words );
+    if (end_adv( qualified_dict_words )) {
+      /* Word in document but not in dictionary.  Print it. */
+      printf( " %s", all_doc_words.w );
+      word_count++;
+    }
+  }
+  printf( "\n" );
+  printf( "Unique, mis-spelled words in document: %d\n", word_count );
+}
+
+/***************************************************************************/
+/***     Main program.                                                   ***/
+/***************************************************************************/
+
+int main ( void )
+{
+  open_cont( dict_container );
+  open_cont( doc_container );
+  init_curs( all_dict_words );
+  init_curs( all_doc_words );
+  init_curs( qualified_dict_words );
+  init_curs( qualified_doc_words );
+  read_in_dict();
+  process_input_file();
+  print_output_data();
+  close_cont( doc_container );
+  close_cont( dict_container );
+  exit( 0 );
+}

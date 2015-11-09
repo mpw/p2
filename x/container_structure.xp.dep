@@ -1,0 +1,2 @@
+container_structure.o: container_structure.xp container_structure.h \
+  structure.xph

@@ -1,0 +1,109 @@
+##### ORDERBY NAME DATA #######
+       name: Akers, Mark  dept_name: Biology
+        age: 60      empno: 10000       time: 1
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 8
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 6
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 5
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 4
+       name: Alexander, Joe  dept_name: Biology
+        age: 21      empno: 10020       time: 3
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 7
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 2
+size = 8
+##### Using timestamp #######
+contents of all_emp:
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 8
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 7
+       name: Akerson, Mary  dept_name: Biology
+        age: 53      empno: 10040       time: 6
+       name: Akerson, Suzanne  dept_name: Biology
+        age: 42      empno: 10050       time: 5
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 4
+       name: Alexander, Joe  dept_name: Biology
+        age: 21      empno: 10020       time: 3
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 2
+       name: Akers, Mark  dept_name: Biology
+        age: 60      empno: 10000       time: 1
+##### c1 - Updating 3rd element #######
+##### c2 - Updating 4rd element #######
+##### c3 - Pointing to 4th element #######
+##### Using timestamp #######
+contents of all_emp:
+       name: Akerson, Suzanne  dept_name: Macys
+        age: 42      empno: 10050       time: 10
+       name: Akerson, Mary  dept_name: Sears
+        age: 53      empno: 10040       time: 9
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 8
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 7
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 4
+       name: Alexander, Joe  dept_name: Biology
+        age: 21      empno: 10020       time: 3
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 2
+       name: Akers, Mark  dept_name: Biology
+        age: 60      empno: 10000       time: 1
+##### Doing adv(on c1) #######
+adv name is: Akin, Monica
+##### Doing adv(on c3) #######
+adv name is: Akin, Monica
+##### Doing rev(on c3) #######
+rev name is: Andrews, John
+##### Trying to change c3's timestamp to 500  #######
+c3 tfield is: 7
+contents of recent emp && tfield > 5:
+       name: Andrews, John  dept_name: Biology
+        age: 61      empno: 10060       time: 7
+       name: Akerson, Suzanne  dept_name: Macys
+        age: 42      empno: 10050       time: 10
+######## updating old employees dept to Computer Science ###
+contents of All Employees:
+       name: Andrews, John  dept_name: Computer Science
+        age: 61      empno: 10060       time: 13
+       name: Akers, Mark  dept_name: Computer Science
+        age: 60      empno: 10000       time: 12
+       name: Akerson, Mary  dept_name: Computer Science
+        age: 53      empno: 10040       time: 11
+       name: Akerson, Suzanne  dept_name: Macys
+        age: 42      empno: 10050       time: 10
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 8
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 4
+       name: Alexander, Joe  dept_name: Biology
+        age: 21      empno: 10020       time: 3
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 2
+contents of old emp:
+       name: Akerson, Mary  dept_name: Computer Science
+        age: 53      empno: 10040       time: 11
+       name: Akers, Mark  dept_name: Computer Science
+        age: 60      empno: 10000       time: 12
+       name: Andrews, John  dept_name: Computer Science
+        age: 61      empno: 10060       time: 13
+##### Deleted old emp #######
+contents of old emp:
+contents of remaining emp:
+       name: Akerson, Suzanne  dept_name: Macys
+        age: 42      empno: 10050       time: 10
+       name: Akerson, Gwyn  dept_name: Biology
+        age: 23      empno: 10030       time: 8
+       name: Akin, Monica  dept_name: Biology
+        age: 40      empno: 10010       time: 4
+       name: Alexander, Joe  dept_name: Biology
+        age: 21      empno: 10020       time: 3
+       name: Andrews, Kay  dept_name: Biology
+        age: 22      empno: 10070       time: 2
+size = 5

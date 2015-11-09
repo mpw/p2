@@ -1,0 +1,1 @@
+hash.o: hash.xp hash.h ../config.h hash.xph

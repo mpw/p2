@@ -1,0 +1,133 @@
+@c $Id: dlist.xp.texi,v 45.0 1997/09/19 05:42:02 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node dlist.xp program, , Functions and Variables Index, Top
+@appendix @file{dlist.xp} program
+
+Below is the complete @file{dlist.xp} program, which was dissected in
+@ref{Example - dlist.xp}.
+
+@smallexample
+layer ds dlist[ ds ] stable no annotation retrieval_sometimes
+
+!#include "qopt.h"
+
+// dlist maintains a doubly-linked list of chronologically-insert-
+// ordered elements 
+
+
+// xform - dlist adds next, prev, mark to elements; first, last to 
+container
+
+xform( element, container, cursor )
+@{
+    add element : struct element *next; 
+    add element : struct element *prev; 
+    add container : struct element *first; 
+    add container : struct element *last;
+    xform( element, container, cursor );
+@}
+
+// optimize
+
+#define COST    LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+
+optimize( cursor )
+@{
+    optimize( cursor );
+    if (cost>COST) @{
+        cost = COST;
+        layer = %ln;
+     retrieval_direction = 0;
+    @}
+@}
+
+// retrieval operations
+// query, adv, rev, reset_start, reset_end, end_adv, end_rev
+
+query( cursor )
+@{
+    char *p = bind_predicate( cursor, obj_type, predicate );
+    %@{
+        %v.p
+    %@}
+    xfree( p );
+@}
+
+adv(cursor)
+%@{
+    cursor.obj = cursor.next;
+%@}
+
+rev(cursor)
+%@{
+    cursor.obj = cursor.prev;
+%@}
+
+end_adv( cursor )
+%@{
+    ( cursor.obj == 0 )
+%@}
+
+end_rev( cursor )
+%@{
+    ( cursor.obj == 0 )
+%@}
+
+reset_start( cursor )
+%@{
+    cursor.obj = container.first;
+%@}
+
+reset_end( cursor )
+%@{
+    cursor.obj = container.last;
+%@}
+
+// non-retrieval operations 
+// init_cont, insert, delete
+
+init_cont( container )
+%@{
+    init_cont ( container );
+
+    container.first = 0;
+    container.last = 0;
+%@}
+
+insert( cursor, record )
+%@{
+    insert( cursor, record );
+    if (!container.first) @{
+        // EMPTY list.
+        container.first = cursor.obj;
+        container.last = cursor.obj;
+        cursor.next = 0;
+        cursor.prev = 0;
+    @} else @{
+        // NON-empty list.
+        // Add record to beginning of list. 
+        cursor.next= container.first;
+        cursor.prev= 0;
+        cursor.next->prev = cursor.obj;
+        container.first= cursor.obj;
+    @}
+%@}
+
+delete( cursor )
+%@{
+
+    if ( cursor.next ) @{ 
+        cursor.next->prev = cursor.prev;
+    @} else @{ 
+        container.last = cursor.prev;
+    @}
+    if ( cursor.prev ) @{ 
+        cursor.prev->next = cursor.next;
+    @} else @{ 
+        container.first = cursor.next;
+    @}
+
+    delete(cursor);
+%@}
+@end smallexample

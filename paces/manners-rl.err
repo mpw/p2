@@ -1,0 +1,183 @@
+1. Firing rule 1 (assign_first_seat)  46 43 45
+2. Firing rule 2 (find_seating)  52 47 43 26 50
+3. Firing rule 3 (make_path)  59 53 48
+4. Firing rule 4 (path_done)  59 53
+5. Firing rule 6 (continue)  64
+6. Firing rule 2 (find_seating)  66 62 28 41 57
+7. Firing rule 3 (make_path)  73 67 60
+8. Firing rule 3 (make_path)  73 67 54
+9. Firing rule 4 (path_done)  73 67
+10. Firing rule 6 (continue)  79
+11. Firing rule 2 (find_seating)  81 77 41 25 71
+12. Firing rule 3 (make_path)  88 82 75
+13. Firing rule 3 (make_path)  88 82 74
+14. Firing rule 3 (make_path)  88 82 68
+15. Firing rule 4 (path_done)  88 82
+16. Firing rule 6 (continue)  95
+17. Firing rule 2 (find_seating)  97 93 25 37 86
+18. Firing rule 3 (make_path)  104 98 91
+19. Firing rule 3 (make_path)  104 98 90
+20. Firing rule 3 (make_path)  104 98 89
+21. Firing rule 3 (make_path)  104 98 83
+22. Firing rule 4 (path_done)  104 98
+23. Firing rule 6 (continue)  112
+24. Firing rule 2 (find_seating)  114 110 38 15 102
+25. Firing rule 3 (make_path)  121 115 108
+26. Firing rule 3 (make_path)  121 115 107
+27. Firing rule 3 (make_path)  121 115 106
+28. Firing rule 3 (make_path)  121 115 105
+29. Firing rule 3 (make_path)  121 115 99
+30. Firing rule 4 (path_done)  121 115
+31. Firing rule 6 (continue)  130
+32. Firing rule 2 (find_seating)  132 128 17 33 119
+33. Firing rule 3 (make_path)  139 133 126
+34. Firing rule 3 (make_path)  139 133 125
+35. Firing rule 3 (make_path)  139 133 124
+36. Firing rule 3 (make_path)  139 133 123
+37. Firing rule 3 (make_path)  139 133 122
+38. Firing rule 3 (make_path)  139 133 116
+39. Firing rule 4 (path_done)  139 133
+40. Firing rule 6 (continue)  149
+41. Firing rule 2 (find_seating)  151 147 34 12 137
+42. Firing rule 3 (make_path)  158 152 145
+43. Firing rule 3 (make_path)  158 152 144
+44. Firing rule 3 (make_path)  158 152 143
+45. Firing rule 3 (make_path)  158 152 142
+46. Firing rule 3 (make_path)  158 152 141
+47. Firing rule 3 (make_path)  158 152 140
+48. Firing rule 3 (make_path)  158 152 134
+49. Firing rule 4 (path_done)  158 152
+50. Firing rule 6 (continue)  169
+51. Firing rule 2 (find_seating)  171 167 14 36 156
+52. Firing rule 3 (make_path)  178 172 165
+53. Firing rule 3 (make_path)  178 172 164
+54. Firing rule 3 (make_path)  178 172 163
+55. Firing rule 3 (make_path)  178 172 162
+56. Firing rule 3 (make_path)  178 172 161
+57. Firing rule 3 (make_path)  178 172 160
+58. Firing rule 3 (make_path)  178 172 159
+59. Firing rule 3 (make_path)  178 172 153
+60. Firing rule 4 (path_done)  178 172
+61. Firing rule 6 (continue)  190
+62. Firing rule 2 (find_seating)  192 188 36 21 176
+63. Firing rule 3 (make_path)  199 193 186
+64. Firing rule 3 (make_path)  199 193 185
+65. Firing rule 3 (make_path)  199 193 184
+66. Firing rule 3 (make_path)  199 193 183
+67. Firing rule 3 (make_path)  199 193 182
+68. Firing rule 3 (make_path)  199 193 181
+69. Firing rule 3 (make_path)  199 193 180
+70. Firing rule 3 (make_path)  199 193 179
+71. Firing rule 3 (make_path)  199 193 173
+72. Firing rule 4 (path_done)  199 193
+73. Firing rule 6 (continue)  212
+74. Firing rule 2 (find_seating)  214 210 22 29 197
+75. Firing rule 3 (make_path)  221 215 208
+76. Firing rule 3 (make_path)  221 215 207
+77. Firing rule 3 (make_path)  221 215 206
+78. Firing rule 3 (make_path)  221 215 205
+79. Firing rule 3 (make_path)  221 215 204
+80. Firing rule 3 (make_path)  221 215 203
+81. Firing rule 3 (make_path)  221 215 202
+82. Firing rule 3 (make_path)  221 215 201
+83. Firing rule 3 (make_path)  221 215 200
+84. Firing rule 3 (make_path)  221 215 194
+85. Firing rule 4 (path_done)  221 215
+86. Firing rule 6 (continue)  235
+87. Firing rule 2 (find_seating)  237 233 31 10 219
+88. Firing rule 3 (make_path)  244 238 231
+89. Firing rule 3 (make_path)  244 238 230
+90. Firing rule 3 (make_path)  244 238 229
+91. Firing rule 3 (make_path)  244 238 228
+92. Firing rule 3 (make_path)  244 238 227
+93. Firing rule 3 (make_path)  244 238 226
+94. Firing rule 3 (make_path)  244 238 225
+95. Firing rule 3 (make_path)  244 238 224
+96. Firing rule 3 (make_path)  244 238 223
+97. Firing rule 3 (make_path)  244 238 222
+98. Firing rule 3 (make_path)  244 238 216
+99. Firing rule 4 (path_done)  244 238
+100. Firing rule 6 (continue)  259
+101. Firing rule 2 (find_seating)  261 257 11 18 242
+102. Firing rule 3 (make_path)  268 262 255
+103. Firing rule 3 (make_path)  268 262 254
+104. Firing rule 3 (make_path)  268 262 253
+105. Firing rule 3 (make_path)  268 262 252
+106. Firing rule 3 (make_path)  268 262 251
+107. Firing rule 3 (make_path)  268 262 250
+108. Firing rule 3 (make_path)  268 262 249
+109. Firing rule 3 (make_path)  268 262 248
+110. Firing rule 3 (make_path)  268 262 247
+111. Firing rule 3 (make_path)  268 262 246
+112. Firing rule 3 (make_path)  268 262 245
+113. Firing rule 3 (make_path)  268 262 239
+114. Firing rule 4 (path_done)  268 262
+115. Firing rule 6 (continue)  284
+116. Firing rule 2 (find_seating)  286 282 20 7 266
+117. Firing rule 3 (make_path)  293 287 280
+118. Firing rule 3 (make_path)  293 287 279
+119. Firing rule 3 (make_path)  293 287 278
+120. Firing rule 3 (make_path)  293 287 277
+121. Firing rule 3 (make_path)  293 287 276
+122. Firing rule 3 (make_path)  293 287 275
+123. Firing rule 3 (make_path)  293 287 274
+124. Firing rule 3 (make_path)  293 287 273
+125. Firing rule 3 (make_path)  293 287 272
+126. Firing rule 3 (make_path)  293 287 271
+127. Firing rule 3 (make_path)  293 287 270
+128. Firing rule 3 (make_path)  293 287 269
+129. Firing rule 3 (make_path)  293 287 263
+130. Firing rule 4 (path_done)  293 287
+131. Firing rule 6 (continue)  310
+132. Firing rule 2 (find_seating)  312 308 8 4 291
+133. Firing rule 3 (make_path)  319 313 306
+134. Firing rule 3 (make_path)  319 313 305
+135. Firing rule 3 (make_path)  319 313 304
+136. Firing rule 3 (make_path)  319 313 303
+137. Firing rule 3 (make_path)  319 313 302
+138. Firing rule 3 (make_path)  319 313 301
+139. Firing rule 3 (make_path)  319 313 300
+140. Firing rule 3 (make_path)  319 313 299
+141. Firing rule 3 (make_path)  319 313 298
+142. Firing rule 3 (make_path)  319 313 297
+143. Firing rule 3 (make_path)  319 313 296
+144. Firing rule 3 (make_path)  319 313 295
+145. Firing rule 3 (make_path)  319 313 294
+146. Firing rule 3 (make_path)  319 313 288
+147. Firing rule 4 (path_done)  319 313
+148. Firing rule 6 (continue)  337
+149. Firing rule 2 (find_seating)  339 335 6 3 317
+150. Firing rule 3 (make_path)  346 340 333
+151. Firing rule 3 (make_path)  346 340 332
+152. Firing rule 3 (make_path)  346 340 331
+153. Firing rule 3 (make_path)  346 340 330
+154. Firing rule 3 (make_path)  346 340 329
+155. Firing rule 3 (make_path)  346 340 328
+156. Firing rule 3 (make_path)  346 340 327
+157. Firing rule 3 (make_path)  346 340 326
+158. Firing rule 3 (make_path)  346 340 325
+159. Firing rule 3 (make_path)  346 340 324
+160. Firing rule 3 (make_path)  346 340 323
+161. Firing rule 3 (make_path)  346 340 322
+162. Firing rule 3 (make_path)  346 340 321
+163. Firing rule 3 (make_path)  346 340 320
+164. Firing rule 3 (make_path)  346 340 314
+165. Firing rule 4 (path_done)  346 340
+166. Firing rule 5 (are_we_done)  365 44 363
+167. Firing rule 7 (print_results)  367 363 44 361
+168. Firing rule 7 (print_results)  367 363 44 360
+169. Firing rule 7 (print_results)  367 363 44 359
+170. Firing rule 7 (print_results)  367 363 44 358
+171. Firing rule 7 (print_results)  367 363 44 357
+172. Firing rule 7 (print_results)  367 363 44 356
+173. Firing rule 7 (print_results)  367 363 44 355
+174. Firing rule 7 (print_results)  367 363 44 354
+175. Firing rule 7 (print_results)  367 363 44 353
+176. Firing rule 7 (print_results)  367 363 44 352
+177. Firing rule 7 (print_results)  367 363 44 351
+178. Firing rule 7 (print_results)  367 363 44 350
+179. Firing rule 7 (print_results)  367 363 44 349
+180. Firing rule 7 (print_results)  367 363 44 348
+181. Firing rule 7 (print_results)  367 363 44 347
+182. Firing rule 7 (print_results)  367 363 44 341
+183. Firing rule 8 (all_done)  367

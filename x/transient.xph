@@ -1,0 +1,62 @@
+// $Id: transient.xph,v 45.0 1997/09/19 05:46:55 jthomas Exp $ */
+// Copyright (C) 1997 The University of Texas at Austin. */
+
+// Transient storage layer implementation included by both
+// x/transient.xp and x/transient_fast.xp
+
+alloc(cursor)
+%{
+   MALLOC(sizeof(struct obj_type))
+%}
+
+varalloc(cursor, expr)
+%{
+   // cast expr to int, since, by default, expr has type void *
+   MALLOC((sizeof(struct obj_type) + ((int) expr)))
+%}
+
+xform(element, container, cursor)
+{
+  // Do not call down.
+}
+
+open_cont(container)
+%{
+#if 1
+   // Flag container as being uninitialized.
+   container.initialized = 0;
+#endif
+%}
+
+open_cont_number(container, expr)
+%{
+#if 1
+   // Flag container as being uninitialized.
+   container.initialized = 0;
+#endif
+%}
+
+init_cont(container)
+{
+  // Do not call down.
+}
+
+close_cont(container)
+{
+  // Do not call down.
+}
+
+overflow(container)
+%{ 
+  // FALSE.
+  0
+  // Do not call down.
+%}
+
+// Provide null xact operations.
+
+#include "xact.xph"
+
+// Provide null verbatim operations.
+
+#include "verbatim.xph"

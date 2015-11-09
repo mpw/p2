@@ -1,0 +1,402 @@
+// $Id: nloops.xp,v 45.0 1997/09/19 05:46:39 jthomas Exp $
+// Copyright (C) 1994, The University of Texas at Austin.
+
+layer lnk nloops[ lnk ] stable  retrieval_never optional multiple annotations
+
+!#include "layer-util.h"   /* string_to_card() */
+!#include "lex.h"          /* MAX_IDENT_LEN */
+!#include "link.h"         /* linkpartition() */
+!#include "nloops.h"
+!#include "qopt.h"
+!#include "string-util.h"  /* replace_string() */
+
+#define BOTH_BOUND  (bound0 &&  bound1)
+#define PARENT_ONLY (bound0 && !bound1)
+#define CHILD_ONLY  (!bound0 &&  bound1)
+#define NONE_BOUND  (!bound0 && !bound1)
+
+
+// nested loops 
+//
+// the hard part of nested loops is analyzing and transforming
+// general link predicates.  Such predicates can have an arbitrary
+// number of join clauses, residual parent predicates and residual
+// child predicates.  Consider the following link predicate (which
+// was defined in a LINK annotation):
+//
+//             ($p.F==$c.G && $p.H==$c.I && $c.J>4)
+//
+// the join keys for the parent are: F, H
+// the join keys for the child are : G, I
+// residual parent predicate: 1
+// residual child predicate: J>4
+//
+// Suppose parent records are read on the outer loop; the
+// qualification on the innerloop would be to augment
+// the predicate ($c.G==<Fvalue> && $c.I==<Hvalue> && $c.J>4)
+// to the child predicate.  (Also, the residual parent predicate
+// should be propagated to the parent file, to minimize 
+// unnecessary parent record retrievals).
+//
+// Note: lstate variables are not used
+//
+// Note: all predicates have been "pushed" down, so that
+// once a child and parent record have been retrieved, they
+// satisfy the link predicate.
+//
+// Note: when users reference a link in a predicate, they do
+// so by:  <linkname>($p,$c)  where <linkname> is the link name
+// and $p is an expression that defines the parent cursor
+// and $c is an expression that defines the child cursor
+// The link predicate that is passed to nloops (and other
+// link layers) is simply <linkname>; the cursor0 and cursor1
+// arguments specify $p and $c.
+//
+// Note: the check operation is used to verify that $p is
+// indeed a cursor over the link's parent file and $c is a
+// cursor over the link's child file.  In the case of adhoc
+// links, check always returns true.  In the case of named
+// links (i.e., links defined in annotations), the containers
+// associated with these links cannot be arbitrary expressions.
+// they must be the actual names of container variables.
+// 
+// check() is called once after loptimize and need not be called
+// again.
+//
+// Note:  all links have names.  Some names are given by users;
+// others are manufactured by pb.  Ad hoc links/joins have manufactured
+// names.  A manufactured name is of the form "*#" where # is some
+// number.
+//
+//
+
+
+
+// ddl hints are of the form:
+//
+//       <nloop pathexpr> LINK <linkname> ON
+//                 _pcard <containername> TO 
+//                 _ccard <containername>
+//                 WHERE <linkpredicate>
+//
+// _pcard := ONE | AT_MOST_ONE | MANY ;
+// _ccard := ONE | AT_MOST_ONE | MANY;
+//
+// arg[0]  linkname
+// arg[1]  _pcard (text string 'one', 'at_most_one', 'many')
+// arg[2]  parent_container_name
+// arg[3]  _ccard (text string 'one', 'at_most_one', 'many')
+// arg[4]  child_container_name
+// arg[5]  linkpredicate (quoted-text)
+
+
+ddlhint(argc, argv)
+{
+  char s[MAX_IDENT_LEN];
+
+  limit 6 arguments;
+
+  if (argc == 6) {
+    // Step 1: get linkname
+
+    get_ddlhint_argument(%a.lnkname, argv[1]);
+
+    // Step 2: get text of pcardinality and convert to cardinality
+
+    get_ddlhint_argument(s, argv[2]);
+    %a.parent_card = string_to_card(s, "nloops");
+
+    // Step 3: get name of parent container
+
+    get_ddlhint_argument(%a.parent_container, argv[3]);
+
+    // Step 4: get text of ccardinality and convert to cardinality
+
+    get_ddlhint_argument(s, argv[4]);
+    %a.child_card = string_to_card(s, "nloops");
+
+    // Step 5: get name of child container
+
+    get_ddlhint_argument(%a.child_container, argv[5]);
+
+    // Step 6: get link predicate 
+
+    get_ddlhint_argument(%a.linkpred, argv[6]);
+  }
+}
+
+
+
+// loptimize
+
+
+loptimize(cursor0, cursor1, lstate)
+{
+  char p[MAX_PRED_LEN];
+  BOOLEAN nloops_link;
+
+  // Step 1:  call below to determine best layer
+
+  loptimize(cursor0, cursor1, lstate);
+
+  // Step 2:  Check to see if this is an adhoc link.  Ad hoc
+  //          link names have null-strings for names.  If this is an adhoc
+  //          link, then nloops can process the join.
+
+  nloops_link = (linkname[0] == 0);
+
+  // Step 3:  if not adhoc link, see if this layer can process a named-link
+  //          join using nested loops.  if so, nloops_link to TRUE
+
+  if (!nloops_link) {
+    FOREACH_ANNOTATION {
+      if (strcmp(linkname,%a.lnkname) == 0) {
+        nloops_link = TRUE;
+        break;
+      }
+    }
+  }
+
+  // Step 4: if nloops can process this join, then
+  //         respond by remembering layer number and cost
+
+  if (nloops_link) {
+    if (NLOOPS_QOPT_COST < linkcost) {
+
+      // remember standard stuff for loptimize:
+      // layer id, cost, cardinalities, and residuals
+
+      linklayer = %ln;
+      linkcost  = NLOOPS_QOPT_COST;
+#if 0
+      /* Un-used. */
+      pcard     = %a.parent_card;
+      ccard     = %a.child_card;
+#endif
+      special_foreachl = FALSE;
+      linkpartition(linkpredicate, presidual, cresidual, apply);
+
+      // nloops propagates the apply predicate - the
+      // question is which cursor (parent or child) is
+      // on the outer loop
+
+      if (BOTH_BOUND) {
+        // don't propagate if both are bound - undo work of linkpartition
+        strcpy(apply, linkpredicate);
+        presidual[0] = 0;
+        cresidual[0] = 0;
+      }
+      if (PARENT_ONLY || NONE_BOUND) {
+        // assume parent is on the outer container of the foreachl loop
+        replace_string(apply, "$p", cursor0, p);
+        post_and(cresidual,p);
+      }
+      if (CHILD_ONLY) {
+        // assume child is the outer container of the foreachl loop 
+        replace_string(apply, "$c", cursor1, p);
+        post_and(presidual,p);
+      }
+    }
+  }
+}
+
+
+// reset parent and child operations
+// position-on-first-pair semantics
+// nloops propagates all residuals, including apply
+// no extra qualification is needed.
+
+
+resetc(cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+%{
+   reset_start(cursor1);
+%}
+
+
+resetp(cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+%{
+   reset_start(cursor0);
+%}
+
+
+// advance operations - get-next-pair semantics
+// note: in the case of ONE or AT_MOST_ONE links, advc
+// and advp shouldn't be called.  (see top2link layer).
+// however, if they are called, then extra (but hopefully)
+// harmless code is generated
+
+advc( cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+{
+   if (ccard == MANY)
+   %{
+      adv(cursor1);
+   %}
+   else  // at most one child and it has already been retrieved
+   %{
+      cursor1.obj = 0;
+   %}
+}
+
+
+advp( cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+{
+   if (pcard == MANY)
+   %{
+      adv(cursor0);
+   %}
+   else  // at most one parent and it has already been retreived
+   %{
+      cursor0.obj = 0;
+   %}
+}
+
+
+// endc and endp operations
+//
+// the following assumes that endc/endp calls follow a
+// advc/advp or resetc/resetp call; this should be legal
+// to assume
+// note: in the case where there is only one child (or at
+// most one child, endc shouldn't be called.  Similarly
+// for parents.  if it is called, an extra test is performed.
+
+endc(cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+{
+   switch(ccard) {
+   case AT_MOST_ONE:
+   case ONE:
+      %{
+         !cursor1.obj && end_adv(cursor1)
+      %}
+      break;
+   case MANY:
+      %{
+         end_adv(cursor1)
+      %}
+      break;
+   }
+}
+
+endp(cursor0, cursor1, lstate)  // cursor0 is parent, cursor1 child
+{
+   switch(pcard) {
+   case AT_MOST_ONE:
+   case ONE:
+      %{
+         !cursor0.obj && end_adv(cursor0)
+      %}
+      break;
+   case MANY:
+      %{
+         end_adv(cursor0)
+      %}
+      break;
+   }
+}
+
+
+
+foreachl(cursor0, cursor1, lstate, expr)  //parent cursor0, child cursor1
+{
+   warning(3, "foreachl should not be called within nloops");
+   %{
+      warning_foreachl_should_not_be_called;
+   %}
+}
+
+
+// related, connect, and disconnect operations
+//
+// related - test linkpredicate on the input cursors.
+
+
+related(cursor0, cursor1, lstate)  //parent cursor0, child cursor1
+{
+  char p1[MAX_PRED_LEN], p2[MAX_PRED_LEN];
+  BOOLEAN this_layer = FALSE;
+
+  // Step 1: test for adhoc link layer 
+
+  if (linkname[0] == 0)
+    this_layer = TRUE;
+
+  // Step 2:  if not an adhoc link, see if this layer can process the 
+  //          operation
+
+  if (!this_layer) {
+    FOREACH_ANNOTATION {
+      if (strcmp(%a.lnkname, linkname) == 0) {
+        this_layer = TRUE;
+        break;
+      }
+    }
+  }
+
+  // Step 3:  if not this layer, call below.  otherwise
+  //          generate predicate
+  
+  if (this_layer) {
+    // this layer can process the operation
+
+    replace_string(linkpredicate, "$p", cursor0, p1);
+    replace_string(p1, "$c", cursor1, p2);
+    %{
+      (%v.p2)
+    %}
+  }
+  else {
+    // not this layer - call below
+    %{
+      related(cursor0, cursor1, lstate);
+    %}
+  }
+}
+
+
+// connect and disconnect are illegal operations
+// for nested loops
+
+connect(cursor0, cursor1, lstate)  //parent cursor0, child cursor1
+{
+BOOLEAN skip = FALSE;
+
+   // Step 1:  See if this layer has been called
+
+   FOREACH_ANNOTATION {
+      if (strcmp(%a.lnkname, linkname) == 0) 
+         warning(3, "connect call on nested loops");
+         %{
+         %}
+         skip = TRUE;
+   }
+
+   // Step 2:  Good - not this layer.  Call below
+
+   if (!skip)
+   %{
+      connect(cursor0, cursor1, lstate);
+   %}
+}
+
+
+disconnect(cursor0, cursor1, lstate)  //parent cursor0, child cursor1
+{
+BOOLEAN skip = FALSE;
+
+   // Step 1:  See if this layer has been called
+
+   FOREACH_ANNOTATION {
+      if (strcmp(%a.lnkname, linkname) == 0)
+         warning(3, "disconnect call on nested loops");
+         %{
+         %}
+         skip = TRUE;
+   }
+
+   // Step 2:  Good - not this layer.  Call below
+ 
+   if (!skip)
+   %{
+      disconnect(cursor0, cursor1, lstate);
+   %}
+}

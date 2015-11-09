@@ -1,0 +1,64 @@
+/* $Id: compcurs08.p2,v 45.0 1997/09/19 05:42:57 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+#include <stdio.h> /* printf() */
+#include "P2_paces.h"
+
+typedef struct {
+  int i;
+} ELEMENT;
+
+typex {
+  t = P2_COMPCURS_TYPEX;
+}
+
+container <ELEMENT> stored_as t with {
+  P2_COMPCURS_ANNOTE(i, 10);
+} x;
+
+int foo( )
+{
+  return 1;
+}
+
+compcurs < a x, b x, c x, d x, e x, f x >
+  where "$f.i == $e.i"
+        "&& $a.i == 7"
+  orderby $a.i
+xx;
+
+static void
+read_data (void)
+{
+  ELEMENT e;
+  int i;
+
+  cursor <x> xxx;
+
+  for (i = 0; i < 10; i++) {
+    e.i = i;
+    insert(xxx, e);
+  }
+}
+
+main()
+{
+  open_cont(x);
+
+  read_data();
+
+  initk(xx);
+  foreachk(xx) {
+    printf("%d %d %d %d %d %d\n",
+	   (xx.a).i,
+	   (xx.b).i,
+	   (xx.c).i,
+	   (xx.d).i,
+	   (xx.e).i,
+	   (xx.f).i);
+  }
+
+  close_cont(x);
+
+  return(0);
+}

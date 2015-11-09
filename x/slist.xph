@@ -1,0 +1,208 @@
+// $Id: slist.xph,v 45.1 1997/09/29 03:50:59 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Singly-linked list implementation.
+// Included by:
+//     slist.xp
+//     slist_queue.xp
+//     slist_stack.xp
+//     stlist_stable.xp
+// Note: NOT included by slist_prev.xp
+
+!#include "qopt.h"
+
+// link cursor function
+
+cursor_func link(cursor)
+%{
+   if (!container.first)
+   {
+     // EMPTY list.
+     // Add record as only element in list.
+     cursor.next     = 0;
+     container.first = cursor.obj;
+#if defined(P2_SLIST_LAST)
+     container.last  = cursor.obj;
+#endif // P2_SLIST_LAST
+   }
+   else
+   {
+     // NON-empty list.
+#if defined(P2_SLIST_LAST)
+     // Add record to end of list. */
+     cursor.next = 0;
+     container.last->next = cursor.obj;
+     container.last = cursor.obj;
+#else
+     // Add record to beginning of list.
+     cursor.next     = container.first;
+     container.first = cursor.obj;
+#endif // P2_SLIST_LAST
+   }
+%}
+
+xform (element, container, cursor)
+{
+   add element   : struct element *next;
+#if defined(P2_SLIST_LAST)
+   add container : struct element *last;
+#endif // P2_SLIST_LAST
+   add container : struct element *first; 
+   xform(element, container, cursor);
+}
+
+#if !defined(P2_LAYER_COST)
+// If possible, avoid using this layer; layer has a high retrieval cost.
+// (x/slist_stack.xp and x/slist_queue.xp define a very low cost,
+// so as to force themselves to be the retrieval layer, in order to
+// preserve stack or queue semantics).
+#define P2_LAYER_COST LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*2
+#endif // P2_LAYER_COST
+
+optimize (cursor)
+{
+   optimize(cursor);
+   if (cost > P2_LAYER_COST)
+   {
+      cost  = P2_LAYER_COST;
+      layer = %ln;
+      retrieval_direction = 0;
+   }
+}
+
+init_cont (container)
+%{
+   init_cont (container);
+   container.first = 0;
+#if defined(P2_SLIST_LAST)
+   container.last = 0;
+#endif // P2_SLIST_LAST
+%}
+
+// retrieval operations
+
+query (cursor)
+{
+   char *p = bind_predicate(te, cursor, obj_type, predicate);
+   %{
+      %v.p
+   %}
+   xfree(p);
+}
+
+end_adv (cursor)
+%{
+   (!cursor.obj)
+%}
+
+end_rev (cursor)
+%{
+   (!cursor.obj)
+%}
+
+adv (cursor)
+%{
+   cursor.obj = cursor.next;
+%}
+
+rev (cursor)
+%{
+  if (cursor.obj == container.first)
+  {
+    // Beginning of list
+    cursor.obj = 0;
+  }
+  else
+  {
+    struct obj_type *p = cursor.obj;
+    cursor.obj = container.first;
+    while (cursor.next != p)
+    {
+      cursor.obj = cursor.next;
+    }
+  }
+%}
+
+reset_start (cursor)
+%{
+   cursor.obj = container.first;
+%}      
+
+reset_end (cursor)
+%{
+#if defined(P2_SLIST_LAST)
+  cursor.obj = container.last;
+#else
+  while (cursor.next != 0)
+  {
+    cursor.obj = cursor.next;
+  }
+#endif // P2_SLIST_LAST
+%}
+
+// other operations
+
+insert (cursor, record)
+%{
+   insert(cursor, record);
+   call link(cursor);
+%}
+
+varinsert (cursor, record, expr)
+%{
+   varinsert(cursor, record, expr);
+   call link(cursor);
+%}
+
+delete (cursor)
+{
+  char p[20], q[20];
+  sprintf(p, "P2_temp%d", other_id_counter++);
+  sprintf(q, "P2_temp%d", other_id_counter++);
+  %{
+    {
+      struct obj_type *%v.p = cursor.obj;
+      struct obj_type *%v.q = cursor.next;
+      if (container.first == %v.p)
+      {
+        // FIRST node.
+        container.first = %v.q;
+      }
+      else
+      {
+        // INTERNAL node.
+        cursor.obj = container.first;
+        while (cursor.next != %v.p)
+        {
+          cursor.obj = cursor.obj->next;
+        }
+#if defined(P2_SLIST_LAST)
+        if (container.last == cursor.next)
+        {
+          // P2_SLIST_LAST node.
+          container.last = cursor.obj;
+        }
+#endif // P2_SLIST_LAST
+        cursor.next = %v.q;
+        cursor.obj = %v.p;
+      }
+      delete(cursor);
+  %}
+
+#if !defined(P2_STABLE)
+  // For post-positioning--remember next pointer.
+  if (layer == %ln)
+  %{
+      {
+        cursor.obj = %v.q;
+        cursor.inbetween = 1;
+      }
+  %}
+#endif // P2_STABLE
+
+  %{
+    }
+  %}
+}
+
+

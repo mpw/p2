@@ -1,0 +1,874 @@
+/************************************
+           short_waltz.p2
+************************************/
+
+/************************************
+  options selected: watch 
+************************************/
+
+#include <stdlib.h>
+#include "leaps.h"
+
+
+/**************** generated #defines *******************/
+
+#define DEBUG 0
+
+#define bind( curstype, kdcurs, active_rule, skiprule, alist) \
+   curstype *c; \
+   if (fresh) { \
+      c = (curstype*) malloc(sizeof(curstype)); \
+      top.curs = (void*) c;\
+      initk(*c); \
+      pos(kdcurs,top.cursor_position); \
+   } else {  \
+      c = (curstype *) top.curs; \
+      goto cnt; \
+   } \
+   foreachk(*c) {
+
+#define next_rule( nextrule, alist ) \
+      return; \
+cnt: ; \
+   } \
+   free(c); \
+   fresh = TRUE; top.current_rule = nextrule; \
+   nextrule(); return;
+
+
+
+/*****************  valid defines ****************/
+
+#define ta " $a._ts <= dom_timestamp "
+#define tb " $b._ts <= dom_timestamp "
+#define tc " $c._ts <= dom_timestamp "
+#define td " $d._ts <= dom_timestamp "
+#define te " $e._ts <= dom_timestamp "
+
+
+#define va " (!is_deleted($a)) "
+#define vb " (!is_deleted($b)) "
+#define vc " (!is_deleted($c)) "
+#define vd " (!is_deleted($d)) "
+#define ve " (!is_deleted($e)) "
+
+
+#define and " && "
+
+#define t2_a and tb
+#define t2_b and ta
+#define t3_a and tb and tc
+#define t3_b and ta and tc
+#define t3_c and ta and tb
+#define t4_a and tb and tc and td
+#define t4_b and ta and tc and td
+#define t4_c and ta and tb and td
+#define t4_d and ta and tb and tc
+#define t5_a and tb and tc and td and te
+#define t5_b and ta and tc and td and te
+#define t5_c and ta and tb and td and te
+#define t5_d and ta and tb and tc and te
+#define t5_e and ta and tb and tc and td
+
+
+#define v2_a vb
+#define v2_b va
+#define v3_a vb and vc
+#define v3_b va and vc
+#define v3_c va and vb
+#define v4_a vb and vc and vd
+#define v4_b va and vc and vd
+#define v4_c va and vb and vd
+#define v4_d va and vb and vc
+#define v5_a vb and vc and vd and ve
+#define v5_b va and vc and vd and ve
+#define v5_c va and vb and vd and ve
+#define v5_d va and vb and vc and ve
+#define v5_e va and vb and vc and vd
+
+
+
+/************* generated forward references ***************/
+
+VOID_FUNC    i1_a, i1_b,
+             i2_a, i2_b,
+             i3_a, i3_b, i3_c, i3_d,
+             i4_a, i4_b, i4_c, i4_d,
+             i5_a, i5_b;
+
+
+
+/************ generated record types ***************/
+
+
+typedef struct {
+   char    value[30];
+   int     _ts;
+} stage;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   int     _ts;
+} line;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   char    joined[7];
+   char    label[7];
+   char    plotted[5];
+   int     _ts;
+} edge;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   int     p3;
+   int     base_point;
+   char    type[20];
+   int     _ts;
+} junction;
+
+
+/************ generated container declarations ***************/
+
+typex { leaps_x = top2ds_qualify[
+                  llist[
+                  delflag[malloc[transient]]]]; }
+
+container < stage > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_stage;
+
+container < line > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_line;
+
+container < line > stored_as leaps_x with {
+   llist key is _ts;
+}  shadow_line;
+
+container < edge > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_edge;
+
+container < edge > stored_as leaps_x with {
+   llist key is _ts;
+}  shadow_edge;
+
+container < junction > stored_as leaps_x with {
+   llist key is _ts;
+}  cont_junction;
+
+/************** generated container numbers *******************/
+
+#define stage_num  1
+#define line_num  2
+#define shadow_line_num  3
+#define edge_num  4
+#define shadow_edge_num  5
+#define junction_num  6
+
+/***************** external files *********************/
+
+#include "make_3_j.c"
+
+/************ utility cursor decls ***************/
+
+typedef cursor <cont_stage> stage_cursor;
+typedef cursor <cont_line> line_cursor;
+typedef cursor <shadow_line> shadow_line_cursor;
+typedef cursor <cont_edge> edge_cursor;
+typedef cursor <shadow_edge> shadow_edge_cursor;
+typedef cursor <cont_junction> junction_cursor;
+
+
+stage_cursor   a_stage;
+
+line_cursor   a_line;
+
+shadow_line_cursor   a_shadow_line;
+
+edge_cursor   a_edge;
+
+shadow_edge_cursor   a_shadow_edge;
+
+junction_cursor   a_junction;
+
+
+
+
+/************ insertion and deletion operations ********/
+
+void insert_stage (stage *r)
+{
+   insert(a_stage,*r);
+   push_wl( a_stage.obj, a_stage._ts, stage_num );
+}
+
+void delete_stage (stage_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_line (line *r)
+{
+   insert(a_line,*r);
+   push_wl( a_line.obj, a_line._ts, line_num );
+}
+
+void delete_line (line_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_shadow_line (line *r)
+{
+   insert(a_shadow_line,*r);
+   push_wl( a_shadow_line.obj, a_shadow_line._ts, shadow_line_num );
+}
+
+void delete_shadow_line (shadow_line_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_edge (edge *r)
+{
+   insert(a_edge,*r);
+   push_wl( a_edge.obj, a_edge._ts, edge_num );
+}
+
+void delete_edge (edge_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_shadow_edge (edge *r)
+{
+   insert(a_shadow_edge,*r);
+   push_wl( a_shadow_edge.obj, a_shadow_edge._ts, shadow_edge_num );
+}
+
+void delete_shadow_edge (shadow_edge_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_junction (junction *r)
+{
+   insert(a_junction,*r);
+   push_wl( a_junction.obj, a_junction._ts, junction_num );
+}
+
+void delete_junction (junction_cursor *c)
+{
+   delete(*c);
+}
+
+
+/**************************** rule #1: reverse_edges :
+   (stage ^value  duplicate  )
+   (line ^p1  <p1> ^p2  <p2>  )
+    -->  *******************************/
+
+int p2_1;
+int p1_1;
+
+#define query_1 where " $a.value == 'duplicate' "
+
+typedef compcurs < a cont_stage, b cont_line >
+   given < a >
+   query_1 t2_a
+   valid v2_a
+   curs1_a;
+
+typedef compcurs < a cont_stage, b cont_line >
+   given < b >
+   query_1 t2_b
+   valid v2_b
+   curs1_b;
+
+/**************************** rule #2: done_reversing :
+   (stage ^value  duplicate  )
+   - (line  )
+    -->  *******************************/
+
+
+cursor <cont_line>
+   C2_2;
+cursor <shadow_line> where "$._ts > dom_timestamp"
+   S2_2;
+
+BOOLEAN N2_2( )
+{
+   foreach(C2_2) { return FALSE; }
+   foreach(S2_2) { return FALSE; }
+   return TRUE;
+}
+
+#define query_2 where " $a.value == 'duplicate' && (N2_2()) "
+
+typedef compcurs < a cont_stage >
+   given < a >
+   query_2
+   curs2_a;
+
+#define query_2_b where " $a.value == 'duplicate' && (N2_2()) "
+
+typedef compcurs < a cont_stage, b shadow_line >
+   given < b >
+   query_2_b t2_b
+   valid v2_b
+   curs2_b;
+
+/**************************** rule #3: make-3_junction :
+   (stage ^value  detect_junctions  )
+   (edge ^p1  <base_point> ^p2  <p1> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p2> ^p2 <> <p1> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p3> ^p2 <> <p1> ^p2 <> <p2> ^joined  false  )
+    -->  *******************************/
+
+int p3_3;
+int p2_3;
+int p1_3;
+int base_point_3;
+
+#define query_3 where " $a.value == 'detect_junctions' && $b.joined == 'false' \
+        && $c.p1 == $b.p1 && $c.p2 != $b.p2 && $c.joined == 'false' \
+        && $d.p1 == $b.p1 && $d.p2 != $b.p2 && $d.p2 != $c.p2 && $d.joined == 'false' "
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < a >
+   query_3 t4_a
+   valid v4_a
+   curs3_a;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < b >
+   query_3 t4_b
+   valid v4_b
+   curs3_b;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < c >
+   query_3 t4_c
+   valid v4_c
+   curs3_c;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < d >
+   query_3 t4_d
+   valid v4_d
+   curs3_d;
+
+/**************************** rule #4: make_L :
+   (stage ^value  detect_junctions  )
+   (edge ^p1  <base_point> ^p2  <p2> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p3> ^p2 <> <p2> ^joined  false  )
+   - (edge ^p1  <base_point> ^p2 <> <p2> ^p2 <> <p3>  )
+    -->  *******************************/
+
+int p3_4;
+int p2_4;
+int base_point_4;
+
+cursor <cont_edge> where " $.p1 == base_point_4 && $.p2 != p2_4 && $.p2 != p3_4 "
+   C4_4;
+cursor <shadow_edge> where " $.p1 == base_point_4 && $.p2 != p2_4 && $.p2 != p3_4  && $._ts > dom_timestamp"
+   S4_4;
+
+BOOLEAN N4_4(  edge_cursor *b, edge_cursor *c )
+{
+   p3_4 = c->p2;
+   p2_4 = b->p2;
+   base_point_4 = b->p1;
+   foreach(C4_4) { return FALSE; }
+   foreach(S4_4) { return FALSE; }
+   return TRUE;
+}
+
+#define query_4 where " $a.value == 'detect_junctions' && $b.joined == 'false' \
+        && $c.p1 == $b.p1 && $c.p2 != $b.p2 && $c.joined == 'false' && (N4_4(&$b,&$c)) "
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge >
+   given < a >
+   query_4 t3_a
+   valid v3_a
+   curs4_a;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge >
+   given < b >
+   query_4 t3_b
+   valid v3_b
+   curs4_b;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge >
+   given < c >
+   query_4 t3_c
+   valid v3_c
+   curs4_c;
+
+#define query_4_d where " $a.value == 'detect_junctions' && $b.joined == 'false' \
+        && $c.p1 == $b.p1 && $c.p2 != $b.p2 && $c.joined == 'false' \
+        && $d.p1 == $b.p1 && $d.p2 != $b.p2 && $d.p2 != $c.p2 && (N4_4(&$b,&$c)) "
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d shadow_edge >
+   given < d >
+   query_4_d t4_d
+   valid v4_d
+   curs4_d;
+
+/**************************** rule #5: done_detecting :
+   (stage ^value  detect_junctions  )
+   - (edge ^joined  false  )
+    -->  *******************************/
+
+
+cursor <cont_edge> where " $.joined == 'false' "
+   C5_2;
+cursor <shadow_edge> where " $.joined == 'false'  && $._ts > dom_timestamp"
+   S5_2;
+
+BOOLEAN N5_2( )
+{
+   foreach(C5_2) { return FALSE; }
+   foreach(S5_2) { return FALSE; }
+   return TRUE;
+}
+
+#define query_5 where " $a.value == 'detect_junctions' && (N5_2()) "
+
+typedef compcurs < a cont_stage >
+   given < a >
+   query_5
+   curs5_a;
+
+#define query_5_b where " $a.value == 'detect_junctions' && $b.joined == 'false' && (N5_2()) "
+
+typedef compcurs < a cont_stage, b shadow_edge >
+   given < b >
+   query_5_b t2_b
+   valid v2_b
+   curs5_b;
+
+
+
+
+/************* generated valid functions **********************/
+
+BOOLEAN valid_stage( void *o ) {
+   pos(a_stage, o);
+   return( !is_deleted(a_stage) );
+}
+
+BOOLEAN valid_line( void *o ) {
+   pos(a_line, o);
+   return( !is_deleted(a_line) );
+}
+
+BOOLEAN valid_shadow_line( void *o ) {
+   pos(a_shadow_line, o);
+   return( !is_deleted(a_shadow_line) );
+}
+
+BOOLEAN valid_edge( void *o ) {
+   pos(a_edge, o);
+   return( !is_deleted(a_edge) );
+}
+
+BOOLEAN valid_shadow_edge( void *o ) {
+   pos(a_shadow_edge, o);
+   return( !is_deleted(a_shadow_edge) );
+}
+
+BOOLEAN valid_junction( void *o ) {
+   pos(a_junction, o);
+   return( !is_deleted(a_junction) );
+}
+
+
+
+BOOL_FUNC_PTR valid_vect[ ] = { 0, valid_stage, valid_line, valid_shadow_line, valid_edge, valid_shadow_edge, valid_junction, 0 };
+
+
+/*************** fire rule procs *****************/
+
+/**************************** rule reverse_edges :
+   (stage ^value  duplicate  )
+   (line ^p1  <p1> ^p2  <p2>  )
+    -->  *******************************/
+
+void fire_rule1( stage_cursor *a, line_cursor *b )
+{
+   /** (write  draw <p1> <p2> (CRLF)) **/
+   printf(" draw %d %d\n", b->p1, b->p2);
+
+   /** (make edge ^p1  <p1> ^p2  <p2> ^joined  false ) **/
+   { edge r;
+     r.p1 =  b->p1;
+     r.p2 =  b->p2;
+     strcpy(r.joined,"false");
+     strcpy(r.label,NILSTR);
+     strcpy(r.plotted,NILSTR);
+     r._ts =  global_counter++;
+     insert_edge(&r);
+   }
+
+   /** (make edge ^p1  <p2> ^p2  <p1> ^joined  false ) **/
+   { edge r;
+     r.p1 =  b->p2;
+     r.p2 =  b->p1;
+     strcpy(r.joined,"false");
+     strcpy(r.label,NILSTR);
+     strcpy(r.plotted,NILSTR);
+     r._ts =  global_counter++;
+     insert_edge(&r);
+   }
+
+   /** (remove 2 -- line -- ) **/
+   {  line r;
+      getrec(*b,r);
+      r._ts =  global_counter++;
+      insert_shadow_line(&r);
+   }
+   b->_ts = global_counter;
+   delete_line(b);
+
+}
+
+/**************************** rule done_reversing :
+   (stage ^value  duplicate  )
+   - (line  )
+    -->  *******************************/
+
+void fire_rule2( stage_cursor *a )
+{
+   /** (modify 1 -- stage -- ^value  detect_junctions) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      strcpy(r.value,"detect_junctions");
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule make-3_junction :
+   (stage ^value  detect_junctions  )
+   (edge ^p1  <base_point> ^p2  <p1> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p2> ^p2 <> <p1> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p3> ^p2 <> <p1> ^p2 <> <p2> ^joined  false  )
+    -->  *******************************/
+
+void fire_rule3( stage_cursor *a, edge_cursor *b, edge_cursor *c, edge_cursor *d )
+{
+   /** (make junction ^type  make_3_junction( b->p1, b->p2, c->p2, d->p2, &r ) ^base_point  <base_point> ) **/
+   { junction r;
+     r.p1 = NILVAL;
+     r.p2 = NILVAL;
+     r.p3 = NILVAL;
+     r.base_point =  b->p1;
+     strcpy(r.type, make_3_junction( b->p1, b->p2, c->p2, d->p2, &r ));
+     r._ts =  global_counter++;
+     insert_junction(&r);
+   }
+
+   /** (modify 2 -- edge -- ^joined  true) **/
+   {  edge r;
+      global_counter++;
+      getrec(*b,r);
+      r._ts =  global_counter++ + 1;
+      insert_shadow_edge(&r);
+      strcpy(r.joined,"true");
+      r._ts =  global_counter++ - 1;
+      insert_edge(&r);
+      b->_ts = global_counter;
+      delete_edge(b);
+   }
+
+   /** (modify 3 -- edge -- ^joined  true) **/
+   {  edge r;
+      global_counter++;
+      getrec(*c,r);
+      r._ts =  global_counter++ + 1;
+      insert_shadow_edge(&r);
+      strcpy(r.joined,"true");
+      r._ts =  global_counter++ - 1;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+   /** (modify 4 -- edge -- ^joined  true) **/
+   {  edge r;
+      global_counter++;
+      getrec(*d,r);
+      r._ts =  global_counter++ + 1;
+      insert_shadow_edge(&r);
+      strcpy(r.joined,"true");
+      r._ts =  global_counter++ - 1;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+}
+
+/**************************** rule make_L :
+   (stage ^value  detect_junctions  )
+   (edge ^p1  <base_point> ^p2  <p2> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p3> ^p2 <> <p2> ^joined  false  )
+   - (edge ^p1  <base_point> ^p2 <> <p2> ^p2 <> <p3>  )
+    -->  *******************************/
+
+void fire_rule4( stage_cursor *a, edge_cursor *b, edge_cursor *c )
+{
+   /** (make junction ^type  L ^base_point  <base_point> ^p1  <p2> ^p2  <p3> ) **/
+   { junction r;
+     r.p1 =  b->p2;
+     r.p2 =  c->p2;
+     r.p3 = NILVAL;
+     r.base_point =  b->p1;
+     strcpy(r.type,"L");
+     r._ts =  global_counter++;
+     insert_junction(&r);
+   }
+
+   /** (modify 2 -- edge -- ^joined  true) **/
+   {  edge r;
+      global_counter++;
+      getrec(*b,r);
+      r._ts =  global_counter++ + 1;
+      insert_shadow_edge(&r);
+      strcpy(r.joined,"true");
+      r._ts =  global_counter++ - 1;
+      insert_edge(&r);
+      b->_ts = global_counter;
+      delete_edge(b);
+   }
+
+   /** (modify 3 -- edge -- ^joined  true) **/
+   {  edge r;
+      global_counter++;
+      getrec(*c,r);
+      r._ts =  global_counter++ + 1;
+      insert_shadow_edge(&r);
+      strcpy(r.joined,"true");
+      r._ts =  global_counter++ - 1;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+}
+
+/**************************** rule done_detecting :
+   (stage ^value  detect_junctions  )
+   - (edge ^joined  false  )
+    -->  *******************************/
+
+void fire_rule5( stage_cursor *a )
+{
+   /** (modify 1 -- stage -- ^value  find_initial_boundary) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      strcpy(r.value,"find_initial_boundary");
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+
+VOID_FUNC_PTR first_rule[] =
+   { 0, i3_a, i1_b, i2_b, i3_b, i4_d,pop,  0};
+
+int rfc = 1;
+
+void i1_a(void)
+{
+   bind(curs1_a, c->a, active_rule1, i2_a, curs1_a_list );
+   fprintf(stderr,"%d. Firing rule 1 (reverse_edges)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule1( &c->a, &c->b );
+   next_rule( i2_a, curs1_a_list );
+}
+
+void i1_b(void)
+{
+   bind(curs1_b, c->b, active_rule1, pop, curs1_b_list );
+   fprintf(stderr,"%d. Firing rule 1 (reverse_edges)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule1( &c->a, &c->b );
+   next_rule( pop, curs1_b_list );
+}
+
+void i2_a(void)
+{
+   bind(curs2_a, c->a, active_rule2, i5_a, curs2_a_list );
+   fprintf(stderr,"%d. Firing rule 2 (done_reversing)  %d\n",rfc++,c->a._ts);
+   fire_rule2( &c->a );
+   next_rule( i5_a, curs2_a_list );
+}
+
+void i2_b(void)
+{
+   bind(curs2_b, c->b, active_rule2, pop, curs2_b_list );
+   fprintf(stderr,"%d. Firing rule 2 (done_reversing)  %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule2( &c->a );
+   next_rule( pop, curs2_b_list );
+}
+
+void i3_a(void)
+{
+   bind(curs3_a, c->a, active_rule3, i4_a, curs3_a_list );
+   fprintf(stderr,"%d. Firing rule 3 (make-3_junction)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule3( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i4_a, curs3_a_list );
+}
+
+void i3_b(void)
+{
+   bind(curs3_b, c->b, active_rule3, i4_b, curs3_b_list );
+   fprintf(stderr,"%d. Firing rule 3 (make-3_junction)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule3( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i3_c, curs3_b_list );
+}
+
+void i3_c(void)
+{
+   bind(curs3_c, c->c, active_rule3, i4_b, curs3_c_list );
+   fprintf(stderr,"%d. Firing rule 3 (make-3_junction)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule3( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i3_d, curs3_c_list );
+}
+
+void i3_d(void)
+{
+   bind(curs3_d, c->d, active_rule3, i4_b, curs3_d_list );
+   fprintf(stderr,"%d. Firing rule 3 (make-3_junction)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule3( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i4_b, curs3_d_list );
+}
+
+void i4_a(void)
+{
+   bind(curs4_a, c->a, active_rule4, i1_a, curs4_a_list );
+   fprintf(stderr,"%d. Firing rule 4 (make_L)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule4( &c->a, &c->b, &c->c );
+   next_rule( i1_a, curs4_a_list );
+}
+
+void i4_b(void)
+{
+   bind(curs4_b, c->b, active_rule4, i5_b, curs4_b_list );
+   fprintf(stderr,"%d. Firing rule 4 (make_L)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule4( &c->a, &c->b, &c->c );
+   next_rule( i4_c, curs4_b_list );
+}
+
+void i4_c(void)
+{
+   bind(curs4_c, c->c, active_rule4, i5_b, curs4_c_list );
+   fprintf(stderr,"%d. Firing rule 4 (make_L)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule4( &c->a, &c->b, &c->c );
+   next_rule( pop, curs4_c_list );
+}
+
+void i4_d(void)
+{
+   bind(curs4_d, c->d, active_rule4, i5_b, curs4_d_list );
+   fprintf(stderr,"%d. Firing rule 4 (make_L)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule4( &c->a, &c->b, &c->c );
+   next_rule( i5_b, curs4_d_list );
+}
+
+void i5_a(void)
+{
+   bind(curs5_a, c->a, active_rule5, pop, curs5_a_list );
+   fprintf(stderr,"%d. Firing rule 5 (done_detecting)  %d\n",rfc++,c->a._ts);
+   fire_rule5( &c->a );
+   next_rule( pop, curs5_a_list );
+}
+
+void i5_b(void)
+{
+   bind(curs5_b, c->b, active_rule5, pop, curs5_b_list );
+   fprintf(stderr,"%d. Firing rule 5 (done_detecting)  %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule5( &c->a );
+   next_rule( pop, curs5_b_list );
+}
+
+
+void insert_data_tuple (void)
+{
+char cont_name[TOKEN_LEN];
+char skip[TOKEN_LEN];
+char fieldname[TOKEN_LEN];
+   sscanf (inp_line, "(make %s", cont_name);
+   if (strcmp(cont_name,"stage") == 0) {
+      stage r;
+      sscanf(inp_line, "%s %s %s %s ", skip, cont_name, fieldname, r.value);
+      r._ts = global_counter++;
+      insert(a_stage,r);
+      push_wl( a_stage.obj, a_stage._ts, stage_num );
+      return;
+   }
+   if (strcmp(cont_name,"line") == 0) {
+      line r;
+      sscanf(inp_line, "%s %s %s %d %s %d ", skip, cont_name, fieldname, &r.p1, fieldname, &r.p2);
+      r._ts = global_counter++;
+      insert(a_line,r);
+      push_wl( a_line.obj, a_line._ts, line_num );
+      return;
+   }
+   if (strcmp(cont_name,"edge") == 0) {
+      edge r;
+      sscanf(inp_line, "%s %s %s %d %s %d %s %s %s %s %s %s ", skip, cont_name, fieldname, &r.p1, fieldname, &r.p2, fieldname, r.joined, fieldname, r.label, fieldname, r.plotted);
+      r._ts = global_counter++;
+      insert(a_edge,r);
+      push_wl( a_edge.obj, a_edge._ts, edge_num );
+      return;
+   }
+   if (strcmp(cont_name,"junction") == 0) {
+      junction r;
+      sscanf(inp_line, "%s %s %s %d %s %d %s %d %s %d %s %s ", skip, cont_name, fieldname, &r.p1, fieldname, &r.p2, fieldname, &r.p3, fieldname, &r.base_point, fieldname, r.type);
+      r._ts = global_counter++;
+      insert(a_junction,r);
+      push_wl( a_junction.obj, a_junction._ts, junction_num );
+      return;
+   }
+   printf("*** unrecognizable make - no action taken***\n");
+}
+
+
+void init_all(void)
+{
+   open_cont( stack );
+
+   open_cont( cont_stage );
+   init_curs( a_stage );
+
+   open_cont( cont_line );
+   init_curs( a_line );
+
+   open_cont( shadow_line );
+   init_curs( a_shadow_line );
+
+   open_cont( cont_edge );
+   init_curs( a_edge );
+
+   open_cont( shadow_edge );
+   init_curs( a_shadow_edge );
+
+   open_cont( cont_junction );
+   init_curs( a_junction );
+}
+
+#include "leaps.c"

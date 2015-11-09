@@ -1,0 +1,57 @@
+lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_FREE] = TRUE
+lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_S]    = TRUE
+lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_X]    = TRUE
+lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_U]    = TRUE
+lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_IS]   = TRUE
+lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_IX]   = TRUE
+lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_SIX]  = TRUE
+
+lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_FREE] = TRUE
+lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_S]    = TRUE
+lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_X]    = FALSE
+lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_U]    = FALSE
+lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_IS]   = TRUE
+lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_IX]   = FALSE
+lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_SIX]  = FALSE
+
+lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_FREE] = TRUE
+lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_S]    = FALSE
+lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_X]    = FALSE
+lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_U]    = FALSE
+lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_IS]   = FALSE
+lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_IX]   = FALSE
+lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_SIX]  = FALSE
+
+lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_FREE] = TRUE
+lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_S]    = TRUE
+lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_X]    = FALSE
+lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_U]    = FALSE
+lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_IS]   = FALSE
+lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_IX]   = FALSE
+lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_SIX]  = FALSE
+
+lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_FREE] = TRUE
+lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_S]    = TRUE
+lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_X]    = FALSE
+lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_U]    = FALSE
+lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_IS]   = TRUE
+lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_IX]   = TRUE
+lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_SIX]  = TRUE
+
+lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_FREE] = TRUE
+lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_S]    = FALSE
+lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_X]    = FALSE
+lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_U]    = FALSE
+lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_IS]   = TRUE
+lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_IX]   = TRUE
+lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_SIX]  = FALSE
+
+lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_FREE] = TRUE
+lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_S]    = FALSE
+lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_X]    = FALSE
+lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_U]    = FALSE
+lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_IS]   = TRUE
+lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_IX]   = FALSE
+lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_SIX]  = FALSE
+
+Parent Exits

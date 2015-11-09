@@ -1,0 +1,6 @@
+(literalize counter value integer)
+
+(p cycle
+   (counter ^value {<x> < 100000})
+   -->
+   (modify 1 ^value (compute <x> + 1)) )

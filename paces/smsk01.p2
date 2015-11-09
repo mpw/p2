@@ -1,0 +1,160 @@
+// $Id: smsk01.p2,v 45.0 1997/09/19 05:44:19 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+/* Bug found by smsk. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define HASH hash_slow
+#define HASHSIZE 50
+
+// Database element
+
+typedef struct{
+  char cust_name[80];
+  int cust_acc_no;
+  char cust_city[80];
+  int cust_balance;
+} DBASE_REC;
+
+// Transaction element
+
+typedef struct {
+  int cust_acc_no;
+} TBASE_REC;
+
+// Global variables
+
+TBASE_REC del_rec;
+
+// Type expressions.
+
+typex {
+  s  = conceptual[HASH[P2_DELFLAG_LAYER[array[transient]]]];
+}
+
+// Containers.
+
+container <DBASE_REC> stored_as s with {
+  HASH key is cust_acc_no with size HASHSIZE;
+  array size is HASHSIZE;
+} dbase;
+
+container <TBASE_REC> stored_as s with {
+  HASH key is cust_acc_no with size HASHSIZE;
+  array size is HASHSIZE;
+} tbase;
+
+// Cursors
+
+cursor <dbase>
+  orderby ascending cust_name
+dbase_cursor;
+
+cursor <tbase>
+  orderby ascending cust_acc_no
+tbase_cursor; // Transaction delete record
+
+cursor <dbase>
+  where "$.cust_acc_no == del_rec.cust_acc_no"
+  orderby ascending cust_name
+dbase_delete_cursor;
+
+DBASE_REC dbase_data[] = {
+{ "seema",  12345, "austin",  90 },
+{ "renu",   56789, "new york", 70 },
+{ "ajita",  23456, "austin",  95 },
+{ "thomas", 23456, "austin",  89 },
+{ "" }
+};
+
+void create_dbase( void )
+{
+  DBASE_REC *t;
+
+  for (t = dbase_data; strcmp( t->cust_name, "" ) != 0; t++)
+  {
+#if 0
+    printf( "inserting \"%s\", %d, \"%s\", %d\n",
+      t->cust_name, t->cust_acc_no, t->cust_city, t->cust_balance );
+#endif
+    insert( dbase_cursor, *t );
+  }
+}
+
+TBASE_REC tbase_data[] = {
+{ 12345 },
+{ 56789 },
+{ -1 }
+};
+
+void create_tbase( void )
+{
+  TBASE_REC *t;
+
+  for (t = tbase_data; t->cust_acc_no != -1; t++)
+  {
+    insert( tbase_cursor, *t );
+  }
+}
+
+void traverse_dbase( void )
+{
+  foreach( dbase_cursor ) {
+    printf("\"%s\", %d, \"%s\", %d\n",
+      dbase_cursor.cust_name,
+      dbase_cursor.cust_acc_no,
+      dbase_cursor.cust_city,
+      dbase_cursor.cust_balance);
+  }
+}
+
+void traverse_tbase( void )
+{
+  TBASE_REC t;
+
+  reset_start(tbase_cursor);
+  foreach (tbase_cursor)
+  {
+    getrec(tbase_cursor, t);
+    printf("%d\n", t.cust_acc_no);
+  }
+}
+
+void process_transactions( void )
+{
+  foreach (tbase_cursor)
+  {
+    getrec(tbase_cursor, del_rec);
+    foreach(dbase_delete_cursor) 
+    {
+      int acc;
+      acc = ref(dbase_delete_cursor, cust_acc_no);
+      printf("acc=%d\n",acc);
+      delete(dbase_delete_cursor);
+    }
+  }
+}
+
+main( void )
+{
+  open_cont(dbase);
+  open_cont(tbase);
+
+  init_curs(dbase_cursor);
+  init_curs(dbase_delete_cursor);
+  init_curs(tbase_cursor);
+
+  create_dbase();
+  traverse_dbase();
+  create_tbase();
+  traverse_tbase();
+  process_transactions();
+  traverse_dbase();
+
+  close_cont(tbase);
+  close_cont(dbase);
+  exit(0);
+}
+

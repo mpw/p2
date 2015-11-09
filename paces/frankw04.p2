@@ -1,0 +1,115 @@
+/* $Id: frankw04.p2,v 1.2 1997/09/23 13:44:43 jthomas Exp $ */
+
+/* Program by Frank Weil (frankw@comm.mot.com) */
+
+/*
+ * Don,
+ * 
+ * I have a quick question for you about P2.  I might be missing
+ * something obvious here, but it appears that it is not possible to
+ * create containers on the fly.  If this is true, how do you use
+ * containers to manage dynamically created objects?
+ * 
+ * For example, suppose we have a list of packets.  The list has a
+ * changing length depending on how many packets have been received and
+ * not yet processed.  Within each packet is a list of data blocks.  This
+ * list is also of changing length.  How can this be programmed in P2 so
+ * that both the packets and the blocks in them can be containers?
+ * 
+ * We would like something like: */
+
+typex {
+   ta = conceptual[odlist[malloc[transient]]];
+}
+
+typedef struct {    /* header block */
+   int info;
+   int seq_num;
+} HEADER;
+
+typedef struct {    /* data block */
+   int info;
+   int seq_num;
+} DATA;
+
+typedef container < DATA > stored_as ta with {
+   odlist key is seq_num;
+} BLOCK_LIST;
+
+typedef struct {    /* packet */
+   int seq_num;
+   HEADER h;
+   BLOCK_LIST d;
+} PACKET;
+
+typedef container < PACKET > stored_as ta with {
+   odlist key is seq_num;
+} PACKET_LIST;
+
+PACKET_LIST pl;
+
+cursor < pl >
+   orderby ascending seq_num
+   all_packets;
+
+/* One cursor for all packets. */
+/* Might be better to put a cursor in each packet. (JAT) */
+
+cursor < all_packets.d >
+   orderby ascending seq_num
+   data_blocks;
+
+/* 
+ * In this example, we do not know how many containers we will need
+ * beforehand, and we cannot seem to be able to create cursors for the
+ * data lists since the data containers don't have names outside of the
+ * ones created as part of the packets.  Is there some trick we can use
+ * here?
+ * 
+ * Thanks,
+ * Frank
+ */
+
+main()
+{
+  int header_seq_num = 0;
+  int data_seq_num = 0;
+  int packet_seq_num = 0;
+  PACKET p;
+  DATA b;
+  int i, j;
+
+  open_cont(pl);
+  init_curs(all_packets);
+  init_curs(data_blocks);
+  /* Populate. */
+  for (i = 0; i < 10; i++)
+  {
+    p.seq_num = packet_seq_num++;
+    p.h.info = i;
+    p.h.seq_num = header_seq_num++;
+    insert(all_packets, p);
+    open_cont(all_packets.d);
+    for (j = 0; j < i; j++)
+    {
+      b.info = i;
+      b.seq_num = data_seq_num++;
+      insert(data_blocks, b);
+    }
+  }
+  /* Print. */
+  foreach(all_packets)
+  {
+    printf("all_packets.seq_num = %d\n", all_packets.seq_num);
+    foreach(data_blocks)
+    {
+      printf("  data_blocks.seq_num = %d\n", data_blocks.seq_num);
+    }
+    close_cont(all_packets.d);
+  }
+  delete_curs(data_blocks);
+  delete_curs(all_packets);
+  close_cont(pl);
+
+  exit(0);
+}

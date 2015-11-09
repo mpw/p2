@@ -1,0 +1,14 @@
+/* $Id: pb-test10.p2,v 45.0 1997/09/19 05:44:01 jthomas Exp $ */
+/* Copyright (C) 1995, The University of Texas at Austin. */
+
+/* This file tests the left shift ("<<") and right shift (">>")
+   operators. */
+
+#include "P2_paces.h"
+
+int
+main()
+{
+  long int b = 0;
+  return( b << 2 >> 4 );
+}

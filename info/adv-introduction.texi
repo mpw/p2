@@ -1,0 +1,52 @@
+@c $Id: adv-introduction.texi,v 45.0 1997/09/19 05:42:01 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node Introduction, xp Manual, Agreement, Top
+@chapter Introduction
+
+This is the manual for doing advanced things to P2 like:
+
+@itemize @bullet
+@item 
+Interpreting and writing xp programs.
+@xref{xp Manual} and also see @ref{xp Operations}.
+
+@item
+Setting the option flags for  xp, ddl, and pb.
+@xref{Invoking the P2 Programs}.
+
+@item
+Verifying the semantics of a type expression. 
+@xref{Layer Composition Checks}.
+@end itemize
+
+It is assumed that the user has first read the
+@var{Introductory P2 System Manual}.
+
+@menu
+* Overview of programs::        
+@end menu
+
+@node Overview of programs,  , Introduction, Introduction
+@section Overview of programs
+
+This section talks about the three programs: xp, ddl, and pb in some
+detail. 
+
+@cindex xp overview
+
+The @dfn{xp} program  translates an xp file into a C file that is to be
+compiled and linked with the pb program.
+
+@cindex ddl
+
+The @dfn{ddl} program parses a p2 file and rewrites the type expressions and
+the annotations into a format understood by pb. This program is
+separate from pb because of it's mutability: new layers are likely to
+require new annotation formats, which have to be added to the ddl grammar.
+
+@cindex pb
+
+The @dfn{pb} program is the workhorse of the system. It recognizes
+containers, cursors, and special operations and converts
+them into C code. 

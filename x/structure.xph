@@ -1,0 +1,57 @@
+// $Id: structure.xph,v 45.0 1997/09/19 05:46:51 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Adds the fields of a given C struct to the cursor or container struct.
+// Included by both x/cursor_structure.xp and x/container_structure.xp
+
+xform(element, container, cursor)
+{
+  char *s = %a.structure;
+  ENTRY *e = 0;
+  IDENT *i;
+  MCURSOR *m;
+
+  // Look up s in struct symbol table. */
+  e = symtab_lookup(symtab[OTH], s);
+  if (e != 0)
+    i = e->ident->ctype->ident;
+  else
+  {
+    e = symtab_lookup(symtab[SUE], s);
+    if (e != 0)
+      i = e->ident;
+    // Look up s in typedef symbol table. */
+    else
+    {
+      // lookup_annotation() removes spaces, converting "struct foo"
+      // into "structfoo".  So, here we look for the prefix "struct",
+      // NOT "struct ".  This test cannot distinguish between
+      // "structfoo" and "struct foo", so perform it only as a last resort.
+      // (JAT)
+      if (strncmp(s, "struct", 6) == 0)
+	/* Look up s[6] in struct symbol table. */
+	e = symtab_lookup(symtab[SUE], &(s[6]));
+      if (e != 0)
+	i = e->ident;
+      else
+	parse_error("couldn't find typedef or struct %s", s);
+    }
+  }
+  m = new_mcursor(i);
+  FOREACH_MEMBER(m)
+  {
+#ifdef CURSOR_STRUCTURE
+    add cursor : mcurs m;
+#else
+    add container : mcurs m;
+#endif
+  }
+
+  xform(element, container, cursor);
+}
+
+ddlhint(argc, argv)
+{
+  limit 1 argument;
+  get_ddlhint_argument(%a.structure, argv[1]);
+}

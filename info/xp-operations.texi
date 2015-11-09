@@ -1,0 +1,466 @@
+@c $Id: xp-operations.texi,v 45.0 1997/09/19 05:42:13 jthomas Exp $
+@c Copyright (C) 1997, The University of Texas at Austin.
+
+@node    xp Operations, Invoking the P2 Programs, xp Manual, Top
+@chapter xp Operations 
+@cindex operations
+@cindex functions
+
+This is the list of additional operations understood by xp; this is to
+complement the list presented in
+@ref{P2 Operations, , ,p2,Introductory P2 System Manual}. 
+
+The operations @code{initk} and @code{foreachk}
+(defined in
+@pxref{Composite Cursor Operations, , ,p2,Introductory P2 System Manual})
+are @emph{not} available in xp files.
+
+@menu
+* Reference Ops::               Operations that reference elements:
+                                iref, ref, pos
+* alloc ::                      
+* init_cont::                   
+* Adhoc Operations::            Operations added to P2
+                                cardinality, gettime, deleted
+* xform::                       Transforms the basic types
+* ddlhint::                     Parses the annotations for the layer
+* optimize::                    Describes the run-time characteristics
+                                of the layer
+* Verbatim Operations::         Operations that are generated once per 
+                                cursor / container / layer / scheme
+* Link Operations::             Operations only used in the link layer
+* Meta-Ops::                    Operations that generate operations
+* Dollarwords::                 Special keywords only used in Meta-Ops
+@end menu
+
+
+@node Reference Ops, alloc , xp Operations, xp Operations
+@section Reference Operations
+
+A reference operation is an operation that points to a particular
+object. For most layers, they take on default values: to reference an
+age field of an employee data type, use  @code{employee.age}. If the data
+structure is split (as it is for @file{part.xp}) then, these operations
+are used to get the field: our example becomes @code{ref(employee,age)}. 
+Since  xp is able to deal with split data
+structures, it  has to interpret references in terms of operations.
+
+
+@defun ref (  cursor, field )
+@defunx iref ( cursor, field )
+The @code{ref} operation returns field @code{field} of the
+object that is referenced by @code{cursor}. 
+
+The @code{iref} operation is like @code{ref},
+but the first argument to @code{iref} is
+really the result of a call from @code{ref} (or another @code{iref}).
+@end defun
+
+@defun pos ( cursor,  expr )
+This  operation repositions the given cursor to the address @code{expr},
+which can be NULL. 
+@end defun
+
+The above three operations are transparent to the user. The code
+@code{cursor.next} is interpreted as a call to @code{ref(cursor,next)}.
+For an expression with additional indirection, the code
+@code{cursor.next->a->b} will be automatically translated to
+@code{iref(iref(ref(cursor,next),a),b)}. 
+For positions, code of the form @code{cursor.obj = c} will be translated
+to @code{pos(cursor, c)}.
+
+For most layers, these three operations take on their defaults:
+@itemize @bullet
+@item
+@code{ref(c,f)} is @code{c.obj->f}
+
+@item
+@code{iref(c,f)} is @code{c->f} 
+
+@item
+@code{pos(c,e)} is @code{c.obj = e}. 
+
+@end itemize
+
+For an example of a non-default @code{ref} and @code{iref},
+see the file @file{part.xp}.
+
+@node alloc , init_cont, Reference Ops, xp Operations
+@section alloc
+
+@defun alloc ( cursor )
+This is a memory (mem realm) operation. It allocates space for the
+record type associated with the cursor argument, 
+and returns a pointer to this space. 
+@end defun
+
+
+@node init_cont, Adhoc Operations, alloc , xp Operations
+@section init_cont
+
+
+@defun init_cont ( container )
+This operation initializes the container fields and fields associated
+with the layer itself. 
+Whenever container (and cursor) fields are referenced,
+they are augmented with their layer 
+numbers automatically by xp. This operation is called by the @code{open}
+operation and is not available in p2 programs.
+@end defun
+
+
+@node Adhoc Operations, xform, init_cont, xp Operations
+@section Adhoc Operations
+
+@cindex adhoc operations
+
+The @dfn{adhoc operations} are those operations that have been added to
+the base set of operations. 
+
+
+@defun {adhoc @var{name}}  ( @var{arguments}, @dots{} )
+Declare a procedure @var{name} which takes several arguments. @var{name}
+is not a built-in function of xp, hence it needs to preceded with the
+keyword "adhoc".
+@end defun
+
+
+The only distinction between an adhoc
+operation and the other predefined operations is that adhoc operations need to be
+preceded by the keyword @samp{adhoc} in xp layer files.
+An example from the file @file{part.xp} shows the use of the adhoc
+keyword, both in definition and procedure call.
+@example
+@group
+adhoc gettime(cursor)
+@{
+    call bindc(cursor); 
+    %@{
+        (((adhoc gettime(cursor3)) == (adhoc gettime(cursor5))) ? 
+         (adhoc gettime(cursor3)) : 
+         (P2_runtime_error("Error in part/gettime values"),0))
+    %@}
+@}
+@end group
+@end example
+
+Adhoc operations are used in p2 files without the
+@code{adhoc} keyword.
+
+The current set of adhoc operations are:
+
+@findex @w{adhoc cardinality}
+@defun cardinality ( container )
+This operation, defined in @file{cardinality.xp},   returns the size of the
+container.
+@end defun
+
+@findex @w{adhoc gettime}
+@defun gettime ( cursor )
+This operation, defined in  @file{timestamp.xp},
+returns the timestamp of the element pointed at by the cursor.
+@end defun
+
+@findex @w{adhoc deleted}
+@defun deleted ( cursor )
+This operation, defined in
+@file{delflag.xp}, returns true if the current element the
+cursor is pointing to has been marked as deleted. 
+@end defun
+
+@node xform, ddlhint, Adhoc Operations, xp Operations
+@section xform
+
+@defun xform (element, container, cursor)
+This operation performs type transformations on elements, containers, and
+cursors by augmenting their fields.
+For instance, @code{add cursor : int odf;}
+will add a new field to the cursor called @code{odf} of type integer. 
+
+For more details, see @ref{Type Extension Details}.
+@end defun
+
+
+@node ddlhint, optimize, xform, xp Operations
+@section ddlhint
+
+@defun ddlhint ( argc, argv )
+This procedure extracts the annotations passed to the layer and stores
+their values (usually) in an annotation field. For further details,
+see @ref{Parsing Annotations Details}.
+@end defun
+
+@node optimize, Verbatim Operations, ddlhint, xp Operations
+@section optimize
+
+@defun optimize ( cursor )
+This operation compares this layer's cost of retrieval for the given cursor
+against all other layers below it and returns the layer with the lowest cost.
+In addition, this operation may alter the predicate. 
+For more details, see @ref{Query Optimization}. 
+@end defun
+
+@node Verbatim Operations, Link Operations, optimize, xp Operations
+@section Verbatim Operations
+
+Verbatim operations allow generation of definitions and operations that
+are needed by the layers, but are neither basic nor adhoc
+operations.
+
+@defun l_verbatim ( )
+Any layer-specific code that is to be generated is placed inside this
+procedure. Most layers have empty @code{l_verbatim} procedures. Unlike
+all other operations, @code{l_verbatim} never calls down to lower
+layers. This exception is handled properly by xp, so there is no need to
+explicitly specify a null @code{l_verbatim} in a layer.
+@end defun
+
+@defun k_verbatim ( container )
+Any container-specific code that is to be generated is placed inside
+this procedure. 
+In  @file{qsort.xp}, the name of the sort field is passed in as part
+of the annotation. A comparison function is created for each
+container because each container can be sorted on a different field.
+@end defun
+
+@defun c_verbatim ( cursor )
+Any cursor-specific code that is to be generated is placed inside this
+procedure. For instance, in @file{orderby.xp} every cursor must have its
+own comparison function (since each cursor can be ordered over a different
+field). In the @code{c_verbatim} function, a sort function and a
+comparison function are defined which will be instantiated for each
+cursor created. 
+@end defun
+
+@ignore
+@defun s_verbatim ( )
+There is no such function yet, but there is supposed to be one for the
+near future. What this will do ( when it exists ) is to generate the
+a function for every schema in the layer. 
+@end defun
+@end ignore
+
+
+@node Link Operations, Meta-Ops, Verbatim Operations, xp Operations
+@section Link Operations
+
+@cindex link
+@cindex link, parent
+@cindex link, child
+@cindex linkname
+@cindex link, linkname.
+@cindex parent
+@cindex child
+
+Briefly, a @dfn{link} is a connection between elements from two
+different containers. Within the link, one of the containers is 
+the @dfn{parent}, another container is the @dfn{child},
+and the name of the link connecting the elements from the containers
+is the @dfn{linkname}. For much more detail, see @ref{Link Layers}.
+
+These operations are added to the link layer. In all these operations:
+@itemize @bullet
+
+@item
+@var{cursor0} is the cursor in the parent container of the link
+
+@item
+@var{cursor1} is the cursor in the child container of the link
+
+@item 
+@var{lstate} is local information about the link that is not
+specified in either the parent or child cursor. Every link layer defines
+what belongs in this structure. 
+
+
+@end itemize
+
+
+@defun loptimize ( cursor0, cursor1, lstate )
+The link analogy to the @code{optimize} operation.
+The link retrieval layer is chosen
+on the basis of the link layer that can process the links in the lowest
+cost. Eventually, the link retrieval layer will convert the
+link operation into ds realm operations, which in turn will select
+a ds realm layer to be the retrieval layer.
+@end defun
+
+@defun resetc ( cursor0, cursor1, lstate )
+Position the child cursor to the first child of the parent. 
+@end defun
+
+@defun advc ( cursor0, cursor1, lstate )
+Go to the next child cursor of the parent.
+@end defun
+
+@defun endc ( cursor0, cursor1, lstate )
+Return true if there are no more children for the parent.
+@end defun
+
+@defun foreachc ( cursor0, cursor1, lstate, expr )
+Iterate over all the children for the parent.
+@end defun
+
+@defun resetp ( cursor0, cursor1, lstate ) 
+Position the parent cursor to the first parent of the child. 
+@end defun
+
+@defun advp ( cursor0, cursor1, lstate )
+Go to the next parent cursor of the child.
+@end defun
+
+@defun endp ( cursor0, cursor1, lstate )
+Return true if there are no more parents of the child.
+@end defun
+
+@defun foreachp ( cursor0, cursor1, lstate, expr )
+Iterate over the parents of the child.
+@end defun
+
+@defun foreachl ( cursor0, cursor1, lstate, expr )
+Iterate over each child-parent pair.
+@end defun
+
+@defun disconnect ( cursor0, cursor1, lstate )
+Disconnect the link between a parent and child for the linkname. 
+@end defun
+
+@defun connect ( cursor0, cursor1, lstate )
+Connect the child and parent into a link for the given lstate linkname.
+@end defun
+
+@defun related ( cursor0, cursor1, lstate )
+Return true if the child and parent are related by the link in lstate.
+@end defun
+
+@node Meta-Ops, Dollarwords, Link Operations, xp Operations
+@section Meta-Ops
+
+These constructs are not true operations but templates for operations. 
+
+@ignore
+
+@defun default_procs ':' @var{function_names} ';'
+Set all the @var{function_names} to be the default call-down
+procedure. This is only used when the default changes.
+@end defun
+
+@end ignore
+
+@defun {cursor_func @var{name}} ( cursor, @dots{} )
+@defunx {container_func @var{name}} ( container, @dots{} )
+The first function provides a way to create functions that will be
+called by cursor-based operations (operations where the first argument
+is a cursor). The second operation is for container-based operations.
+
+For instance,
+@example
+@group
+cursor_func common( cursor, "int value" )
+%@{ cursor.alpha = 0; 
+   cursor.beta  = %v.value;
+   cursor.gamma = 7;
+%@}
+
+delete( cursor )
+%@{ call common( cursor, "5"); 
+   delete( cursor );
+%@}
+@end group
+@end example
+
+Note that the keyword @code{call} must precede the call to  @code{common}.  
+@end defun
+
+@defun default_cursor_def ':' @var{body} 
+@defunx default_container_def ':' @var{body}
+For every cursor (container) definition not already explicitly defined, 
+@ignore
+by either a declared
+definition or as an argument to @code{default_procs},
+@end ignore
+the definition is
+based on this procedure definition.
+
+The body of this procedure contains all of the normal xp syntax
+plus some special keywords called
+@dfn{Dollarwords} (because they begin with a @code{$}).
+The first keyword in the body is a @code{$HEADER}.
+For details, @xref{Dollarwords}.
+@end defun
+
+@node Dollarwords,  , Meta-Ops, xp Operations
+@section Dollarwords
+
+The dollarwords are tokens beginning with a dollar sign and are used
+only in default operation specifications. Their meanings are listed
+below along with an example
+
+
+@defvr Dollarword $NAME
+Returns the name of the operation. @*
+@samp{open} 
+@end defvr
+
+@defvr Dollarword $OP
+Returns the index number of the operation. @*
+@samp{14}
+@end defvr
+
+@defvr Dollarword $GENSEMI
+Generates a semicolon if the operation is a procedure. If the operation
+is an expression, like @code{end_adv} or @code{gettime}, then the
+semicolon is not generated. @*
+@var{semicolon generated}
+@end defvr
+
+@defvr Dollarword $STRNAME
+Returns the quoted name of the operation. @*
+@samp{"open"}
+@end defvr
+
+@defvr Dollarword $HEADER
+Generates the header of the operation. @*
+@samp{open_generic (container)}
+@end defvr
+
+@defvr Dollarword $GENERICARGS
+Generates the argument list for generic procedures. @*
+@samp{(&container)}
+@end defvr
+
+@defvr Dollarword $CALLDOWN
+Generates the code to call down to the next layer. @*
+@samp{open(container)}
+@end defvr
+
+@defvr Dollarword $CALLDOWN@var{n}
+Generates the code to call down to the next layer using @var{n} as the
+number of the cursor (or container). @*
+@samp{open(container5)} (for @code{$CALLDOWN5})
+@end defvr
+
+@defvr Dollarword $CALL_LEVEL
+Generates the code to call the procedure at this level.
+@samp{open#(container)}
+@end defvr
+
+Most dollarwords are treated as if they were surrounded by @code{%@{ %@}}s.
+Additional dollarwords will be added as they are needed.
+Since these defaults replace the standard default operation (calling down to
+the next layer), any procedure that is not supposed to do the default
+operations  will have to be
+explicitly defined.
+
+A synchronization example would be defined as follows:
+
+@example
+@group
+def_cursor_func : 
+$HEADER
+@{ 
+    %@{ @{wait(s); $CALLDOWN ; send(s)@} %@}
+    $GENSEMI ;
+@}
+@end group
+@end example

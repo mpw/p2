@@ -1,0 +1,35 @@
+
+all employees are:
+10065 19 Al
+10020 21 Alexander, Joe
+10070 22 Andrews, Kay
+10030 23 Anderson, Gwyn
+10010 42 Akin, Monica
+10050 43 Anderson, Suzanne
+10040 53 Anderson, Mary
+10000 60 Akers, Mark
+10060 61 Andrews, John
+
+ak employees are:
+10065 19 Al
+10010 42 Akin, Monica
+10000 60 Akers, Mark
+
+old employees are:
+10010 42 Akin, Monica
+10050 43 Anderson, Suzanne
+10040 53 Anderson, Mary
+10000 60 Akers, Mark
+10060 61 Andrews, John
+
+old employees are:
+
+remaining employees are:
+10065 19 Al
+10020 21 Alexander, Joe
+10070 22 Andrews, Kay
+10030 23 Anderson, Gwyn
+
+recent (empno > 10050) employees are:
+10065 19 Al
+10070 22 Andrews, Kay

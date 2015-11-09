@@ -1,0 +1,89 @@
+// $Id: trace.xp,v 45.0 1997/09/19 05:46:55 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Tracing layer.
+// Print all operations before they are executed.
+
+layer ds trace [ ds ] stable no annotation retrieval_always
+
+optimize(cursor)
+{
+  optimize(cursor);
+}
+
+init_schema(schema)
+%{
+   init_schema(schema);
+   P2_init_trace_manager();
+%}
+
+close_schema(schema)
+%{
+   P2_delete_trace_manager();
+   close_schema(schema);  
+%}
+
+init_curs(cursor)
+%{
+   init_curs(cursor);
+%}
+
+insert(cursor, record)
+%{
+   P2_trace("insert()");
+   insert(cursor, record);
+%}
+
+delete(cursor)
+%{
+   P2_trace("delete()");
+   delete(cursor);
+%}
+
+swap(cursor0, cursor1)
+%{
+   P2_trace("swap()");
+   swap(cursor0, cursor1);
+%}
+
+upd(cursor, field, expr)
+%{
+   P2_trace("upd()");
+   upd(cursor, field, expr)
+%}
+
+abort_xact(schema)
+%{
+  P2_trace("abort_xact()");
+  abort_xact(schema);
+%}
+
+begin_xact(schema)
+%{
+  P2_trace("begin_xact()");
+  begin_xact(schema);
+%}
+
+commit_xact(schema)
+%{
+  P2_trace("commit_xact()");
+  commit_xact(schema);
+%}
+
+checkpoint_schema(schema)
+%{
+  P2_trace("checkpoint_schema()");
+  checkpoint_schema(schema);
+%}
+
+def_cursor_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}
+
+def_container_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}

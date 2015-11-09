@@ -1,0 +1,186 @@
+/* $Id: t1.p2,v 45.0 1997/09/19 05:44:21 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test cardinality and timestamp */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define ITERATOR        foreach
+#define ALL_CURSORS     1
+#define ALL_DATA        1
+#define DELETE          1
+#define BINTREE         1
+#define CONCEPTUAL      1
+#define SOLODEL         0
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} emp_type;
+
+emp_type rawdata[] = {
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10070,22,"Biology","Andrews, Kay" },
+#if ALL_DATA
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10010,40,"Biology","Akin, Monica" },
+   { 10050,42,"Biology","Akerson, Suzanne" },
+   { 10040,53,"Biology","Akerson, Mary" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10030,23,"Biology","Akerson, Gwyn" },
+#endif
+   { -1 }
+};
+
+typex {
+#if CONCEPTUAL
+#if BINTREE
+  t = conceptual[timestamp[cardinality[slist[odlist[P2_DELFLAG_LAYER[
+        array[transient]]]]]]];
+#else
+  t = conceptual[timestamp[cardinality[P2_DELFLAG_LAYER[
+        array1[transient]]]]];
+#endif
+#else
+#if BINTREE
+  t = top2ds[generic[init_generic[orderby_fast[
+        generic_funcall[inbetween[qualify[
+          bintree1[bintree2[P2_DELFLAG_LAYER[array1[transient]]]]]]],
+        top2ds[array2[transient]]]]]];
+#else
+  t = top2ds[generic[init_generic[orderby_fast[
+        generic_funcall[inbetween[qualify[
+          P2_DELFLAG_LAYER[array1[transient]]]]],
+        top2ds[array2[transient]]]]]];
+#endif
+#endif
+}
+
+container <emp_type> stored_as t with {
+#if BINTREE
+  // bintree key is empno;
+  odlist key is age;
+#endif
+  array size is 10;
+  timestamp on counter1;
+#if !CONCEPTUAL
+  array2 size is 10;
+#endif
+} emp_cont;
+
+int counter1 = 1;
+
+#define RECENT_EMP_ORDERBY      orderby ascending empno
+
+#if ALL_CURSORS
+typedef cursor <emp_cont>                    orderby descending empno all_emp_type;
+all_emp_type                                                          all_emp;
+
+cursor <emp_cont> where "$.name <= 'Al' "    orderby descending name  ak_emp;
+cursor <emp_cont> where "$.empno > 10020"    orderby descending empno recent_emp;
+#endif
+
+typedef cursor <emp_cont> where "$.age > 40" orderby  ascending age   old_emp_type;
+old_emp_type                                                          old_emp;
+
+int main ( void ) 
+{
+  emp_type *p; /* pointer to raw data */
+  int sz; /* size */
+  int tm; /* timestamp */
+
+  open_cont( emp_cont );
+  init_curs( old_emp );
+#if ALL_CURSORS
+  init_curs( all_emp );
+  init_curs( recent_emp );
+  init_curs( ak_emp );
+#endif
+
+  for (p = rawdata; p->empno != -1; p++) 
+  {
+#if ALL_CURSORS
+      insert( all_emp, *p );
+#else
+      insert( old_emp, *p );
+#endif
+  }
+
+#if ALL_CURSORS
+  printf("\nall emp are:\n(orderby descending empno)\n"); 
+  ITERATOR( all_emp )
+  {
+    tm = timestamp(all_emp);
+    printf( "%d %d %s %s %d\n", all_emp.empno, all_emp.age, all_emp.name, 
+        all_emp.dept_name, tm); 
+  }
+
+  sz = cardinality(emp_cont);
+  printf("size = %d\n",sz);
+
+  printf("\nak emp are:\n(orderby descending name)\n");
+  ITERATOR( ak_emp )
+  {
+    tm = timestamp(ak_emp);
+    printf("%d %d %s %s %d\n", ak_emp.empno, ak_emp.age, ak_emp.name, 
+        all_emp.dept_name, tm);
+  }
+
+  printf( "\nrecent (empno > 10020) emp are:\n(orderby descending empno)\n");
+  ITERATOR( recent_emp )
+  {
+    printf("%d %d %s\n", recent_emp.empno, 
+                         recent_emp.age,
+                         recent_emp.name); 
+  }
+#endif
+ 
+  printf( "\nold emp are:\n(orderby ascending age)\n"); 
+  ITERATOR( old_emp )
+  {
+    emp_type r;
+    getrec( old_emp, r );
+    printf( "%d %d %s\n", r.empno, 
+                          r.age,
+                          r.name); 
+#if DELETE
+    delete( old_emp );
+#endif
+  }
+
+#if SOLODEL
+  ITERATOR(old_emp)
+  {
+    delete(old_emp );
+  } 
+#endif
+
+  printf( "\nold emp are:\n(orderby ascending age)\n"); 
+  ITERATOR( old_emp )
+  {
+    printf("%d %d %s\n", old_emp.empno, 
+                         old_emp.age,
+                         old_emp.name); 
+  }
+
+#if ALL_CURSORS
+  printf( "\nremaining emp are:\n(orderby descending empno)\n"); 
+  ITERATOR( all_emp)
+  {
+    printf( "%d %d %s\n", all_emp.empno, 
+                          all_emp.age,
+                          all_emp.name); 
+  }
+#endif
+
+  sz = cardinality(emp_cont); 
+  printf("size = %d\n",sz);
+
+
+  close_cont( emp_cont );
+  exit( 0 );
+}

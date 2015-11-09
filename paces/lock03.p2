@@ -1,0 +1,100 @@
+/* $Id: lock03.p2,v 45.0 1997/09/19 05:43:36 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test P2_lock-manager mode P2_LOCK_X. */
+
+#include "P2_paces.h"
+
+#include <assert.h>   /* assert() */
+#include <stdio.h>    /* perror(), printf() */
+
+#define LOCK_NAME 3
+
+void
+print_error(const char *s)
+{
+  perror(s);
+  fflush(stderr);
+  exit(1);
+}
+
+int
+main()
+{
+  P2_LOCK_NAME lock_name;
+  P2_PROCESS_ID child_pid;
+  P2_SEMAPHORE_ID semaphore;
+
+  /* Initialize process and lock manager. */
+  P2_init_process();
+  P2_init_lock_manager();
+  assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+
+  /* Initialize semaphore to 0. */
+  if (P2_init_semaphore(&semaphore, 0) < 0)
+    print_error("P2_init_semaphore(&semaphore) failed");
+
+  child_pid = P2_fork_process();
+  if (child_pid == -1)
+  {
+    /*** This is an error. ***/
+
+    print_error("P2_fork_process() failed");
+  }
+  else if (child_pid == 0)
+  {
+    /*** This is the child. ***/
+
+    assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+    if (P2_lock(LOCK_NAME, P2_LOCK_X, P2_LOCK_MEDIUM, 1) != P2_LOCK_OK)
+      print_error("Child: P2_lock(LOCK_NAME) failed");
+    else
+    {
+      printf("Child: Hello World\n");
+      if (P2_unlock(LOCK_NAME) != P2_LOCK_OK)
+	print_error("Child: P2_unlock(LOCK_NAME) failed");
+      else
+	printf("Child: Goodbye World\n");
+    }
+    /* Flush stdout. */
+    fflush(stdout);
+    /* Increment semaphore. */
+    if (P2_unlock_semaphore(&semaphore) < 0)
+      print_error("Child: P2_unlock_semaphore(&semaphore) failed");
+    exit(0);
+  }
+  else
+  {
+    /*** This is the parent. ***/
+
+    assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+    /* Wait for child to increment semaphore. */
+    if (P2_lock_semaphore(&semaphore) < 0)
+      print_error("Parent: P2_lock_semaphore(&semaphore) failed");
+    /* Delete the semaphore. */
+    if (P2_delete_semaphore(&semaphore) < 0)
+      print_error("Parent: P2_delete_semaphore(&semaphore) failed");
+
+    if (P2_lock(LOCK_NAME, P2_LOCK_X, P2_LOCK_MEDIUM, 1) != P2_LOCK_OK)
+      print_error("Parent: P2_lock(LOCK_NAME) failed");
+    else
+    {
+      printf("Parent: Hello World\n");
+      if (P2_unlock(LOCK_NAME) != P2_LOCK_OK)
+	print_error("Parent: P2_unlock(LOCK_NAME) failed");
+      else
+	printf("Parent: Goodbye World\n");
+    }
+  }
+
+  /* Delete process and lock manager. */
+  /* We must call P2_delete_lock_manager() only once.
+     In this case, we only call it from the parent. */
+  assert(child_pid != 0);
+  printf("Parent: Exits\n");
+  P2_delete_lock_manager();
+  P2_delete_process();
+
+  /* Exit. */
+  exit(0);
+}

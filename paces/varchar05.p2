@@ -1,0 +1,36 @@
+/* $Id: varchar05.p2,v 45.0 1997/09/19 05:44:47 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test the varinsert() operation */
+
+#include "P2_paces.h"
+
+/* Type expression. */
+typex {
+  t = top2ds[dlist[malloc[transient]]];
+}
+
+/* Element. */
+typedef struct {
+  int i;
+  varchar c[10];
+} E;
+
+/* Container. */
+container <E> stored_as t with {
+} cont;
+
+/* Cursor. */
+cursor <cont> curs;
+
+E e = { 1, "abc" };
+
+int
+main()
+{
+  open_cont(cont);
+  init_curs(curs);
+  varinsert(curs, e, 0);
+  close_cont(cont);
+  exit(0);
+}

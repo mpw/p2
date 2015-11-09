@@ -1,0 +1,60 @@
+// $Id: top2ds.xph,v 45.1 1997/09/24 14:56:09 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Included by both paces/top2ds.xp and paces/top2ds_qualify.xp
+
+open_schema(schema)
+%{
+   open_schema(schema);
+#if 0
+   // Call down.
+   init_schema(schema);
+#else
+   // Call level.
+   init_schema#(schema);
+#endif
+%}
+
+open_cont(container)
+{
+%{
+   open_cont(container);
+   if (!container.initialized)
+   {
+#if 0
+     // Call down.
+     init_cont(container);
+     container.initialized = 1;
+#else
+     // Call level.
+     init_cont#(container);
+#endif
+   }
+%}
+}
+
+open_cont_number(container, expr)
+{
+%{
+   open_cont_number(container, expr);
+   if (!container.initialized)
+   {
+#if 0
+     // Call down.
+     init_cont(container);
+     container.initialized = 1;
+#else
+     // Call level.
+     init_cont#(container);
+#endif
+   }
+%}
+}
+
+init_cont(container)
+%{
+  {
+   init_cont(container);
+   container.initialized = 1;
+  }
+%}

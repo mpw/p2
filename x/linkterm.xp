@@ -1,0 +1,103 @@
+// $Id: linkterm.xp,v 45.0 1997/09/19 05:46:30 jthomas Exp $
+// Copyright (C) 1995, The University of Texas at Austin.
+
+layer lnk linkterm[ top ] stable no annotation retrieval_never
+
+// loptimize
+
+loptimize( cursor0, cursor1, lstate )
+{
+   // loptimize does nothing except reflect the call back
+   // upwards.
+}
+
+
+
+// link retrieval operations
+// fatal error calls since they should have been intercepted
+// by this point
+
+
+resetc( cursor0, cursor1, lstate )  // cursor0 is parent, cursor1 child
+{ 
+   error( "resetc called in linkterm" );
+}
+
+
+resetp( cursor0, cursor1, lstate )  // cursor0 is parent, cursor1 child
+{ 
+   error( "resetp called in linkterm" );
+}
+
+
+advc(  cursor0, cursor1, lstate )  // cursor0 is parent, cursor1 child
+{ 
+   error( "advc called in linkterm" );
+}
+
+
+advp(  cursor0, cursor1, lstate )  // cursor0 is parent, cursor1 child
+{
+   error( "advp called in linkterm" );
+}
+
+
+endc( cursor0, cursor1, lstate )  // cursor0 is parent, cursor1 child
+{
+   error( "endc called in linkterm" );
+}
+
+
+endp( cursor0, cursor1, lstate )  // cursor0 is parent, cursor1 child
+{
+   error( "endp called in linkterm" );
+}
+
+
+foreachl( cursor0, cursor1, lstate, expr )  //parent cursor0, child cursor1
+{
+   error( "foreachl called in linkterm" );
+}
+
+foreachc( cursor0, cursor1, lstate, expr )  //parent cursor0, child cursor1
+{
+   error( "foreachp called in linkterm" );
+}
+
+foreachp( cursor0, cursor1, lstate, expr )  //parent cursor0, child cursor1
+{
+   error( "foreachc called in linkterm" );
+}
+
+
+related( cursor0, cursor1, lstate )  //parent cursor0, child cursor1
+{
+   error( "related called in linkterm" );
+}
+
+
+connect( cursor0, cursor1, lstate )  //parent cursor0, child cursor1
+{
+   error( "connect called in linkterm" );
+}
+
+
+disconnect( cursor0, cursor1, lstate )  //parent cursor0, child cursor1
+{
+   error( "disconnect called in linkterm" );
+}
+
+
+// Idea: 
+// 
+// by adding in another function def_link_func(), which works on all link
+// functions (determined by op_tab.txt) we can replace all this section 
+// with: 
+// 
+// def_link_func : 
+// $HEADER
+// { 
+//     error("%s called in linkterm", $STRNAME);
+// }
+//
+// (BJG)

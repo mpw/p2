@@ -1,0 +1,124 @@
+/* $Id: xact-lock10.p2,v 45.0 1997/09/19 05:45:19 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Demonstrate xact manager race condition bug. */
+/* Test P2_lock-manager mode P2_LOCK_X times N with transactions. */
+/* N = 10, begin_xact OUTside mutex. */
+
+/* Analogous to paces/xact-lock04.p2 and paces/xact-lock11.p2 */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <stdio.h>    /* fprintf() */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+/* Total number of children to fork() */
+#define N 10
+
+/*****************************************************************************/
+/*                  Declare typex and schema.                                */
+/*****************************************************************************/
+
+typex {
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+}
+
+typedef struct {
+  int i;
+} E;
+
+schema {
+  container <E> k;
+} stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, 1);
+} s;
+
+/*****************************************************************************/
+/*                  Print errors.                                            */
+/*****************************************************************************/
+
+static void
+parent_error (const char *s, int i)
+{
+  fprintf(stderr, "Parent");
+  if (i == -1)
+    fprintf(stderr, ": ");
+  else
+    fprintf(stderr, " i = %d: ", i);
+  perror(s);
+  exit(1);
+}
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int i;
+
+int
+main()
+{
+  P2_PROCESS_ID child_pid[N];
+
+#ifdef LABEL
+  /* Process label. */
+  char label[P2_PROCESS_ID_LABEL_SIZE];
+#endif /* LABEL */
+
+  /* Open schema. */
+  open_schema(s);
+
+#ifdef LABEL
+  /* Label the parent process. */
+  P2_label_process_id("Parent");
+#endif /* LABEL */
+
+  for (i = 0; i < N; i++)
+  {
+    /* Fork child. */
+    child_pid[i] = P2_fork_process();
+    if (child_pid[i] == -1)
+    {
+      /*** This is an error. ***/
+
+      parent_error("P2_fork_process() failed", i);
+    }
+    else if (child_pid[i] == 0)
+    {
+      /*** This is the child. ***/
+
+      /* Begin transaction. */
+      begin_xact(s);
+
+      /* Commit transaction. */
+      commit_xact(s);
+
+      /* Exit success. */
+      exit(0);
+    }
+    else
+    {
+      /*** This is the parent. ***/
+    }
+  }
+
+  /* Barrier: wait for all N children to exit. */
+  for (i = 0; i < N; i++)
+    if (P2_join_process(child_pid[i]) != 0)
+      parent_error("P2_join_process() != 0", i);
+
+  /* Close schema. */
+  close_schema(s);
+
+  printf("Parent Exits\n");
+
+  /* Exit. */
+  exit(0);
+}

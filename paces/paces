@@ -1,0 +1,101 @@
+#!/bin/sh
+# $Id: paces,v 45.0 1997/09/19 05:43:56 jthomas Exp $
+#
+# This script tests to see whether the executables produced by the P2
+# system have the correct behavior.  This script works by making
+# executables from a .p2 source file, running the executables in the
+# source directory, and comparing their stdout and stderr output
+# with the (presumably) correct output in the corresponding
+# .out and .err files.
+
+# Command line arguments.
+
+if [ $# -lt 4 ]; then
+  echo "Usage: paces source_directory sh_kill_exit_status timeout files"
+  exit 1
+fi
+
+result=0
+source_directory=""
+sh_kill_exit_status=""
+timeout=""
+
+for file in $*
+do
+
+  # Assign the first 3 command line arguments to the variables
+  # source_directory, sh_kill_exit_status, and timeout.
+  if [ "${source_directory}x" = "x" ]; then
+    source_directory=$file
+  elif [ "${sh_kill_exit_status}x" = "x" ]; then
+    sh_kill_exit_status=$file
+  elif [ "${timeout}x" = "x" ]; then
+    timeout=$file
+  else
+
+  # Treat all subsequent command line arguments as file names.
+  if [ ! -r $file ]; then
+    echo "warning: paces could not find executable"
+    exit 1
+  fi
+
+  # Run the executable in the background (in case the it doesn't terminate)
+  # and in source directory (in case it uses relative path names).
+  current_directory=`pwd`
+  ( cd $source_directory; \
+    if [ -r $file.in ]; then cat $file.in; fi | $current_directory/$file ) \
+       2> $file.err.tmp > $file.out.tmp & # Separate files for stderr & stdout.
+  ###     > $file.out.tmp 2>&1 &             # Single file for stderr & stdout.
+  p=$!
+
+  # Start-up a deamon to kill the executable after timeout seconds.
+  ( sleep $timeout; kill $p ) &
+  k=$!
+
+  wait $p
+  exit_status=$?
+
+  if [ $exit_status -eq $sh_kill_exit_status ]; then
+    # Executable was killed by deamon.
+    error_message="$file: execution timeout after $timeout seconds"
+  else
+    # Executable ran to completion.  Kill the deamon.
+    kill $k
+
+    if [ $exit_status -ne 0 ]; then
+      error_message="$file: execution failed, exit status = $exit_status"
+    else
+      # Compare the stdout and stderr output of the newly-made
+      # executable with the (presumably) correct output.
+
+      # stdout
+      cmp $file.out.tmp $source_directory/$file.out
+      if [ $? -ne 0 ]; then
+        error_message="$file: comparison with output file $file.out failed"
+
+      # stderr
+      elif [ -r $source_directory/file.err ]; then
+        cmp $file.err.tmp $source_directory/$file.err
+        if [ $? -ne 0 ]; then
+          error_message="$file: comparison with error file $file.err failed"
+        fi
+      fi
+    fi
+  fi
+
+  if [ -z "${error_message}" ]; then
+      # Success.
+      echo "$file succeeded"
+      echo "$file" >> P2_successes
+      touch stamp-$file
+      rm -f $file.out.tmp $file.err.tmp
+  else
+      # Failure.
+      echo "*** $error_message ***"
+      echo "$error_message" >> P2_failures
+      result=1
+  fi
+
+  fi
+done
+exit $result

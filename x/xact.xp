@@ -1,0 +1,83 @@
+// $Id: xact.xp,v 45.0 1997/09/19 05:46:56 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Transaction manager.
+
+layer ds xact [ ds ] stable no annotation retrieval_always
+
+xform(element, container, cursor)
+{
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  optimize(cursor);
+}
+
+init_schema(schema)
+%{
+   init_schema(schema);
+   P2_init_xact_manager();
+%}
+
+close_schema(schema)
+%{
+#if 0
+   P2_xact_manager_checkpoint_schema();
+#endif
+
+   P2_delete_xact_manager();
+   close_schema(schema);
+%}
+
+abort_xact(schema)
+%{
+  // Call down.
+  abort_xact(schema);
+
+  // Set-up new transaction.
+  P2_xact_manager_abort_xact();
+%}
+
+begin_xact(schema)
+%{
+  // Insert record into xact_cb_cont???
+  // Call P2_log_transaction???
+
+  // Set-up new transaction.
+  P2_xact_manager_begin_xact();
+
+  // Call down.
+  begin_xact(schema);
+%}
+
+commit_xact(schema)
+%{
+  // Call down.
+  commit_xact(schema);
+
+  // Set-up new transaction.
+  P2_xact_manager_commit_xact();
+%}
+
+checkpoint_schema(schema)
+%{
+  // Checkpoint
+  P2_xact_manager_checkpoint_schema();
+
+  // Call down.
+  checkpoint_schema(schema);
+%}
+
+def_cursor_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}
+
+def_container_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}

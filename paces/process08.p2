@@ -1,0 +1,78 @@
+/* $Id: process08.p2,v 45.0 1997/09/19 05:44:06 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test P2_process_join() times N = 100 */
+/* Limit the number of live children to M. */
+/* Analogous to paces/process09.p2 */
+/* Wait for child i-(M-1) to finish before forking child i.
+   That is, limit the number of live children to M. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <assert.h>   /* assert() */
+#include <stdio.h>    /* printf() */
+#include <unistd.h>   /* sleep() */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+#define N 100 /* Total number of children to fork() */
+#define M 5   /* Maxium number of live children */
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main ()
+{
+  P2_PROCESS_ID child_pid[N];
+  int i;
+
+  /* Initialize process manager. */
+  P2_init_process();
+
+  for (i = 0; i < N; i++)
+  {
+    child_pid[i] = P2_fork_process();
+    if (child_pid[i] == -1)
+    {
+      /*** This is an error. ***/
+
+      fprintf(stderr, "i = %d: ", i);
+      perror("Can't fork child");
+      exit(1);
+    }
+    else if (child_pid[i] == 0)
+    {
+      /*** This is the child. ***/
+
+      exit(0);
+    }
+    else
+    {
+      /*** This is the parent. ***/
+
+      /* Wait for child i-(M-1) to finish before forking child i.
+	 That is, limit the number of live children to M. */
+      if (i >= (M-1))
+	if (P2_join_process(child_pid[i-(M-1)]) != 0)
+	  perror("P2_join_process() != 0");
+    }
+  }
+
+  /* Barrier: Wait for the last M children to finish. */
+  for (i = N-(M-1); i < N; i++)
+    if (P2_join_process(child_pid[i]) != 0)
+      perror("P2_join_process() != 0");
+
+  /* Delete process manager. */
+  P2_delete_process();
+
+  exit(0);
+}

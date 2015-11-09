@@ -1,0 +1,145 @@
+/* $Id: lock09.p2,v 45.1 1997/09/19 07:48:32 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Lock timeout. */
+/* Analogous to paces/lock08.p2 */
+
+#include "P2_paces.h"
+
+#include <assert.h>   /* assert() */
+#include <stdio.h>    /* perror(), printf() */
+#include <stdarg.h>   /* va_list, va_start(), va_end() */
+
+/* Lock name. */
+#define LOCK_NAME 9
+
+/* Lock timeout. */
+#if 1
+#define LOCK_TIMEOUT 1
+#else
+#define LOCK_TIMEOUT 10
+#endif
+
+void
+print_error(const char *format, ...)
+{
+  va_list args;
+
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fflush(stderr);
+  exit(1);
+}
+
+char *
+lock_reply_string(P2_LOCK_REPLY reply)
+{
+  assert(reply >= P2_MIN_LOCK_REPLY && reply <= P2_MAX_LOCK_REPLY);
+
+  switch (reply)
+  {
+  case P2_LOCK_OK:
+    return("P2_LOCK_OK");
+  case P2_LOCK_TIMEOUT:
+    return("P2_LOCK_TIMEOUT");
+  case P2_LOCK_DEADLOCK:
+    return("P2_LOCK_DEADLOCK");
+  case P2_LOCK_NOT_LOCKED:
+    return("P2_LOCK_NOT_LOCKED");
+  case P2_LOCK_REQUEST_OVERFLOW:
+    return("P2_LOCK_REQUEST_OVERFLOW");
+  case P2_LOCK_HEAD_OVERFLOW:
+    return("P2_LOCK_HEAD_OVERFLOW");
+#ifndef NDEBUG
+  default:
+    P2_runtime_error("illegal P2_LOCK_REPLY");
+    return("???");
+#endif /* NDEBUG */
+  }
+}
+
+int
+main()
+{
+  P2_LOCK_REPLY lock_reply;
+  P2_PROCESS_ID child_pid;
+  P2_SEMAPHORE_ID semaphore;
+
+  /* Initialize process and lock manager. */
+  P2_init_process();
+  P2_init_lock_manager();
+  assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+
+  /* Initialize semaphore to 0. */
+  if (P2_init_semaphore(&semaphore, 0) < 0)
+    print_error("P2_init_semaphore(&semaphore) failed");
+
+  /* Lock */
+  lock_reply = P2_lock(LOCK_NAME, P2_LOCK_X, P2_LOCK_MEDIUM, LOCK_TIMEOUT);
+  assert(lock_reply == P2_LOCK_OK
+	 || lock_reply == P2_LOCK_TIMEOUT
+	 || lock_reply == P2_LOCK_REQUEST_OVERFLOW
+	 || lock_reply == P2_LOCK_HEAD_OVERFLOW);
+  printf("Parent: P2_lock(%d, P2_LOCK_X, P2_LOCK_MEDIUM, %d) = %s\n",
+	 LOCK_NAME, LOCK_TIMEOUT, lock_reply_string(lock_reply));
+  /* Flush stdout. */
+  fflush(stdout);
+
+  child_pid = P2_fork_process();
+  if (child_pid == -1)
+  {
+    /*** This is an error. ***/
+
+    print_error("P2_fork_process() failed");
+  }
+  else if (child_pid == 0)
+  {
+    /*** This is the child. ***/
+
+    assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+    lock_reply = P2_lock(LOCK_NAME, P2_LOCK_X, P2_LOCK_MEDIUM, LOCK_TIMEOUT);
+    assert(lock_reply == P2_LOCK_OK
+	   || lock_reply == P2_LOCK_TIMEOUT
+	   || lock_reply == P2_LOCK_REQUEST_OVERFLOW
+	   || lock_reply == P2_LOCK_HEAD_OVERFLOW);
+    printf("Child: P2_lock(%d, P2_LOCK_X, P2_LOCK_MEDIUM, %d) = %s\n",
+	   LOCK_NAME, LOCK_TIMEOUT, lock_reply_string(lock_reply));
+    /* Flush stdout. */
+    fflush(stdout);
+    /* Unlock. */
+    if (lock_reply == P2_LOCK_OK)
+      if (P2_unlock(LOCK_NAME) != P2_LOCK_OK)
+	print_error("Child: P2_unlock(%d) failed", LOCK_NAME);
+    /* Increment semaphore. */
+    if (P2_unlock_semaphore(&semaphore) < 0)
+      print_error("Child: P2_unlock_semaphore(&semaphore) failed");
+    exit(0);
+   }
+  else
+  {
+    /*** This is the parent. ***/
+
+    assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+    /* Wait for child to increment semaphore. */
+    if (P2_lock_semaphore(&semaphore) < 0)
+      print_error("Parent: P2_lock_semaphore(&semaphore) failed");
+    /* Delete the semaphore. */
+    if (P2_delete_semaphore(&semaphore) < 0)
+      print_error("Parent: P2_delete_semaphore(&semaphore) failed");
+    /* Unlock. */
+    if (P2_unlock(LOCK_NAME) != P2_LOCK_OK)
+      print_error("Parent: P2_unlock(%d) failed", LOCK_NAME);
+  }
+
+  /* Delete process and lock manager. */
+  /* We must call P2_delete_lock_manager() only once.
+     In this case, we only call it from the parent. */
+  assert(child_pid != 0);
+  printf("Parent: Exits\n");
+  P2_delete_lock_manager();
+  P2_delete_process();
+
+  /* Exit. */
+  exit(0);
+}

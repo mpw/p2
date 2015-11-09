@@ -1,0 +1,57 @@
+predicate index now non-empty
+   7 10030 Akerson
+   6 10060 Andrews
+   5 10040 Akerson
+   4 10050 Akerson
+   3 10010 Akin
+   2 10020 Alexander
+   1 10070 Andrews
+   0 10000 Akers
+
+case1 
+   7 10030 Gwyn
+   5 10040 Mary
+   4 10050 Suzanne
+
+
+case2 
+   5 10040 Mary
+   4 10050 Suzanne
+
+
+case3 
+   7 10030 Gwyn
+
+
+cross product
+   7 7 Akerson
+   5 7 Akerson
+   4 7 Akerson
+   7 5 Akerson
+   5 5 Akerson
+   4 5 Akerson
+   7 4 Akerson
+   5 4 Akerson
+   4 4 Akerson
+
+
+cross product with deletions
+   7 10030 Akerson
+*** deleting 7 Akerson
+*** deleting 5 Akerson
+*** deleting 3 Akin
+*** deleting 1 Andrews
+--   6 10060 Andrews
+--   4 10050 Akerson
+--   2 10020 Alexander
+--   0 10000 Akers
+
+   4 10050 Akerson
+*** deleting 6 Andrews
+*** deleting 2 Alexander
+--   4 10050 Akerson
+--   0 10000 Akers
+
+
+delete last akerson
+predicate index now empty

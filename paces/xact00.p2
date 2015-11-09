@@ -1,0 +1,43 @@
+/* $Id: xact00.p2,v 45.0 1997/09/19 05:45:23 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include "P2_paces.h"
+
+typex {
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+}
+
+typedef struct {
+  int i;
+} E;
+
+schema {
+  container <E> k;
+} stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, 1);
+} s;
+
+cursor <s.k> c;
+
+int main ()
+{
+#if 0
+  /* Initialize log, xact, and lock managers. */
+  P2_init_log_manager();
+#endif
+  /* Open schema. */
+  open_schema(s);
+
+  begin_xact(s);
+  abort_xact(s);
+
+  /* Close schema. */
+  close_schema(s);
+#if 0
+  /* Delete log, xact, and lock managers. */
+  P2_delete_log_manager();
+#endif
+
+  /* Return. */
+  return 0;
+}

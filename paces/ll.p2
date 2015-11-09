@@ -1,0 +1,143 @@
+/* $Id: ll.p2,v 45.0 1997/09/19 05:43:34 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define USE_TOP2DS_QUALIFY 1
+
+typedef struct {
+   int   empno;
+   int   age;
+   int   _ts;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+EMP_TYPE rawdata[] = {
+   { 10000,60,0,"Biology","Akers, Mark" },
+   { 10070,22,0,"Biology","Andrews, Kay" },
+   { 10020,21,0,"Biology","Alexander, Joe" },
+   { 10010,40,0,"Biology","Akin, Monica" },
+   { 10050,42,0,"Biology","Akerson, Suzanne" },
+   { 10040,53,0,"Biology","Akerson, Mary" },
+   { 10060,61,0,"Biology","Andrews, John" },
+   { 10030,23,0,"Biology","Akerson, Gwyn" },
+   { -1 }
+};
+
+#if USE_TOP2DS_QUALIFY
+typex { leaps_x = top2ds_qualify[
+                  llist[
+                  P2_DELFLAG_LAYER[malloc[transient]]]]; 
+}
+#else
+typex { leaps_x = top2ds[qualify[
+                  llist[
+                  P2_DELFLAG_LAYER[malloc[transient]]]]]; 
+}
+#endif
+
+container <EMP_TYPE> stored_as leaps_x with {
+  llist timestamp is _ts;
+} emp_cont;
+
+typedef cursor <emp_cont>  emp_cont_cursor;
+
+cursor <emp_cont> where "$._ts <= dom_timestamp" k;
+
+cursor <emp_cont> where "$.age > 25" case1;
+
+cursor <emp_cont> where "$.age > 25 && $._ts <= dom_timestamp" case2;
+
+cursor <emp_cont> where "$.age > 25 && $._ts > dom_timestamp" case3;
+
+
+char *name;
+cursor <emp_cont> where "$.dept_name == name && $._ts <= dom_timestamp" kk;
+
+emp_cont_cursor e;
+
+int dom_timestamp = 5;
+int global = 0;
+
+void delete_some( void )
+{
+int i = 1;
+
+   foreach(e) {
+      if (i) {
+         e._ts = global++;
+         delete(e);
+      }
+      i = !i;
+   }
+}
+      
+int main ( void ) 
+{
+int j = 1;
+
+  name = "Biology";
+  open_cont( emp_cont );
+  init_curs( k );
+  init_curs( e );
+  init_curs( case1 );
+  init_curs( case2 );
+  init_curs( case3 );
+
+  {
+    EMP_TYPE *p;
+    for (p = rawdata; p->empno != -1; p++) {
+      p->_ts = global++;
+      insert(e, *p); 
+    }
+  }
+
+  foreach(e) {
+      printf("%4d %d %s\n", e._ts, e.empno, e.name);
+  }
+  printf("\n");
+
+  printf("case1 \n");
+  foreach(case1) {
+      printf("%4d %d %s\n", case1._ts, case1.empno, case1.name);
+  }
+  printf("\n\n");
+
+  printf("case2 \n");
+  foreach(case2) {
+      printf("%4d %d %s\n", case2._ts, case2.empno, case2.name);
+  }
+  printf("\n\n");
+
+  printf("case3 \n");
+  foreach(case3) {
+      printf("%4d %d %s\n", case3._ts, case3.empno, case3.name);
+  }
+  printf("\n\n");
+
+  foreach(k) {
+      printf("%4d %d %s\n", k._ts, k.empno, k.name);
+        delete_some();
+  }
+  printf("\n");
+
+  foreach(k) {
+      printf("%4d %d %s\n", k._ts, k.empno, k.name);
+  }
+  printf("\n");
+
+  foreach(kk) {
+      printf("%4d %d %s\n", kk._ts, kk.empno, kk.name);
+  }
+  printf("\n");
+
+  foreach(e) {
+      printf("%4d %d %s\n", e._ts, e.empno, e.name);
+  }
+  printf("\n");
+  
+  close_cont( emp_cont );
+  exit( 0 );
+}

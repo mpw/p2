@@ -1,0 +1,161 @@
+# $Id: Makeconfig.in,v 45.9 1997/09/29 05:32:18 jthomas Exp $
+# Copyright (C) 1995, The University of Texas at Austin.
+# This file requires GNU make -- it will not work with the normal Unix make.
+# @configure_input@
+
+# This file is included by all P2 Makefiles.
+
+#### Start of system configuration section. ####
+
+# Root of install tree.
+# Installation prefix for architecture-independent files.
+# Over-ride with the --prefix= command line argument to configure, eg:
+#   ../src/configure --prefix=/projects/predator/pub/p2
+# prefix = /projects/predator/pub/p2
+# prefix = $(objroot)/installed
+prefix = @prefix@
+
+# Installation prefix for architecture-dependent files.
+exec_prefix = @exec_prefix@
+
+bindir = $(exec_prefix)/bin
+datadir = $(prefix)/share
+includedir = $(prefix)/include
+libdir = $(exec_prefix)/lib
+infodir = $(prefix)/info
+
+# Debugging and optimization flags.
+# Best performance:
+###OPT_CFLAGS = -g -O2 -finline-functions -funroll-loops
+# Release/Distribution:
+OPT_CFLAGS = -O
+# Debug:
+###OPT_CFLAGS = -g
+
+AUTOCONF = @AUTOCONF@
+AUTOHEADER = @AUTOHEADER@
+
+# Eventually, move these to bin.
+# Unfortunately, moving these will will require modifying Makefile.in (JAT)
+CPPGEN = $(objroot)/cppgen
+LAYERGEN = $(objroot)/layergen
+
+DDL = $(objroot)/bin/ddl
+PB = $(objroot)/bin/pb
+RL = $(objroot)/bin/rl
+XP = $(objroot)/bin/xp
+
+# If you chage $(P2), be sure to change configure.in
+# (which creates P2 from P2.in) (JAT)
+# Can't add prefix $(SPEW) to $(P2) here, because $(P2) is used as a
+# target and dependency as well as a compiler. (JAT)
+P2 = $(objroot)/bin/P2
+
+SHELL = /bin/sh
+
+# Normal case.
+CC = @CC@
+# Dmake.
+###CC = $(SPEW) @CC@
+# Purify.
+###CC = purify -leaks-at-exit=no -windows=no @CC@
+
+CFLAGS = $(OPT_CFLAGS) @CFLAGS@
+LEX_CFLAGS = $(OPT_CFLAGS) @LEX_CFLAGS@
+XP_CFLAGS = $(OPT_CFLAGS) @XP_CFLAGS@
+PB_CFLAGS = $(OPT_CFLAGS) @PB_CFLAGS@
+CPP = @CPP@
+
+# $(objroot) contains config.h
+### -DTRACE -DNDEBUG -DP2_NEDEBUG
+CPPFLAGS = -DNDEBUG -DP2_NEDEBUG -I. -I$(srcdir) -I$(objroot) -I$(srcroot)/common @DEFS@
+
+AR = ar
+ARFLAGS = crv
+AS = as
+RANLIB = @RANLIB@
+RM = rm -f
+INDENT = @INDENT@
+LEX = @LEX@
+LEXLIB = @LEXLIB@
+YACC = @YACC@
+YFLAGS = -d
+LIBS = @LIBS@
+SED = sed
+AWK = @AWK@
+EGREP = @EGREP@
+ECHO_C = @ECHO_C@
+ECHO_N = @ECHO_N@
+
+GC = @GC@
+
+LEX_TABLE_SIZE = @LEX_TABLE_SIZE@
+
+# The install target copies files from build tree to install tree.
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_DATA = @INSTALL_DATA@
+
+# uname prints information about the machine and operating system it is run on.
+UNAME = uname
+
+#### End of system configuration section. ####
+
+# Phony targets.
+.PHONY:		all dirs install installdirs check
+.PHONY:		clean mostlyclean distclean realclean
+
+# Include the .dep files.
+#   INCLUDE = 0 for clean rules because in these cases it is not
+#        necessary to include the .dep files and thus, possibly,
+#        have to generate them.
+#   INCLUDE = 1 Normally.
+INCLUDE = 1
+
+# Machine and operating system type.
+uname = $(shell $(UNAME))
+
+# Guess a canonical system name
+config_guess = $(shell config.guess)
+
+.PRECIOUS:	%.c %.h %.l %.y %.xp %.ops %.p2 %.ddl %.i %.o %.awk
+.PRECIOUS:	%.nxp %.cdef %.kdef
+
+# This rule checks out an rcs file iff the file exists,
+# and the file is not locked.  The net effect is to
+# check out a file if someone has checked in changes
+# (and no one has subsequently locked the file).
+# This rule is experimental (JAT).
+
+%:		RCS/%,v
+		@cd $(srcdir); \
+		if [ -z "`rlog -L -R $@`" ]; then \
+		  echo $(ECHO_N) "Checking out $@ ... $(ECHO_C)"; \
+		  co $@ > /dev/null 2>&1; \
+		  if [ $$? ]; then \
+		    echo "done"; \
+		  else \
+		    echo "failed"; \
+		  fi; \
+		fi; \
+		exit 0
+
+# Make dependencies from .c files
+# -I$(srcroot)/pb is only necessary for the x sub-directory. (JAT)
+
+%.dep:		%.c
+		@echo $(ECHO_N) "Generating $@ ... $(ECHO_C)"
+		$(CPP) -M -I$(srcroot)/pb $(CPPFLAGS) $< \
+		  | $(SED) 's%$*.o%$(notdir $@)%' \
+		  > $(notdir $@)
+		@echo "done"
+
+# Make dependencies from .c files in ../common/
+
+%.dep:		../common/%.c
+		@echo $(ECHO_N) "Generating $@ ... $(ECHO_C)"
+		$(CPP) -M $(CPPFLAGS) $< \
+		  | $(SED) 's%$*.o%$(notdir $@)%' \
+		  > $(notdir $@)
+		@echo "done"
+

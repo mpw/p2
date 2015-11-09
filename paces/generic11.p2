@@ -1,0 +1,21 @@
+/* $Id: generic11.p2,v 1.1 1997/09/24 14:54:08 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* SCHEMA member container, conceptual, mmap_persistent */
+
+#include "P2_paces.h" /* P2_PACES_ELEMENT */
+
+typex {
+  t = conceptual[array[mmap_persistent]];
+}
+
+schema {
+  container <P2_PACES_ELEMENT> *k;
+} stored_as t with {
+  array size of k is 10;
+  mmap_persistent of k file is "/tmp/P2_generic11-data" with size 1024;
+} s;
+
+#define P2_PACES_CONTAINER *s.k
+
+#include "generic04.p2h"

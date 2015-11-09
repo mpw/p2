@@ -1,0 +1,96 @@
+/* $Id: process11.p2,v 45.0 1997/09/19 05:44:07 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Previous child spawns next child; parent waits for child to finish.
+   So, the last child we fork is the first child to finish. */
+
+/* The maximum number of live processes is equal to i, thus we should
+   limit N to a relatively small number. */
+
+/* Analogous to paces/process12.p2, but CHILD locks mutex semaphore. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <assert.h>   /* assert() */
+#include <stdio.h>    /* printf() */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+#define N 10 /* Total number of children to fork() */
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main ()
+{
+  P2_PROCESS_ID child_pid;
+  P2_SEMAPHORE_ID mutex;
+  int i;
+
+  /* Initialize process manager. */
+  P2_init_process();
+
+  /* Initialize mutex semaphore to 0
+     (child waits for parent to unlock semaphore). */
+  if (P2_init_semaphore(&mutex, 0) < 0)
+    perror("Can't initialize mutex semaphore");
+
+  for (i = 0; i < N; i++)
+  {
+    child_pid = P2_fork_process();
+    if (child_pid == -1)
+    {
+      /*** This is an error. ***/
+
+      fprintf(stderr, "i = %d: ", i);
+      perror("Can't fork child");
+      exit(1);
+    }
+    else if (child_pid == 0)
+    {
+      /*** This is the child. ***/
+
+      /* Serialize. */
+
+      /* Lock mutex semaphore (wait for parent to print output). */
+      if (P2_lock_semaphore(&mutex) < 0)
+	perror("Can't lock mutex semaphore");
+    }
+    else
+    {
+      /*** This is the parent. ***/
+
+      /* Print and flush. */
+      printf("%d\n", i);
+      fflush(stdout);
+      /* Unlock mutex semaphore. */
+      if (P2_unlock_semaphore(&mutex) < 0)
+	perror("Can't unlock mutex semaphore");
+
+      /* Wait for child to finish. */
+      if (P2_join_process(child_pid) < 0)
+	perror("Can't join with child");
+
+      if (i == 0)
+      {
+	/* Delete semaphore. */
+	if (P2_delete_semaphore(&mutex) < 0)
+	  perror("Can't delete mutex semaphore");
+	/* Delete process manager. */
+	P2_delete_process();
+      }
+
+      exit(0);
+    }
+  }
+
+  exit(0);
+}

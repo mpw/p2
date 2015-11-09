@@ -1,0 +1,11 @@
+/* $Id: hash02.p2,v 45.0 1997/09/19 05:43:27 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Use words2.txt, a file of words
+   found at http://www.teb.upm.es/~jantonio/sfl/sfl155.htm#TOC1
+   with the str_hash function (see paces/P2.c)
+   6026 words taken from Conan Doyle's "Abbey Grange"
+   occupying approx. 54KB */
+
+#define WORD_FILE_NAME "words2.txt"
+#include "hash01.p2"

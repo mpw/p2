@@ -1,0 +1,37 @@
+/* $Id: gcc3.p2,v 45.0 1997/09/19 05:43:22 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* gcc-specific extensions: statement expressions */
+
+#include "P2_paces.h"
+#include <stdio.h>
+
+#define maxint(a,b) \
+       ({int _a = (a), _b = (b); _a > _b ? _a : _b; })
+
+__inline__ static int
+absval(int i)
+{
+#if 0
+  /* This breaks GNU indent 1.9.1 */
+  return({ int y = i; int z;
+           if (y > 0) z = y;
+           else z = - y;
+           z; });
+#else
+  /* Work-around bug GNU indent 1.9.1 */
+  return({ int y = i; int z;
+           if (y > 0) z = y;
+           if (y <= 0) z = -y;
+           z; });
+#endif
+}
+
+int
+main ()
+{
+  printf("absval(-1) = %d\n", absval(-1));
+  printf("maxint(1, 0) = %d\n", maxint(1, 0));
+  printf("maxint(absval(-1), 0) = %d\n", maxint(absval(-1), 0));
+  return 0;
+}

@@ -1,0 +1,592 @@
+@c $Id: layers.texi,v 45.0 1997/09/19 05:42:07 jthomas Exp $
+@c Copyright (C) 1997, The University of Texas at Austin.
+
+@node     P2 Layers, Invoking P2, P2 Operations, Top
+@chapter  P2 Layers
+@cindex   P2 layers
+@cindex   layers
+
+@menu
+* Layer Format::                
+* P2 Layer Specifications::     
+@end menu
+
+@node Layer Format, P2 Layer Specifications, P2 Layers, P2 Layers
+@section Layer Format
+
+@cindex realm
+@cindex vertical parameterization
+The P2 layers are @dfn{vertically parameterized}.
+Each component imports zero or more standardized interfaces and exports a
+standardized interface. 
+A standardized interface is one of these five types called a @dfn{realm}:
+
+@vtable @samp
+
+@item ds
+data structures realm - usually things like linked lists, arrays, binary trees.
+
+@item top
+the conceptual layer - the topmost layers. Usually this is the layer that
+defines @code{foreach} and @code{rofeach} in terms of other operations.
+
+@item mem
+memory allocation - the layers responsible for memory allocation.
+
+@item lnk
+link layers - layers to do link processing.
+
+@item toplnk
+conceptual layer for links - the topmost layer in the link sub-realm.
+
+@end vtable
+
+This is the order that they appear in the file @file{op-tab.h}.
+This is important if  we wish to add another operation or another realm.
+
+
+
+@cindex layer options
+
+Below is the list of layer options to describe certain characteristics of
+the layer. Through the layer options, the syntactic complexity of the
+xp file is reduced.
+
+
+@defvr  {Layer option} @w{no annotation}
+@defvrx {Layer option} annotation
+@defvrx {Layer option} @w{optional annotation}
+@defvrx {Layer option} @w{multiple annotation}
+@defvrx {Layer option} @w{optional multiple annotations}
+These mutually exclusive options describe the number of annotations a
+layer expects. They consecutively represent: zero, one, zero or one, one or
+more, zero or more. 
+@*
+If none of these options are present, then "no annotation" is assumed.
+@end defvr
+
+
+@defvr  {Layer option} stable
+@defvrx {Layer option} unstable
+These mutually exclusive options describe the relationship between the
+delete operation and the current cursor. A @code{stable} option will not
+move the cursor after performing a delete operation. An @code{unstable}
+option will move the cursor to the first element after the deleted one.
+@*
+If neither option is present, then "stable" is assumed. 
+@end defvr
+
+@defvr  {Layer option} retrieval_always
+@defvrx {Layer option} retrieval_never
+@defvrx {Layer option} retrieval_sometimes
+These three mutually exclusive options describe the status of the
+retrieval operations (@code{adv}, @code{rev}, @code{reset_start}, etc.)
+in the layer. A @code{retrieval_always} option means the retrieval
+operations are always executed, even if the layer is not chosen as the
+retrieval layer. A @code{retrieval_never} option means that retrieval
+options are not present in this layer. A @code{retrieval_sometimes}
+option means that the retrieval operations are performed only if the
+layer is chosen as the retrieval layer. 
+@*
+If none of these options are present, then "retrieval_never" is assumed.
+@end defvr
+
+
+@defvr  {Layer option} curs_state
+@defvrx {Layer option} cont_state
+These options describes if the layer needs to maintain  cursor state
+and/or container state information.
+@end defvr
+
+@defvr {Layer option} d2u
+This option means that the layer implements the  delete operation by using  updates. For
+instance, the @file{delflag} layer "deletes" an element by updating the
+element's "deleted-field" from 0 to 1.
+@end defvr
+
+@defvr {Layer option} indirect_only
+This option  is presently used to indicate whether a layer
+provides persistent storage or not.  The name comes from the fact that
+persistent containers cannot be declared directly, but only
+indirectly.  
+@end defvr
+
+
+To recap, a layer without any options expects no annotations, does not move
+the cursor on deletions, has no retrieval operations, does not maintain
+cursor or container state information, does not map deletions onto
+updates, and can declare containers directly. 
+
+
+
+Finally, to interpret the layer definition:
+@example
+ds array [ mem ] stable annotation retrieval_sometimes
+@end example
+the format is:
+@itemize @bullet
+@item
+The realm of the layer. (@samp{ds})
+
+@item 
+The name of the layer. (@samp{array})
+
+@item 
+The parameters of the layer surrounded by @samp{'[' ']'}.
+A layer may have zero or more parameters.
+Each parameter is the the name of a realm,
+which can be instantiated with a layer from that realm,
+e.g., (@samp{[ mem ]}).
+
+@item 
+The remaining elements are the layer options that were discussed
+in the previous subsection.
+(@samp{stable} @samp{annotation}
+@samp{retrieval_sometimes})
+
+@end itemize
+
+@node P2 Layer Specifications,  , Layer Format, P2 Layers
+@section P2 Layer Specifications
+
+These are the layers implemented in P2 so far. New layers are likely to be
+developed, so this list may change. 
+
+
+@deftypefn layer ds array [ mem ] stable annotation retrieval_sometimes
+Annotation: @code{array size is @var{size}}
+@*@*
+Array allocates a linear array of @var{size}  elements. Space occupied
+by deleted elements is not reused. An error is raised if there is
+an attempt to add more than @var{size} elements to the container.
+@end deftypefn
+
+@deftypefn layer ds avail [ ds ] stable no annotation d2u retrieval_never
+Avail keeps a list of all elements that have been  deleted so that the
+space can be reused for subsequent insertions.
+@end deftypefn
+
+@deftypefn layer ds avl [ ds ] unstable annotation curs_state retrieval_sometimes
+Annotation: @code{avl key is @var{field}}.
+@*@*
+This layer implements AVL trees ordered on the field @var{field}. AVL
+trees are height-balanced binary trees, meaning the maximum height for
+the tree with N nodes is log2(N). 
+@end deftypefn
+
+@deftypefn layer ds bintree [ds] unstable annotation curs_state retrieval_sometimes
+Annotation: @code{bintree key is @var{field}}
+@*@*
+Binary tree ordered on key @var{field}.
+@end deftypefn
+
+@deftypefn layer top ccbus [ top ] stable no annotation retrieval_always
+This layer is used only internally by P2 to link containers of
+different implementations.
+This layer will first re-route the type expression based on the
+information in the container (which has references to all the
+lower-level type expressions). 
+@ignore
+The @code{$CALL_LEVEL} operation is
+performed because the type expression gets moved to the right location
+before the call.
+@end ignore
+@end deftypefn
+
+@deftypefn layer ds delflag [ ds ] stable retrieval_always no annotation d2u
+Delflag marks deleted elements instead of actually deleting them. Most
+often used on top of array.
+@end deftypefn
+
+@deftypefn layer top conceptual [ ds ] 
+This layer does not really exist. It is a layer name that is understood
+by P2 to expand into a series of layers. The current definition of
+conceptual is:
+@example
+conceptual[X] == 
+    top2ds[init_generic[generic[generic_funcall[orderby[
+        inbetween[qualify[X]],  
+        top2ds[inbetween[dlist[malloc[transient]]]]
+        ]]]]]
+@end example
+@end deftypefn
+
+
+@deftypefn layer ds deque_dlist [ ds ] stable no annotation retrieval_sometimes
+deque_deque_dlist is an ugly hack of @file{dlist}; it assumes a global 
+integer variable "ugly_hack", which has the values zero and nonzero.  
+A zero value means that records are inserted at the head of 
+the dlist.  A nonzero value means that records are inserted 
+at the tail of the dlist.  Note: "ugly_hack" is reset to zero 
+upon every insertion. 
+@end deftypefn
+
+@deftypefn layer ds dlist [ ds ] stable no annotation retrieval_sometimes
+Doubly-linked list. 
+@end deftypefn
+
+@deftypefn layer mem fasttransient [ ] stable no annotations
+Like @file{transient}, but it calls @code{fastmalloc()}, (which is built
+into the P2 runtime system) for faster memory allocations.
+@end deftypefn
+
+@deftypefn layer ds generic [ ds ] stable no annotation retrieval_always
+This layer will reroute operations from being inline to calling a
+procedure through the operation vector of a container (or a cursor) if
+the container is declared as a generic container.
+If the container is not a generic container, then this layer will not
+affect the operations. 
+The layer @file{init_generic} has to come after @file{generic}
+in the type expression.
+@end deftypefn
+
+@deftypefn layer ds generic_funcall [ ds ] stable curs_state no annotation retrieval_always
+If the operations are marked as "function expansion", then the calls to
+the operations are made through the operation vector of the container
+(cursor). This layer is remarkably similar to the @code{generic}
+layer. This layer usually comes after @code{generic}.
+@end deftypefn
+
+@deftypefn layer ds hash [ ds ] unstable curs_state annotation retrieval_sometimes
+Annotation: @code{hash key is @var{fieldname} with size @var{size}}
+@*@*
+Performs hashing. The number of buckets is @var{size} and the field to
+hash on is @var{fieldname}.
+@end deftypefn
+
+@deftypefn layer ds hashcmp [ ds ] stable multiple annotations
+Annotation: @code{hashcmp field @var{field}}.
+@*@*
+String equality comparisons are slow operations. This layer will speed
+that up by storing the hash value of a string field alongside the string
+field. Equality tests between strings are transformed into an equality
+test between two hash values---only if the values are equal will the
+string comparison be performed.
+@end deftypefn
+
+@deftypefn layer ds hlist [ ds ] stable curs_state annotation retrieval_sometimes
+Annotation: @code{hlist timestamp is @var{timestamp_field} key is
+@var{field} with size @var{hashsize}}. 
+@*@*
+This layer implements a time-stamp ordered hash-list. 
+Timestamps are assigned increasing values and stored in the field
+@var{timestamp_field}. Inserted elements are placed at the head of the
+list. Updates are modelled as insertions followed by deletions.
+The size of the hash table is @var{hashsize}. The hashing field is @var{field}.
+@*@*
+Note: this layer was used in the implementation of LEAPS. It is not
+clear if it has any other usage.
+@ignore
+@*
+If the basic annotation is followed by
+@code{option @var{foo}}
+where @var{foo} is anything, then an optimization is called.
+This optimization will have @code{reset_start()} point at
+the first qualified element that was found via a previous invocation of
+@code{reset_start()} (when the timestamp doesn't change). 
+@end ignore
+
+@end deftypefn
+
+@deftypefn layer ds hpredindx [ ds ] stable annotation retrieval_sometimes curs_state
+Annotation: @code{hpredindx timestamp is @var{timestamp_field} key
+is @var{field} with size @var{hash_size} predicate @var{pred} with
+@var{empty_proc}  with @var{nonempty_proc}}
+@*@*
+This is a timestamp ordered container  of qualified elements that are
+hashed into an array of buckets. The timestamp field is
+@var{timestamp_field}. The key to hash the elements on is @var{field}
+and the size of the hash array is @var{hash_size}. The predicate
+@var{pred} is used to allow only all elements satisfying a particular
+predicate to be in this container. The procedure @var{empty_proc} is
+called when the last element is deleted from the container whereas the
+procedure @var{nonempty_proc} is called when the first element is added
+to the container. Either one or both procedures can be the string
+"null" which means no function is called. 
+@*@*
+Note: this layer was used in the implementation of LEAPS. It is not
+clear if it has any other usage.
+@end deftypefn
+
+
+@deftypefn layer ds inbetween [ ds ] stable curs_state no annotation retrieval_always
+This layer is used to point the cursor to the next object after a
+deletion for unstable layers. This layer must be used if there are
+unstable layers in the type expression and this layer must be above all
+the unstable layers.
+@end deftypefn
+
+@deftypefn layer ds init_generic [ ds ] stable no annotation retrieval_never
+This layer  initializes the operation vector (of the list of procedures)
+associated with a container or a cursor. This layer comes 
+after the @code{generic} layer. 
+@end deftypefn
+
+@deftypefn layer lnk linkterm [ top ] stable no annotation retrieval_never
+The bottommost link layer. The transition from the link realm to the top realm.
+@end deftypefn
+
+@deftypefn layer ds llist [ ds ] stable curs_state annotation retrieval_sometimes
+Annotation: @code{llist timestamp is @var{timestamp_field}}.
+@*@*
+This layer implements a time-stamp ordered hash-list. 
+Timestamps are assigned increasing values and stored in the field
+@var{timestamp_field}. Inserted elements are placed at the head of the
+list. Updates are modelled as insertions followed by deletions.
+@*@*
+Note: this layer was used in the implementation of LEAPS. It is not
+clear if it has any other usage.
+
+@ignore
+@*
+If the basic annotation is  followed by
+@code{option @var{foo}} where @var{foo} is anything,
+then an optimization is called.
+This optimization will have @code{reset_start()} point at
+the first qualified element that was found via a previous invocation of 
+@code{reset_start()} (when the timestamp doesn't change).
+@end ignore
+@end deftypefn
+
+@deftypefn layer ds lpredindx [ ds ] stable annotation retrieval_sometimes curs_state
+Annotation: @code{lpredindx timestamp is @var{timestamp_field} predicate @var{pred} with
+@var{empty_proc}  with @var{nonempty_proc}}
+@*@*
+This is a timestamp ordered list  of predicate qualified elements. 
+The timestamp field is
+@var{timestamp_field}.  The predicate
+@var{pred} is used to allow only all elements satisfying a particular
+predicate to be in this container. The procedure @var{empty_proc} is
+called when the last element is deleted from the container whereas the
+procedure @var{nonempty_proc} is called when the first element is added
+to the container. Either one or both procedures can be the string
+"null" which means no function is called. 
+@*@*
+Note: this layer was used in the implementation of LEAPS. It is not
+clear if it has any other usage.
+@end deftypefn
+
+@deftypefn layer ds malloc [ mem ] stable no annotations
+Allocates space dynamically.
+@end deftypefn
+
+@deftypefn layer ds mlist [ ds, top ] unstable curs_state cont_state multiple annotation retrieval_sometimes
+Annotation: @code{mlist on @var{fieldname}}.
+@*@*
+This is the multi-list indexing layer. This layer accepts any number of
+fields and the container is indexed over all these fields. The
+first parameter is the type expression of how the elements are stored
+and the second parameter is the type expression of how the index objects
+are stored.
+@*@*
+Note that this layer accepts multiple annotations. That is, several
+indices can be performed over the same container and handled by only
+one invocation of the mlist layer.
+@end deftypefn
+
+
+@deftypefn layer mem mmap_persistent [ ] stable indirect_only
+Annotation: @code{mmap_persistent file is @var{filename} with size
+@var{size}}. 
+@*@*
+This is a layer where the memory is mapped to disk.
+This layer uses the @code{mmap} system call, which is not implemented
+for all versions of UNIX.
+For instance, it does not work on the Linux, Solaris, and ULTRIX, but
+it does work on the SunOS.
+The file named @var{filename} is allocated with @var{size} characters
+in order to provide baking store.
+@end deftypefn
+
+@deftypefn layer mem mmap_shared [ ] stable indirect_only
+Annotation: @code{mmap_shared file is @var{filename} with size
+@var{size}}. 
+@*@*
+This layer works like mmap_shared, but maps memory transiently,
+rather than persistently.
+The primary use of this layer is to allocate a region of memory that
+will be shared by
+two or more processes.
+@end deftypefn
+
+@deftypefn layer ds multimalloc [ mem ] stable optional annotation retrieval_never
+Annotation: @code{multimalloc size is @var{size}}. 
+@*
+If no
+annotation is specified, the default value of @var{size} is 100.
+@*@*
+This layer works like malloc, but it allocates @var{size} objects at
+once and keeps track of the next available location via caching.
+@end deftypefn
+
+
+@deftypefn layer ds named_funcall [ ds ] stable curs_state no annotation retrieval_always
+A type expression without @code{named_funcall} inlines the code at the
+point of invocation. With this layer, a procedure is generated (based on
+the name of the container) and the invocation has been replaced by a
+procedure call. These are done if the operations are tagged as "function
+expansion".
+@*
+Unlike the @code{generic_funcall} layer, there is no operation vector
+associated with the container (cursor).
+@end deftypefn
+
+@deftypefn layer lnk nloops [ lnk ] stable  retrieval_never optional multiple annotations
+Annotation: @code{nloop link @var{linkname} on @var{pcard}
+@var{p_k_name} to @var{ccard} @var{c_k_name} where
+@var{link_pred}}. 
+@*
+Note that the annotation is optional, in which case
+the default would be used. 
+@ignore
+Actually, the default is not defined, so
+there might be something wrong with the declaration.
+@end ignore
+@*@*
+This layer implements link traversals as a series of nested loops. The
+name of the link is @var{linkname}. The predicate for the link, called
+@var{link_pred}, determines how the parent elements and child elements
+are connected. 
+The names of the parent and child containers are @var{p_k_name} and 
+@var{c_k_name}, respectively. The cardinality relationship between
+the parent and the child is @var{pcard}:@var{ccard}. 
+@end deftypefn
+
+@deftypefn layer ds odlist [ ds ] unstable annotation retrieval_sometimes
+Doubly-linked list ordered by field @var{field}.
+
+Annotation: @code{odlist key is @var{field}}.
+@end deftypefn
+
+@deftypefn layer ds orderby [ ds, top ] stable curs_state no annotation retrieval_always
+This layer is needed if cursors with orderby clauses are defined.
+The first parameter is the continuation of the type expression of the base type.
+The second parameter is the type expression of
+the container of pointers which maintain the ordering
+specified in the cursor declaration.
+Orderby is smart enough to
+(1) do nothing if the elements are already maintained in the correct order
+or (2) convert advance to reverse and vice versa if the elements
+are returned in the opposite of the correct order
+by some lower level layer.
+@end deftypefn
+
+@deftypefn layer ds qualify [ ds ] stable curs_state no annotation retrieval_always
+This layer modifies retrieval operations to advance
+to the next qualified object.
+The qualification is determined by the cursor predicate.
+@end deftypefn
+
+@deftypefn layer ds part [ top, top ] stable curs_state cont_state annotation retrieval_always
+Annotation: @code{part at field @var{fieldname}}.
+@*@*
+This layer partitions the element into two structures,
+called the primary and the secondary structures.
+All fields in the original element data type which appear
+before (and including) @var{fieldname}
+are added to the secondary
+and all fields after @var{fieldname}
+are added to the primary.
+@end deftypefn
+
+@deftypefn layer ds predindx [ ds ] annotation curs_state retrieval_sometimes
+Annotation: @code{predindx predicate @var{pred}}.
+@*@*
+This layer maintains a list of all elements satisfying predicate
+@var{pred} in change order (inserted and updated elements are placed at
+the head of the list).
+@end deftypefn
+
+
+
+@deftypefn layer ds qsort [ mem ] stable annotation retrieval_sometimes
+Annotation: @code{qsort key is @var{field} with size @var{size}}.
+@*@*
+This layer maintains the elements in a fixed size array (at most
+@var{size} elements) ordered by the field @var{field}.
+Actually, the array is in sorted order only after a call to
+@code{reset_start} or @code{reset_end}. An error is raised if there is
+an attempt to add more than @var{size} elements to the container.
+@end deftypefn
+
+
+@deftypefn layer ds cardinality [ ds ] stable no annotation
+This layer adds the adhoc operation @var{cardinality} which returns the
+number of elements in the container.
+@end deftypefn
+
+@deftypefn layer ds slist [ ds ] unstable no annotation retrieval_sometimes
+This is the unordered singly-linked list layer.
+@end deftypefn
+
+@deftypefn layer ds slow_hash [ ds ] unstable annotation retrieval_sometimes
+Annotation: @code{slow_hash key is @var{field} with size @var{size}}.
+@*@*
+This layer implements a hash function over @var{size} buckets on the
+field @var{field}. This is a slow version because the
+current bucket is recomputed for each operation (instead of @file{hash} which attempts to
+cache the value of the current bucket.
+@end deftypefn
+
+@deftypefn layer ds timestamp [ ds ] stable annotation
+Annotation: @code{timestamp on @var{counter}}
+@*@*
+This layer adds a field @var{counter}  to the element type which the main program has
+to initialize. This field is incremented for each insert and
+update. This layer also adds the adhoc operation @code{gettime} which
+returns the value of the timestamp of the element of the current cursor.
+@end deftypefn
+
+@deftypefn layer ds tlist [ ds ] stable annotation retrieval_sometimes
+Annotation: @code{tlist key is @var{field}}.
+@*@*
+This layer maintains a list of elements in timestamp
+ordering using the field @var{field}.
+@end deftypefn
+
+@deftypefn layer top top2ds [ ds ] stable no annotation retrieval_never
+This is the interface between the top realm and the data structure realm.
+The definitions of @code{foreach} and @code{rofeach} are specified here.
+@end deftypefn
+
+@deftypefn layer top top2ds_qualify [ ds ] stable no annotation retrieval_always
+The union between @file{top2ds} and @file{qualify} layers. 
+@end deftypefn
+
+@deftypefn layer toplnk top2link [ lnk ] stable no annotation  retrieval_never
+The layer which sits above all link layers. It gathers information such
+as which layer will process the link. 
+@end deftypefn
+
+@deftypefn layer ds tpredindx [ ds ] stable annotation retrieval_sometimes curs_state
+Annotation: @code{tpredindx predicate @var{pred} with
+@var{empty_proc}  with @var{nonempty_proc}}
+@*@*
+This is a timestamp ordered list  of predicate qualified elements. 
+The predicate
+@var{pred} is used to allow only all elements satisfying a particular
+predicate to be in this list. The procedure @var{empty_proc} is
+called when the last element is deleted from the list  whereas the
+procedure @var{nonempty_proc} is called when the first element is added
+to the list. Either one or both procedures can be the string
+"null" which means no function is called. 
+@*@*
+Note: this layer was used in the implementation of LEAPS. It is not
+clear if it has any other usage.
+
+@end deftypefn
+
+
+@deftypefn layer mem transient [ ] stable no annotations
+This layer stores elements in memory. 
+@end deftypefn
+
+@deftypefn layer ds vtimestamp [ ds ] stable annotation
+Annotation: @code{vtimestamp field is @var{field} counter is
+@var{countername}}.
+@*@*
+This layer updates the timestamp field @var{field}, which is already
+defined in the base type, with the value @var{countername}, which is
+already defined in the main program. 
+@end deftypefn
+

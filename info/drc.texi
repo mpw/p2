@@ -1,0 +1,264 @@
+@c $Id: drc.texi,v 45.0 1997/09/19 05:42:02 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node Layer Composition Checks, Concept Index, Invoking the P2 Programs, Top
+@chapter Layer Composition Checks
+
+@cindex layer composition 
+@cindex design rule check
+
+@menu
+* DRC Introduction::            
+* Preliminaries::               Defining restrictions,
+                                 preconditions and postconditions
+* DRC BNF::                     Syntax of the attr.txt file
+* Examples::                    Examples of layer specifications
+@end menu
+
+@node DRC Introduction, Preliminaries, Layer Composition Checks, Layer Composition Checks
+@section DRC Introduction
+
+There are compositions of layers that are syntactically correct, but are
+semantically incorrect. The purpose of pb's built-in design rule checking is to
+evaluate additional rules (beyond matching type signatures) to assure P2
+users that their type equations are semantically meaningful.
+
+@node Preliminaries, DRC BNF, DRC Introduction, Layer Composition Checks
+@section  Preliminaries
+
+@cindex subsystem
+@cindex property
+A @dfn{subsystem} (or type expression) is a composition of one or more
+layers. A @dfn{property} is an attribute of a layer or subsystem that is
+rooted at that layer. Two example properties are:
+
+@itemize @bullet
+
+@item
+@dfn{stability} - is layer or the subsystem that it roots stable? That
+is, can cursors point to holes in a container?
+
+@item
+@dfn{has_inbetween} - does layer or the subsystem that it roots have the
+inbetween capability/layer that guarantees stability of cursors?
+
+@end itemize
+
+@cindex property
+@cindex property value
+A @dfn{property value} is a value that can be assigned to a property. In the
+design rule checker (DRC), there are only three possible
+values that can be assigned to a property P:
+
+@table @var
+@item asserted 
+property P is asserted.
+
+@item unset
+no information about P is known.
+
+@item negated
+property P is negated.
+
+@end table
+
+As an example, consider the @code{stability} and @code{has_inbetween} properties. If a
+subsystem has no unstable layers, stability property should have the
+value 1. If a subsystem does not have an inbetween layer, has_inbetween
+will have the value 0. On the other hand, it is possible for
+has_inbetween to have the value 1, yet the subsystem is unstable. This
+is possible if an unstable layer is placed *above* the inbetween layer.
+
+@cindex requirement
+A @dfn{requirement} is a constraint that is imposed on the value of a
+property. There are six possible requirements in our model for a
+property P:
+
+@table @var
+@item assert
+property P must have the value
+
+@item unset
+no constraint is imposed on property P 
+
+@item negate
+property P must not have the value 
+
+@item may negate
+property P may exhibit the values unset or negate 
+
+@item may assert
+property P may exhibit the values unset or assert 
+
+@item set
+property P may exhibit the values assert or negate
+@end table
+
+@cindex preconditions
+@cindex postconditions
+@cindex restrictions
+Design rules for every layer are expressed in terms of preconditions,
+postconditions, and restrictions.
+A @dfn{postcondition} is a set of asserted or negated properties. A
+@dfn{precondition} is a constraint that is imposed on selected
+properties to regulate the usage of a layer. If preconditions are not
+satisfied, the layer cannot be used. In general, the precondition of a
+layer must satisfy the postconditions of higher-level layers.
+A @dfn{restriction} is a constraint on a subsystem that instantiates the 
+parameters of the layer.
+In general, the postconditions that are exported by layers of
+a subsystem must satisfy the restrictions of a layer's parameter for a
+correct instantiation.
+
+The model of DRC is to make sure that for every layer @var{X}:
+
+@itemize @bullet
+@item
+The postcondition of the subsystem (below layer @var{X}) satisfies the
+restrictions of the parameter of the layer @var{X}. 
+
+@item
+Layer @var{X} satisfies the precondition for the layer above @var{X}. 
+
+@end itemize
+
+If a precondition or a restriction is not satisfied, the checking is
+usually halted. However, these two conditionals can be flagged with the
+word "warning" which will continue processing. 
+
+
+
+@ignore
+Our model of DRC thus evolves around making sure that layer
+preconditions are satisfied (thus ensuring that individual layers are
+used in a correct context) and that subsystems instantiations satisfy
+the restrictions imposed by layer parameters. Stated another way, for a
+given layer, there are conditions that must be satisfied for it to be
+used correctly by layers beneath it (these are handled by restrictions)
+and above it (these are handled by preconditions).
+@end ignore
+
+
+@node DRC BNF, Examples, Preliminaries, Layer Composition Checks
+@section DRC BNF
+
+Below is the BNF for the uncommented attribute table (currently found in the
+@file{p2/tools/attr.txt}) for design rule checking on the layers in
+P2. C-style comments @code{/* comment */} can appear anywhere. All tokens
+must be separated by whitespace, including @code{/*} and @code{*/}.
+
+@example
+@group
+restfile   :== attr-list layerdefs*
+attr-list  :== @code{attributes} @code{=} @code{@{} attr-pair* @code{@}}
+attr-pair  :== layername layer_descr
+layerdefs  :== layername+ : @code{@{} cond* @code{@}}
+cond       :==  @code{preconditions} [ @code{warnings} ] list* 
+             | @code{postconditions} list2* 
+             | @code{restrictions} [ @code{warnings} ] list* 
+             | @code{restrictions-}num [ @code{warnings} ] list* 
+list       :== @code{assert} attr* | @code{negate} attr* | @code{set} attr* | 
+              @code{unset} attr* | @code{may negate} attr* | @code{may assert} attr* 
+list2      :== @code{assert} attr* | @code{negate} attr*  
+
+layername  :== @r{string representing name of layer}
+layer_desc :== @r{double quoted string representing layer description}
+attr       :== @r{string representing attribute name}
+num        :== @r{number representing nth parameter}
+@end group
+@end example
+
+@node Examples,  , DRC BNF, Layer Composition Checks
+@section Examples
+
+
+First, the attribute list looks something like this:
+
+@example
+@group
+attributes = @{  
+        in_between      "an inbetween flag layer"
+        unstable        "an unstable layer"
+        retrval         "a retrieval layer"
+        always          "a layer always used in retrievals"
+        pred            "a predicate-ordered layer"
+        qual_present    "a qualification layer"
+@}
+@end group
+@end example
+
+The description string for each attribute name is also used in error
+messages, so it is important to follow the format @code{"a @var{something}
+layer"}.
+
+
+@cindex layer checking
+
+Now let us look at some data from the attributes file to determine how the
+layer design rule checks work.
+
+@example
+@group
+avl bintree odlist : @{ 
+        preconditions      assert in_between
+        postconditions     assert retrval pred unstable
+@}
+@end group
+@end example
+
+This rule says that the preconditions and postconditions apply to three layers: @file{avl},
+@file{bintree}, and @file{odlist}. The precondition states that before
+this layer is used, the layer above it must have asserted the @code{in_between}
+property. In addition, these layers assert the properties @code{retrval}
+(because the layers are retrieval_sometimes layers), @code{pred}
+(because the layers are ordered over a predicate), and @code{unstable}
+(because the cursor points to the next element after deletion).
+
+@example
+@group
+avail : @{ 
+        restrictions may negate retrval
+@}
+@end group
+@end example
+
+This example shows that the @file{avail} layer's parameter 0 (its only
+parameter)  can be instantiated with a subsystem that either explicitly
+negates the @code{retrval} property or doesn't mention it at all. This
+is the effect of @code{may negate}. If the property had to be explicitly
+negated, then it would appear as @code{negate}.
+
+
+@example
+@group
+orderby : @{ 
+        postconditions assert always
+        restrictions-1 negate retrval 
+        restrictions-0 assert retrval
+@}
+@end group
+@end example
+
+In this example @file{orderby} has two parameters, 0 and 1 (recall the
+type of this layer is @code{ds orderby [ ds, top ]}. Parameter 0
+has to be instantiated with a subsystem that has the @code{retrval} property where
+parameter 1 has to be instantiated with a subsystem that explicitly
+negates the @code{retrval} property.
+
+
+@example
+@group
+top2ds_qualify : @{
+        postconditions assert qual_present
+        restrictions   warnings assert qual_present
+@}
+@end group
+@end example
+
+This example has the layer @file{top2ds_qualify}, which is a combination
+of the layer @file{top2ds} and @file{qualify}. Because of this, the
+@code{qual_present} property is asserted (as well as in the layer
+@file{qualify}). If the @file{qualify} layer appears underneath this
+one, then a warning is generated because even though this is a wrong
+combination, there's no harm in the combination.
+

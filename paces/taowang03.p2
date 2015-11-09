@@ -1,0 +1,273 @@
+/* $Id: taowang03.p2,v 45.0 1997/09/19 05:44:24 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Problems in orderby layer (un-necessary sorting of the orderby container)
+   and hash (incorrect query optimization), found by taowang. */
+
+#include <stdio.h>
+#include <sys/times.h>
+#include <limits.h>
+
+/* Use the hash layer. */
+#if 1
+#if !defined(HASH)
+#define HASH
+#endif /* HASH */
+#endif
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+char *dept_names[] = { "Accounting", "Architecture", "Biology",
+"Business", "Chemistry", "Computer Sciences", "Communication",
+"Economy", "Fiance", "Government", "History", "Music", "Politics",
+"Statistics", "Zoology"};
+
+char *title_names[] = { "Professor", "Assoc. Prof.", "Assist. Prof.",
+"Lecturer", "Staff"};
+
+char *first_names[] = {"Al", "Bobby", "Candy", "Dandy", "Elvis",
+"Floria", "Gloria", "Hud", "Io", "Jack", "Knap", "Loop", "Mike",
+"Nanny", "Oops", "Pop", "Quota", "Risto", "Susan", "Tom", "Ulman",
+"Verb", "Wan", "Xin", "Yan", "Zan"};
+
+char *last_names[] = {"Albert", "Blumoff", "Clare", "Donald", "Evan",
+"Fluid", "Glammer", "Hudson", "Imminent", "Jane", "Kluth", "Lubbock",
+"Minnesota", "Nuces", "Object", "Plaxton", "Quantum", "Rombergh",
+"Slim", "Thomas", "Uer", "Verdict", "Wang", "Xuan ", "Yu", "Zhang"};
+
+typedef struct {
+  char name[20];
+  char dept[20];
+  char title[20];
+  int SSN;
+  int birthday;
+  int phone;
+  char *address;
+  int salary;
+  char *photo;
+  char *notes;
+} E;
+
+typex {
+#if defined(HASH)
+#if 0
+  /* orderby_fast has the orderby problem. */
+  t = top2ds_qualify[orderby_fast[
+        inbetween[bintree[hash[malloc[transient]]]],
+	top2ds[inbetween[dlist[malloc[transient]]]]]];
+#else
+  /* orderby_smart fixes the orderby problem, so this type expression
+     displays the problem with the hash layer. */
+  t = top2ds_qualify[orderby_smart[
+        inbetween[bintree[hash[malloc[transient]]]],
+	top2ds[inbetween[dlist[malloc[transient]]]]]];
+#endif
+#else /* HASH */
+  /* No bug. */
+  t = conceptual[bintree[malloc[transient]]];
+#endif /* HASH */
+}
+
+container <E> stored_as t with {
+  bintree key is name;
+#if defined(HASH)
+  hash key is SSN with size 800;
+#endif /* HASH */
+} k;
+
+cursor <k> scan;
+
+cursor <k> orderby name scan1;
+
+int SSN_var;
+char name_var[20];
+
+cursor <k> where "$.SSN == SSN_var" ret1;
+
+cursor <k>
+  where "$.name == name_var && $.dept == 'Computer Sciences'"
+  orderby name
+ret2;
+
+int my_rand(int m, int n)
+{
+  return (rand() % (n-m+1)) + m;
+
+}
+
+E *generate_data()
+{
+  E *temp=(E *)malloc(sizeof(E));
+
+  strcpy(temp->name, first_names[my_rand(0, 25)]);
+  strcat(temp->name, " ");
+  strcat(temp->name, last_names[my_rand(0, 25)]);
+  
+  strcpy(temp->dept, dept_names[my_rand(0, 14)]);
+
+  strcpy(temp->title, title_names[my_rand(0, 4)]);
+
+  temp->SSN = my_rand(1, 1000);
+
+  temp->birthday = my_rand(1930, 1975);
+
+  temp->phone = my_rand(4710000, 4799999);
+
+  temp->salary = my_rand(15000, 250000);
+
+  return temp;
+
+}
+
+void print_subtotal(struct tms *start, struct tms *end)
+{
+#if defined(DEBUG)
+  printf("u:%ld, s:%ld, cu:%ld, cs:%ld\n", end->tms_utime - start->tms_utime, end->tms_stime - start->tms_stime, end->tms_cutime - start->tms_cutime, end->tms_cstime - start->tms_cstime);
+#else
+  printf("\n");
+#endif
+}
+
+void gettotal(struct tms *total, struct tms *start, struct tms *end)
+{
+  total->tms_utime += end->tms_utime - start->tms_utime;
+  total->tms_stime += end->tms_stime - start->tms_stime;
+  total->tms_cutime += end->tms_cutime - start->tms_cutime;
+  total->tms_cstime += end->tms_cstime - start->tms_cstime;
+
+}
+
+main()
+{
+  int i;
+  E *e;
+  clock_t starta, enda, totala;
+  struct tms start, end, total;
+
+  memset(&total, 0, sizeof(struct tms));
+
+#if defined(HASH)
+  printf("conceptual[bintree_name[hash_SSN[malloc[transient]]]]\n");
+#else
+  printf("conceptual[bintree_name[malloc[transient]]]\n");
+#endif
+  srand(time(NULL));
+  open_cont( k );
+  init_curs(scan);
+
+  for (i=0; i<1000; i++) {
+    e = generate_data();
+    insert(scan, *e);
+  }
+
+  /* total workload: 5000  */
+  /* insertion: 30% (1500)  */
+
+  starta = times(&start);
+  for (i=0; i<1500; i++) {
+    e = generate_data();
+    insert(scan, *e);
+  }
+  enda = times(&end);
+  
+  printf("Insertion (30%%) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala = enda-starta;
+
+  /* deletion: 20%  */
+
+  starta = times(&start);
+  reset_start(scan);
+  for (i=0; i<1000; i++) {
+    delete(scan);
+    adv(scan);
+  }
+  enda = times(&end);
+
+  printf("Deletion (20%%) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* update: 10% (implemented by deletion + insertion) */
+  starta = times(&start);
+  reset_start(scan);
+  for (i=0; i<500; i++) {
+    delete(scan);
+    adv(scan);
+    e = generate_data();
+    insert(scan, *e);
+  }
+  enda = times(&end);
+  
+  printf("Update (10%%) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* scan orderby name : 10% */
+  starta = times(&start);
+  init_curs(scan1);
+  for (i=0; i<500; i++)
+    foreach( scan1) {
+    }
+  enda = times(&end);
+  printf("Scan orderby name (10%%) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* ret (SSN = var): 10%  */
+
+  starta = times(&start);
+  for (i=0; i<500; i++) {
+    SSN_var = my_rand(1, 10000);
+    init_curs( ret1 );
+    foreach( ret1 ) {
+#if 0
+      printf("%s, %d, %s, %s, %d, %d\n", 
+	     ret1.name, ret1.SSN, ret1.dept, ret1.title, ret1.birthday, ret1.salary );
+#endif
+    }
+  }
+  enda = times(&end);
+  printf("Ret (SSN = var) (10%%) : ");
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+  /* ret (name = var) && (dept = "Computer Sciences") : 20% */
+  starta = times(&start);
+  for (i=0; i<1000; i++) {
+    strcpy(name_var, first_names[my_rand(0, 25)]);
+    strcat(name_var, " ");
+    strcat(name_var, last_names[my_rand(0, 25)]);
+
+    init_curs( ret2 );
+    foreach( ret2 ) {
+#if 0
+      printf("%s, %d, %s, %s, %d, %d\n", 
+	     ret2.name, ret2.SSN, ret2.dept, ret2.title, ret2.birthday, ret2.salary );
+#endif
+    }
+  }
+  enda = times(&end);
+  printf("Ret (name = var) && (dept = const) (20%%) : "); 
+  print_subtotal(&start, &end);
+  gettotal (&total, &start, &end);
+  totala += enda-starta;
+
+#if defined(DEBUG)
+  printf("Total time: c:%ld s:%ld cu:%ld cs:%ld all:%ld\n", total.tms_utime, total.tms_stime, total.tms_cutime, total.tms_cstime, totala);
+#endif
+
+  close_cont( k );
+
+  exit(0);
+}

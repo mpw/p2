@@ -1,0 +1,96 @@
+// $Id: delflag.xp,v 45.0 1997/09/19 05:46:19 jthomas Exp $
+// Copyright (C) 1995, The University of Texas at Austin.
+
+layer ds delflag [ ds ] stable retrieval_always no annotation d2u
+
+!#include "qopt.h"
+
+// This layer adds a boolean field to each element to indicate
+// whether or not it has been deleted.  The flag is cleared
+// on insertion and set on deletion.  Advances and reverses
+// are checked to make sure that positioning is over an undeleted
+// record
+
+// Note: delflag is not a retrieval layer.
+
+// This layer adds boolean field df to elements.
+
+xform(element, container, cursor)
+{
+   add element : char df;
+   xform(element, container, cursor);
+}
+
+// Optimize.
+
+optimize(cursor)
+{
+   optimize(cursor);
+}
+
+// Non-retrieval operations - insert, delete, swap.
+
+insert(cursor, record)
+%{
+   insert(cursor, record);
+   cursor.df = 0; // FALSE.
+%}
+
+delete(cursor)
+%{
+   cursor.df = 1; // TRUE.
+%}
+
+swap(cursor0, cursor1)
+%{
+   {
+     int t;
+     t = cursor0.df;
+     cursor0.df = cursor1.df;
+     cursor1.df = t;
+     swap(cursor0, cursor1);
+   }
+%}
+
+// Retrieval operations.
+
+adv(cursor)
+{ 
+   %{
+      do {
+        adv(cursor);
+      } while (!(end_adv(cursor)) && (cursor.df == 1));
+   %}
+}
+
+rev(cursor)
+{ 
+   %{
+      do {
+        rev(cursor);
+      } while (!(end_rev(cursor)) && (cursor.df == 1));
+   %}
+}
+
+reset_start(cursor)
+%{
+   reset_start(cursor);
+   while (!(end_adv(cursor)) && (cursor.df == 1)) {
+      adv(cursor);
+   }
+%}
+
+reset_end(cursor)
+%{
+   reset_end(cursor);
+   while (!(end_rev(cursor)) && (cursor.df == 1)) {
+      rev(cursor);
+   }
+%}
+
+// Adhoc operations.
+
+adhoc deleted(cursor) 
+%{
+    (cursor.df == 1)
+%}

@@ -1,0 +1,248 @@
+/* $Id: P2_op-vec-manager.p2,v 45.1 1997/09/19 07:46:52 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Operation vector manager */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include <stdio.h>
+
+#include "assert.h"            /* assert() */
+
+/* The P2 compiler will implicitly #include "P2_op-vec-manager.h" in
+   every file (except this one) after pb, but before cc.  In this file,
+   we need the declarations in P2_op-vec-manager.h before pb, thus we
+   must explicitly #include "P2_op-vec-manager.h" here. */
+#include "P2_op-vec-manager.h" /* P2_OP_VEC */
+
+#include "print-log.h"         /* P2_PRINT_LOG */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+#if 0
+/* Instead of hash_array_overwrite, use the avail and array layers to
+   store the operation vectors. */
+#if !defined(DEBUG)
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* Maximum number of operation vectors (also number of hash buckets). */
+/* Use a prime number here so that we're less likely to get hash clash. (JAT) */
+#define MAX_OP_VEC 1011
+
+/*****************************************************************************/
+/*                  Declare typex, container, and cursor.                    */
+/*****************************************************************************/
+
+typex {
+#if defined(DEBUG)
+  op_vec_typex = top2ds[qualify[avail[array[transient]]]];
+  op_name_vec_typex = top2ds[qualify[avail[array[mmap_persistent]]]];
+#else
+  op_vec_typex = top2ds[qualify[hash_array_overwrite[transient]]];
+  op_name_vec_typex = top2ds[qualify[hash_array_overwrite[mmap_persistent]]];
+#endif /* DEBUG */
+}
+
+typedef struct {
+  P2_CURS_ID id;
+  P2_OP_VEC op_vec;
+} OP_VEC_STRUCT;
+
+#if defined(P2_PRINT_LOG)
+typedef struct {
+  P2_CURS_ID id;
+  P2_OP_NAME_VEC op_name_vec;
+} OP_NAME_VEC_STRUCT;
+#endif /* P2_PRINT_LOG */
+
+/* sizeof(element<op_name_vec_cont>):
+     Size of (transformed) operation name vector container element. */
+#if defined(DEBUG)
+/* avail adds 1 pointer (next free) to element. */
+#define SIZEOF_ELEMENT_OP_NAME_VEC_CONT \
+  (sizeof(OP_NAME_VEC_STRUCT) + sizeof(void *))
+#else
+/* hash_array_overwrite adds 1 integer (valid flag) to element. */
+#define SIZEOF_ELEMENT_OP_NAME_VEC_CONT \
+  (sizeof(OP_NAME_VEC_STRUCT) + sizeof(int))
+#endif /* DEBUG */
+
+#if defined(DEBUG)
+/* avail adds 1 pointer (free list) to container. */
+#define MMAP_PERSISTENT_SIZE \
+  ((MAX_OP_VEC * SIZEOF_ELEMENT_OP_NAME_VEC_CONT) + sizeof(void *))
+#else
+/* hash_array_overwrite adds nothing to container??? */
+#define MMAP_PERSISTENT_SIZE \
+  (MAX_OP_VEC * SIZEOF_ELEMENT_OP_NAME_VEC_CONT)
+#endif /* DEBUG */
+
+container <OP_VEC_STRUCT> stored_as op_vec_typex with {
+#if defined(DEBUG)
+  array size is MAX_OP_VEC;
+#else
+  hash_array_overwrite key is id with size MAX_OP_VEC;
+#endif /* DEBUG */
+} op_vec_cont;
+
+#if defined(P2_PRINT_LOG)
+container <OP_NAME_VEC_STRUCT> stored_as op_name_vec_typex with {
+#if defined(DEBUG)
+  array size is MAX_OP_VEC;
+#else
+  hash_array_overwrite key is id with size MAX_OP_VEC;
+#endif /* DEBUG */
+  mmap_persistent file is "/tmp/P2_op-name-vec-data" with size MMAP_PERSISTENT_SIZE;
+} op_name_vec_cont;
+#endif /* P2_PRINT_LOG */
+
+cursor <op_vec_cont> where "$.id == id" op_vec_curs;
+#if defined(P2_PRINT_LOG)
+cursor <op_name_vec_cont> where "$.id == id" op_name_vec_curs;
+#endif /* P2_PRINT_LOG */
+
+/*****************************************************************************/
+/*                  Put operation vector.                                    */
+/*****************************************************************************/
+
+void
+#if defined(P2_PRINT_LOG)
+P2_put_op_vec (P2_CURS_ID id, P2_OP_VEC op_vec, P2_OP_NAME_VEC op_name_vec)
+#else /* P2_PRINT_LOG */
+P2_put_op_vec (P2_CURS_ID id, P2_OP_VEC op_vec)
+#endif /* P2_PRINT_LOG */
+{
+  static OP_VEC_STRUCT op_vec_struct;
+#if defined(P2_PRINT_LOG)
+  static OP_NAME_VEC_STRUCT op_name_vec_struct;
+#endif
+
+#ifndef NDEBUG
+  if (!op_vec_cont.initialized)
+    P2_runtime_error("P2_put_op_vec: the operation vector container has not"
+		     " been initialized--need to open_schema()?");
+#endif
+
+#if 0
+  // We can't assert that id != 0, since the id of schema is currently
+  // always zero.
+  assert(id != 0);
+#endif
+  assert(op_vec != NULL);
+#if defined(P2_PRINT_LOG)
+  assert(op_name_vec != NULL);
+#endif
+
+  op_vec_struct.id = id;
+  op_vec_struct.op_vec = op_vec;
+#if defined(P2_PRINT_LOG)
+  op_name_vec_struct.id = id;
+  memcpy(op_name_vec_struct.op_name_vec, op_name_vec, sizeof(P2_OP_NAME_VEC));
+#endif /* P2_PRINT_LOG */
+
+#if defined(DEBUG)
+  /* If an old operation vector for the given cursor exists, */
+  reset_start(op_vec_curs);
+  if (!end_adv(op_vec_curs))
+  {
+    assert(op_vec_curs.id == id);
+    /* Delete the old operation vector. */
+    delete(op_vec_curs);
+  }
+  /* Make sure we won't overflow the container. */
+  if (overflow(op_vec_cont))
+    P2_runtime_error("operation vector manager container overflow");
+#if defined(P2_PRINT_LOG)
+  /* If an old operation name vector for the given cursor exists, */
+  reset_start(op_name_vec_curs);
+  if (!end_adv(op_name_vec_curs))
+  {
+    assert(op_name_vec_curs.id == id);
+    /* Delete the old operation name vector. */
+    delete(op_name_vec_curs);
+  }
+  /* Make sure we won't overflow the container. */
+  if (overflow(op_name_vec_cont))
+    P2_runtime_error("operation name vector manager container overflow");
+#endif /* P2_PRINT_LOG */
+#endif /* DEBUG */
+
+  /* Insert the new operation vector. */
+  insert(op_vec_curs, op_vec_struct);
+#if defined(P2_PRINT_LOG)
+  /* Insert the new operation name vector. */
+  insert(op_name_vec_curs, op_name_vec_struct);
+#endif
+}
+
+/*****************************************************************************/
+/*                  Get operation vector.                                    */
+/*****************************************************************************/
+
+P2_OP_VEC
+P2_get_op_vec (P2_CURS_ID id)
+{
+  reset_start(op_vec_curs);
+  if (end_adv(op_vec_curs))
+    return(NULL);
+  else
+  {
+    assert(op_vec_curs.id == id);
+    return(op_vec_curs.op_vec);
+  }
+}
+
+#if defined(P2_PRINT_LOG)
+P2_OP_NAME_VEC *
+P2_get_op_name_vec (P2_CURS_ID id)
+{
+  reset_start(op_name_vec_curs);
+  if (end_adv(op_name_vec_curs))
+    return(NULL);
+  else
+  {
+    assert(op_name_vec_curs.id == id);
+    return(&(op_name_vec_curs.op_name_vec));
+  }
+}
+#endif /* P2_PRINT_LOG */
+
+/*****************************************************************************/
+/*                  Init and delete operation vector manager.                */
+/*****************************************************************************/
+
+void
+P2_init_op_vec_manager (void)
+{
+  open_cont(op_vec_cont);
+  init_curs(op_vec_curs);
+
+#if defined(P2_PRINT_LOG)
+  /* Make sure SIZEOF_ELEMENT_OP_VEC_CONT is correct. */
+  assert(SIZEOF_ELEMENT_OP_NAME_VEC_CONT == sizeof(element<op_name_vec_cont>));
+
+  open_cont(op_name_vec_cont);
+  init_curs(op_name_vec_curs);
+#endif /* P2_PRINT_LOG */
+}
+
+void
+P2_delete_op_vec_manager (void)
+{
+#if 0
+#if defined(P2_PRINT_LOG)
+  delete_curs(op_name_vec_curs);
+  close_cont(op_name_vec_cont);
+#endif /* P2_PRINT_LOG */
+
+  delete_curs(op_vec_curs);
+  close_cont(op_vec_cont);
+#endif
+}
+

@@ -1,0 +1,71 @@
+/* $Id: taowang01.p2,v 45.0 1997/09/19 05:44:23 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Bug in hash layer, x/hash.xp, found by taowang. */
+
+#include <string.h>
+
+#define HASHCMP 
+#define N 10
+
+typedef struct {
+  char name[20];
+  char dept[20];
+  char title[10];
+  int SSN;
+  int birthday;
+  int phone;
+  char *address;
+  int salary;
+  char *photo;
+  char *notes;
+} E;
+
+typex {
+#ifdef HASHCMP
+  t = conceptual[hashcmp[hash[bintree[malloc[transient]]]]];
+#else
+  t = top2ds[init_generic[generic[
+        bintree[hash[malloc[transient]]]]]];
+#endif
+}
+
+container <E> stored_as t with {
+  bintree key is name;
+#ifdef HASHCMP
+  hashcmp key is name;
+#endif
+  hash key is SSN with size N;
+} k;
+
+/* Here's the part that broke hash: a cursor with no predicate. */
+cursor <k> scan;
+
+main()
+{
+  E e;
+  int i;
+  open_cont(k);
+  init_curs(scan);
+
+  /* Insert. */
+  for (i = 0; i < N; i++)
+  {
+    sprintf(e.name, "name%2d", i);
+    e.SSN = i;
+    insert(scan, e);
+  }
+  /* Print Forward. */
+  rofeach(scan)
+  {
+    printf("%s\n", scan.name);
+  }
+  /* Print Backward. */
+  foreach(scan)
+  {
+    printf("%s\n", scan.name);
+  }
+
+  close_cont(k);
+  exit(0);
+}

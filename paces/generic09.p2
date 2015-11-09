@@ -1,0 +1,20 @@
+/* $Id: generic09.p2,v 1.1 1997/09/24 14:54:08 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* SCHEMA member container, init_generic, transient. */
+
+#include "P2_paces.h" /* P2_PACES_ELEMENT */
+
+typex {
+  t = top2ds_qualify[init_generic[array[transient]]];
+}
+
+schema {
+  container <P2_PACES_ELEMENT> k;
+} stored_as t with {
+  array size of k is 10;
+} s;
+
+#define P2_PACES_CONTAINER s.k
+
+#include "generic04.p2h"

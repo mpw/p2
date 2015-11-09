@@ -1,0 +1,229 @@
+/* $Id: lock07.p2,v 45.0 1997/09/19 05:43:38 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test P2_lock-manager mode P2_LOCK_X */
+/* total = 0+1+2+3+4+5+6+7+8+9+10 = 45 */
+/* Analogous to lock06.p2 and process03.p2 (JAT) */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <stdio.h>    /* printf() */
+#include <unistd.h>   /* sleep() */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+#if 1
+/* If P2_FORK_PROCESS is defined, then we will fork the children. */
+#if !defined(P2_FORK_PROCESS)
+#define P2_FORK_PROCESS
+#endif /* P2_FORK_PROCESS */
+#endif
+
+#if 1
+/* If P2_LOCK_MANAGER is defined, then we will use P2 lock manager locks,
+   rather than Unix IPC semaphores. */
+#define P2_LOCK_MANAGER
+#endif
+
+/* Print debugging output. */
+#if 0
+#if !defined(DEBUG)
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* Label processes. */
+#if defined(P2_LOCK_MANAGER)
+#if defined(TRACE)
+#define LABEL
+#endif /* TRACE */
+#endif /* P2_LOCK_MANAGER */
+
+/* Mutex lock name. */
+#define LOCK_NAME 7
+
+/* Mutex lock timeout. */
+#define LOCK_TIMEOUT 2
+
+/*****************************************************************************/
+/*                  Global Variables.                                        */
+/*****************************************************************************/
+
+typedef struct {
+  int i;
+} DATA;
+
+typex {
+  t = top2ds[array[mmap_shared]];
+}
+
+container <DATA> stored_as t with {
+  array size is 1;
+  mmap_shared file is "/tmp/P2_lock07-data" with size 100;
+} cont;
+
+cursor <cont> curs;
+
+/*****************************************************************************/
+/*                  Print error.                                             */
+/*****************************************************************************/
+
+void
+print_error (const char *s)
+{
+  perror(s);
+  exit(1);
+}
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main ()
+{
+  P2_PROCESS_ID child_pid;
+#if !defined(P2_LOCK_MANAGER)
+  P2_SEMAPHORE_ID mutex;
+#endif /* P2_LOCK_MANAGER */
+  DATA data;
+  int i;
+  int total;
+
+#if defined(LABEL)
+  /* Process label. */
+  char s[P2_PROCESS_ID_LABEL_SIZE];
+#endif /* LABEL */
+
+  /* Initialize process. */
+  P2_init_process();
+#if defined(P2_LOCK_MANAGER)
+  /* Initialize lock manager. */
+  P2_init_lock_manager();
+#else
+  if (P2_init_semaphore(&mutex, 1) < 0)
+    print_error("P2_init_semaphore(mutex) failed");
+#endif /* P2_LOCK_MANAGER */
+
+#if defined(LABEL)
+  /* Label the parent process. */
+  P2_label_process_id("Parent");
+#endif /* LABEL */
+
+  open_cont(cont);
+  init_curs(curs);
+  data.i = 0;
+  insert(curs, data);
+
+  for (i = 0; i < 10; i++)
+  {
+#if defined(P2_FORK_PROCESS)
+    child_pid = P2_fork_process();
+#else
+    child_pid = 0;
+#endif /* P2_FORK_PROCESS */
+    if (child_pid == -1)
+    {
+      /*** This is an error. ***/
+
+      fprintf(stderr, "i = %d: ", i);
+      print_error("Can't fork child %d");
+    }
+    else if (child_pid == 0)
+    {
+      /*** This is the child. ***/
+
+#if defined(LABEL)
+      /* Label the child process. */
+      sprintf(s, "child %d", i);
+      P2_label_process_id(s);
+#endif /* LABEL */
+
+      /* Lock mutex lock. */
+#if defined(P2_LOCK_MANAGER)
+      if (P2_lock(LOCK_NAME, P2_LOCK_X, P2_LOCK_MEDIUM, LOCK_TIMEOUT)
+	  != P2_LOCK_OK)
+#else
+      if (P2_lock_semaphore(&mutex) < 0)
+#endif /* P2_LOCK_MANAGER */
+        print_error("P2_lock(mutex) failed");
+
+      /* curs.i = curs.i + i */
+      total = ref(curs, i) + i;
+#if !defined(DEBUG)
+      /* For paces: always produce the same output. */
+      printf("Pause\n");
+#else
+      /* For debugging: print detailed info. */
+      printf("Pause %d + %d = %d\n", ref(curs, i), i, total);
+#endif /* DEBUG */
+      upd(curs, i, total);
+      /* Flush stdout. */
+      fflush(stdout);
+
+      /* Unlock mutex lock. */
+#if defined(P2_LOCK_MANAGER)
+      if (P2_unlock(LOCK_NAME) != P2_LOCK_OK)
+#else
+      if (P2_unlock_semaphore(&mutex) < 0)
+#endif /* P2_LOCK_MANAGER */
+        print_error("P2_unlock(mutex) failed");
+
+#if defined(P2_FORK_PROCESS)
+      exit(0);
+#endif /* P2_FORK_PROCESS */
+    }
+    else
+    {
+      /*** This is the parent. ***/
+    }
+  }
+
+  /* Wait until all children are finished with the lock. */
+#if 0
+  while(ref(curs, i) < 45)
+    P2_sleep_process(1);
+  total = ref(curs, i);
+#else
+  while (1)
+  {
+    total = ref(curs, i);
+    if (total == 45)
+      break;
+    else
+      P2_sleep_process(1);
+  }
+#endif
+
+  printf("total = %d\n", total);
+  /* Flush stdout. */
+  fflush(stdout);
+  close_cont(cont);
+
+#if defined(P2_LOCK_MANAGER)
+  /* Lock mutex lock. */
+  if (P2_lock(LOCK_NAME, P2_LOCK_X, P2_LOCK_MEDIUM, LOCK_TIMEOUT) != P2_LOCK_OK)
+    print_error("P2_lock(mutex) failed");
+#else
+  P2_lock_semaphore(&mutex);
+#endif /* P2_LOCK_MANAGER */
+
+#if defined(P2_LOCK_MANAGER)
+  /* Delete lock manager. */
+  P2_delete_lock_manager();
+#else
+  if (P2_delete_semaphore(&mutex)  < 0)
+    print_error("P2_delete_semaphore(mutex) failed");
+#endif /* P2_LOCK_MANAGER */
+  /* Delete process. */
+  P2_delete_process();
+
+  /* Exit. */
+  exit(0);
+}

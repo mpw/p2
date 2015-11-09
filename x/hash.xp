@@ -1,0 +1,355 @@
+// $Id: hash.xp,v 45.1 1997/09/19 22:14:56 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds hash[ ds ] unstable annotation retrieval_sometimes
+
+// Analogous to hash_slow.xp, but cache the ADDRESS (cursor.current)
+// rather than the INDEX of the current element.  Also, cache
+// (cursor.end) the address (&container.bucket[%a.size]) of the first
+// element after the last bucket. (JAT)
+
+!#include "hash.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+xform(element, container, cursor)
+{
+   // Step 1: Add fields to element, cursor, and container.
+   add element   : struct element *next;
+   // Note: current and end are pointer to pointer to element, because
+   // they point to a bucket element, which in turn, points to an element.
+   add cursor    : struct element **current; /* pointer to current bucket. */
+   add cursor    : struct element **end;     /* &container.bucket[%a.size]; */
+   add container : struct element *bucket[%a.size];
+
+   if (%a == NULL)
+     error("hash requires annotation");
+   else
+   {
+     // Step 2: Remember additional info about annotations.
+     %a.typeptr     = find_data_type(element, %a.ofield);
+     %a.ofield_type = %a.typeptr->typename;
+     %a.bi          = %a.typeptr->bounds_impact;
+
+     // Step 3: Transform the input data types.
+     xform(element, container, cursor);
+
+     // Set default %a.hash_function, if necessary.
+     // Default is "P2_"%a.ofield_type"_hash"
+     if (strcmp(%a.hash_function, "") == 0)
+     {
+       strcpy(%a.hash_function, "P2_");
+       strcat(%a.hash_function, %a.ofield_type);
+       strcat(%a.hash_function, "_hash");
+     }
+   }
+}
+
+init_curs(cursor)
+%{
+   init_curs(cursor);
+   cursor.end = &container.bucket[%a.size];
+%}
+
+end_adv(cursor)
+%{
+   (cursor.current >= cursor.end)
+%}
+
+end_rev(cursor)
+%{
+   (cursor.current < container.bucket)
+%}
+
+adv(cursor)
+{
+  BOUNDS b;
+
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi))
+  {
+    case 0:
+    case 1:
+%{
+     // If there is another element in this bucket, advance to it.
+     if (cursor.obj->next != 0)
+       cursor.obj = cursor.obj->next;
+     // Otherwise, advance to the next non-empty bucket.
+     else
+     {
+       do
+         (cursor.current)++;
+       while (((cursor.current) < (cursor.end)) && (*(cursor.current) == 0));
+       cursor.obj = *(cursor.current);
+     }
+%}
+    break;
+
+    case 2:
+%{
+     // Advance to the next element in this bucket.
+     cursor.obj = cursor.obj->next;
+     // If there is no such element, set end_adv() equal to TRUE.
+     if (cursor.obj == 0)
+     {
+       cursor.current = cursor.end;
+#ifndef NDEBUG
+       // Make sure we get an error if we try to dereference cursor.obj
+       cursor.obj = (void *) -1;
+#endif // NDEBUG
+     }
+%}
+    break;
+  }
+}
+
+rev(cursor)
+{
+  BOUNDS b;
+  char temp[30];
+  sprintf(temp, "P2_temp%d", other_id_counter++);
+
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi))
+  {
+    case 0:
+    case 1:
+%{
+  // If this is the first element in the bucket, reverse to the
+  // previous non-empty bucket.
+  if (*(cursor.current) == cursor.obj)
+  { 
+    do
+      (cursor.current)--;
+    while (((cursor.current) >= (container.bucket)) && (*(cursor.current) == 0));
+    if ((cursor.current) >= (container.bucket))
+    {
+      cursor.obj = *(cursor.current);
+      while (cursor.obj->next) 
+        cursor.obj = cursor.obj->next;
+    }
+  }
+  // Otherwise, reverse to the previous element in this bucket.
+  // Since buckets are singly-linked, we have to use a temporary
+  // variable to store the current value of cursor.obj in temp.  Then,
+  // starting from the beginning of the bucket, *(cursor.current), we
+  // advance cursor.obj through the elements in the bucket until
+  // cursor.next equals temp
+  else
+  { 
+    struct obj_type * %v.temp;
+    %v.temp = cursor.obj;
+    cursor.obj = *(cursor.current);
+    while (cursor.obj->next != %v.temp)
+      cursor.obj = cursor.obj->next;
+  }
+  
+%}
+    break;
+
+    case 2:
+%{
+  // If this is the first element in the bucket, set end_adv() equal to TRUE.
+  if (*(cursor.current) == cursor.obj)
+  {
+    cursor.current = cursor.end;
+#ifndef NDEBUG
+    // Make sure we get an error if we try to dereference cursor.obj
+    cursor.obj = (void *) -1;
+#endif // NDEBUG
+  }
+  // Otherwise, reverse to the previous element in this bucket.
+  // (See above)
+  else
+  {
+    struct obj_type * %v.temp;
+    %v.temp = cursor.obj;
+    cursor.obj = *(cursor.current);
+    while (cursor.obj->next != %v.temp)
+      cursor.obj = cursor.obj->next;
+  }
+%}
+    break;
+  }
+}
+
+delete(cursor)
+{
+  char hash_value[30];
+  char p[30], q[30], c[30];
+  sprintf(hash_value, "P2_temp%d", other_id_counter++);
+  sprintf(p, "P2_temp%d", other_id_counter++);
+  sprintf(q, "P2_temp%d", other_id_counter++);
+  sprintf(c, "P2_temp%d", other_id_counter++);
+  %{
+     {
+       struct obj_type * %v.p = cursor.obj;
+       struct obj_type * %v.q = cursor.next;
+       struct obj_type ** %v.c;
+  %}
+
+#if 0
+     /* This didn't make a lick of sense.  Works better without it. (BJG) */
+
+       if (layer == %ln)
+  %{
+       %v.c = cursor.current;
+  %}
+       else
+#endif
+  %{
+       int %v.hash_value;
+       %v.hash_value = %a.hash_function(cursor.%a.ofield, %a.size);
+       %v.c = &container.bucket[%v.hash_value];
+  %}
+
+  %{
+       if (* %v.c == %v.p)
+       {
+         // FIRST node.
+         * %v.c = %v.q;
+         delete(cursor);
+       }
+       else
+       {
+         // INTERNAL node.
+         cursor.obj = * %v.c;
+         while (cursor.next != %v.p)
+           cursor.obj = cursor.obj->next;
+         cursor.next = %v.q;
+         cursor.obj = %v.p;
+         delete(cursor);
+       }
+  %}
+     // For post-positioning--remember next pointer.
+     if (layer == %ln)
+  %{
+       if (%v.q != 0)
+       {
+         // Next pointer is non-NULL, remember it.
+         cursor.obj = %v.q;
+         cursor.inbetween = 1;
+       }
+       else
+       {
+         // Next pointer is non-NULL, don't bother to post-position
+         cursor.inbetween = 0;
+       }
+  %}
+
+  %{
+     }
+  %}
+}
+
+reset_start(cursor)
+{
+  BOUNDS b;
+  char hash_key[100];
+  char hash_value[30];
+  char c[30], e[30];
+  sprintf(hash_value, "P2_temp%d", other_id_counter++);
+  sprintf(c, "P2_temp%d", other_id_counter++);
+  sprintf(e, "P2_temp%d", other_id_counter++);
+
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi)) {
+
+    case 0:
+    case 1:
+%{
+  {
+    struct obj_type ** %v.c;
+    struct obj_type ** %v.e;
+    %v.c = container.bucket;
+    %v.e = cursor.end;
+    while (%v.c < %v.e && * %v.c == 0)
+      %v.c ++;
+    cursor.current = %v.c;
+    if (%v.c < %v.e)
+      cursor.obj = * %v.c;
+  }
+%}
+    break;
+
+    case 2:
+     strcpy(hash_key, b.upper);
+%{
+   {
+     int %v.hash_value;
+     %v.hash_value = %a.hash_function(%v.hash_key, %a.size);
+     if (container.bucket[%v.hash_value] == 0)
+       cursor.current = cursor.end;
+     else
+     {
+       cursor.current = &container.bucket[%v.hash_value];
+       cursor.obj = *(cursor.current);
+     }
+   }
+%}
+    break;
+  }
+}
+
+reset_end(cursor)
+{
+  BOUNDS b;
+  char hash_key[100];
+  char hash_value[30];
+  char c[30], e[30];
+  sprintf(hash_value, "P2_temp%d", other_id_counter++);
+  sprintf(c, "P2_temp%d", other_id_counter++);
+  sprintf(e, "P2_temp%d", other_id_counter++);
+
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi)) {
+
+    case 0:
+    case 1:
+%{
+  {
+    struct obj_type ** %v.c;
+    struct obj_type ** %v.e;
+    int %v.hash_value;
+    %v.hash_value = %a.size-1;
+    %v.c = &container.bucket[%v.hash_value];
+    %v.e = container.bucket; 
+    while (%v.c >= %v.e && * %v.c == 0)
+      %v.c--;
+    cursor.current = %v.c;
+    if (%v.c < %v.e)
+    { 
+      cursor.current = 0;
+      cursor.obj = 0;
+    }
+    else
+    { 
+      cursor.obj = * %v.c;
+      while (cursor.obj->next) 
+        cursor.obj = cursor.obj->next;
+    }
+  }
+%}
+    break;
+
+    case 2:
+     strcpy(hash_key, b.upper);
+%{
+   {
+     int %v.hash_value;
+     %v.hash_value = %a.hash_function(%v.hash_key, %a.size);
+     if (container.bucket[%v.hash_value] == 0)
+     {
+       cursor.current = 0;
+       cursor.obj = 0;
+     }
+     else
+     {
+       cursor.current = &container.bucket[%v.hash_value];
+       cursor.obj = *(cursor.current);
+     }
+   }
+%}
+    break;
+  }
+}
+
+#include "hash.xph"

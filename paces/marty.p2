@@ -1,0 +1,201 @@
+/* $Id: marty.p2,v 45.0 1997/09/19 05:43:44 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* This is the cannonical non-composite cursor example file. */
+/* Analogous to paces/jeff.p2, the cannonical composite cursor example file. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include <stdio.h>      /* printf() */
+#include "P2_paces.h"
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+#define ALL_CURSORS     1
+#define ALL_DATA        1
+#define DELETE          1
+#define BINTREE         0
+#define CONCEPTUAL      1
+
+/* Define EMP_TYPEDEF, the container element type,
+   as either the typedef "EMP_TYPE" or the SUE "struct emp_type" (JAT) */
+#if 1
+#define EMP_TYPEDEF     struct emp_type
+#else
+#define EMP_TYPEDEF     EMP_TYPE
+#endif
+
+/*****************************************************************************/
+/*                  Declarations.                                            */
+/*****************************************************************************/
+
+typedef struct emp_type {
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+EMP_TYPEDEF rawdata[] = {
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10070,22,"Biology","Andrews, Kay" },
+#if ALL_DATA
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10010,40,"Biology","Akin, Monica" },
+   { 10050,42,"Biology","Akerson, Suzanne" },
+   { 10040,53,"Biology","Akerson, Mary" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10030,23,"Biology","Akerson, Gwyn" },
+#endif
+   { -1 }
+};
+
+typex {
+#if CONCEPTUAL
+#if BINTREE
+  t = conceptual[bintree1[bintree2[P2_DELFLAG_LAYER[array1[transient]]]]];
+#else
+  t = conceptual[P2_DELFLAG_LAYER[array1[transient]]];
+#endif
+#else
+#if BINTREE
+  t = top2ds[generic[init_generic[orderby_fast[
+        generic_funcall[inbetween[qualify[
+          bintree1[bintree2[P2_DELFLAG_LAYER[array1[transient]]]]]]],
+        top2ds[array2[transient]]]]]];
+#else
+  t = top2ds[generic[init_generic[orderby_fast[
+        generic_funcall[inbetween[qualify[
+          P2_DELFLAG_LAYER[array1[transient]]]]],
+        top2ds[array2[transient]]]]]];
+#endif
+#endif
+}
+
+container <EMP_TYPEDEF> stored_as t with {
+#if BINTREE
+  bintree1 key is empno;
+  bintree2 key is age;
+#endif
+  array1 size is 10;
+#if !CONCEPTUAL
+  array2 size is 10;
+#endif
+} emp_cont;
+
+#if ALL_CURSORS
+
+typedef cursor <emp_cont>
+  orderby P2_DESCENDING empno
+ALL_EMP_TYPE;
+ALL_EMP_TYPE  all_emp;
+
+cursor <emp_cont>
+  where "$.name <= 'Al' "
+  orderby P2_DESCENDING name
+ak_emp;
+
+cursor <emp_cont>
+  where "$.empno > 10020"
+  orderby P2_DESCENDING empno
+recent_emp;
+
+#endif
+
+typedef cursor <emp_cont>
+  where "$.age > 40"
+  orderby  P2_ASCENDING age
+OLD_EMP_TYPE;
+OLD_EMP_TYPE  old_emp;
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int main (void) 
+{
+  open_cont(emp_cont);
+  init_curs(old_emp);
+#if ALL_CURSORS
+  init_curs(all_emp);
+  init_curs(recent_emp);
+  init_curs(ak_emp);
+#endif
+
+  {
+    EMP_TYPEDEF *p;
+    for (p = rawdata; p->empno != -1; p++) {
+#if ALL_CURSORS
+      insert(all_emp, *p);
+#else
+      insert(old_emp, *p);
+#endif
+    }
+  }
+
+#if ALL_CURSORS
+  printf("\nall emp are:\n(orderby descending empno)\n"); 
+  P2_ITERATOR(all_emp)
+  {
+    EMP_TYPEDEF r;
+    getrec(all_emp, r);
+    printf("%d %d %s\n", r.empno, 
+                         r.age,
+                         r.name); 
+  }
+
+  printf("\nak emp are:\n(orderby descending name)\n");
+  P2_ITERATOR(ak_emp)
+  {
+    printf("%d %d %s\n", ak_emp.empno,
+                         ak_emp.age,
+                         ak_emp.name);
+  }
+
+  printf("\nrecent (empno > 10020) emp are:\n(orderby descending empno)\n");
+  P2_ITERATOR(recent_emp)
+  {
+    printf("%d %d %s\n", recent_emp.empno, 
+                         recent_emp.age,
+                         recent_emp.name); 
+  }
+#endif
+ 
+  printf("\nold emp are:\n(orderby ascending age)\n"); 
+  P2_ITERATOR(old_emp)
+  {
+    EMP_TYPEDEF r;
+    getrec(old_emp, r);
+    printf("%d %d %s\n", r.empno, 
+                         r.age,
+                         r.name); 
+#if DELETE
+    delete(old_emp);
+#endif
+  }
+
+  printf("\nold emp are:\n(orderby ascending age)\n"); 
+  P2_ITERATOR(old_emp)
+  {
+    printf("%d %d %s\n", old_emp.empno, 
+                         old_emp.age,
+                         old_emp.name); 
+  }
+
+#if ALL_CURSORS
+  printf("\nremaining emp are:\n(orderby descending empno)\n"); 
+  P2_ITERATOR(all_emp)
+  {
+    printf("%d %d %s\n", all_emp.empno, 
+                         all_emp.age,
+                         all_emp.name); 
+  }
+#endif
+
+  close_cont(emp_cont);
+  exit(0);
+}

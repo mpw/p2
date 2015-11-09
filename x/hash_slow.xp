@@ -1,0 +1,216 @@
+// $id: hash_slow.xp,v 41.1 1997/06/04 22:38:08 jthomas Exp jthomas $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds hash_slow [ ds ] unstable annotation retrieval_sometimes
+
+// Analogous to hash.xp, but cache the INDEX (cursor.hash_value)
+// rather than the ADDRESS of the current element. (JAT)
+
+!#include "hash_slow.h"
+
+xform(element, container, cursor)
+{
+   // Step 1: Add fields to element, cursor, and container.
+   add element   : struct element *next;
+   add cursor    : int hash_value; /* index of current bucket. */
+   add container : struct element *bucket[%a.size];
+
+   if (%a == NULL)
+     error("hash_slow requires annotation");
+   else {
+     // Step 2: Remember additional info about annotations.
+     %a.typeptr     = find_data_type(element, %a.ofield);
+     %a.ofield_type = %a.typeptr->typename;
+     %a.bi          = %a.typeptr->bounds_impact;
+
+     // Step 3: Transform the input data types.
+     xform(element, container, cursor);
+
+     // Set default %a.hash_function, if necessary.
+     // Default is "P2_"%a.ofield_type"_hash"
+     if (strcmp(%a.hash_function, "") == 0)
+     {
+       strcpy(%a.hash_function, "P2_");
+       strcat(%a.hash_function, %a.ofield_type);
+       strcat(%a.hash_function, "_hash");
+     }
+   }
+}
+
+end_adv(cursor)
+%{
+   (cursor.hash_value >= %a.size)
+%}
+
+end_rev(cursor)
+%{
+   (cursor.hash_value < 0)
+%}
+
+adv(cursor)
+{
+  BOUNDS b;
+  char hash_value[30];
+  sprintf(hash_value, "P2_temp%d", other_id_counter++);
+
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi)) {
+
+    case 0:
+    case 1:
+%{
+     // Can probably get rid of the conjunct cursor.obj != 0 (JAT)
+     // if (cursor.obj != 0 && cursor.obj->next != 0)
+     if (cursor.obj->next != 0)
+       cursor.obj = cursor.obj->next;
+     else {
+       int %v.hash_value;
+       %v.hash_value = cursor.hash_value;
+       do
+         %v.hash_value++;
+       while (%v.hash_value < %a.size && container.bucket[%v.hash_value] == 0);
+       cursor.hash_value = %v.hash_value;
+       if (%v.hash_value < %a.size)
+         cursor.obj = container.bucket[%v.hash_value];
+     }
+%}
+    break;
+
+    case 2:
+%{
+     // Get rid of this guard? (JAT)
+     // if (cursor.obj != 0)
+       cursor.obj = cursor.obj->next;
+     if (cursor.obj == 0)
+       cursor.hash_value = %a.size;
+%}
+    break;
+    }
+}
+
+rev(cursor)
+%{
+    P2_runtime_error("cannot reverse in hash_slow");
+%}
+
+delete(cursor)
+{
+  char hash_value[30];
+  sprintf(hash_value, "P2_temp%d", other_id_counter++);
+
+  %{
+     {
+       struct obj_type *p = cursor.obj;
+       struct obj_type *q = cursor.next;
+       int %v.hash_value;
+  %}
+
+       if (layer == %ln)
+  %{
+       %v.hash_value = cursor.hash_value;
+  %}
+       else
+  %{
+       %v.hash_value = %a.hash_function(cursor.%a.ofield, %a.size);
+  %}
+
+  %{
+       if (container.bucket[%v.hash_value] == p) {
+         // FIRST node.
+         container.bucket[%v.hash_value] = q;
+         delete(cursor);
+       }
+       else {
+         // INTERNAL node.
+         cursor.obj = container.bucket[%v.hash_value];
+         while (cursor.next != p) {
+           cursor.obj = cursor.obj->next;
+         }
+         cursor.next = q;
+         cursor.obj = p;
+         delete(cursor);
+       }
+  %}
+     // For post-positioning--remember next pointer.
+     if (layer == %ln)
+  %{
+       if (q != 0) {
+         // Next pointer is non-NULL, remember it.
+         cursor.obj = q;
+         cursor.inbetween = 1;
+       }
+#if 0
+       else {
+         // Next pointer is NULL, find next non-NULL bucket.
+         do
+           %v.hash_value++;
+         while (%v.hash_value < %a.size && container.bucket[%v.hash_value] == 0);
+         cursor.hash_value = %v.hash_value;
+         if (%v.hash_value < %a.size)
+           cursor.obj = container.bucket[%v.hash_value];
+         cursor.inbetween = 1;
+       }
+#else
+       else {
+         // Next pointer is NULL, don't bother to post-position.
+         cursor.inbetween = 0;
+       }
+#endif
+  %}
+
+  %{
+     }
+  %}
+}
+
+reset_start(cursor)
+{
+  BOUNDS b;
+  char hash_key[100];
+  char hash_value[30];
+  sprintf(hash_value, "P2_temp%d", other_id_counter++);
+
+  switch(use_layer(te, &b, cursor, predicate, %a.ofield, %a.bi)) {
+
+    case 0:
+    case 1:
+%{
+  {
+    int %v.hash_value;
+    %v.hash_value = 0;
+    while (%v.hash_value < %a.size && container.bucket[%v.hash_value] == 0)
+      %v.hash_value++;
+    cursor.hash_value = %v.hash_value;
+    if (%v.hash_value < %a.size)
+      cursor.obj = container.bucket[%v.hash_value];
+  }
+%}
+    break;
+
+    case 2:
+     strcpy(hash_key, b.upper);
+%{
+   {
+     int %v.hash_value;
+     %v.hash_value = %a.hash_function(%v.hash_key, %a.size);
+#if 0
+     cursor.obj = container.bucket[%v.hash_value];
+     while (cursor.obj != 0 && !query(cursor))
+#endif
+     if (container.bucket[%v.hash_value] == 0)
+       cursor.hash_value = %a.size;
+     else {
+       cursor.hash_value = %v.hash_value;
+       cursor.obj = container.bucket[%v.hash_value];
+     }
+   }
+%}
+    break;
+  }
+}
+
+reset_end(cursor)
+%{
+    P2_runtime_error("cannot reset_end in hash_slow");
+%}
+
+#include "hash.xph"

@@ -1,0 +1,74 @@
+/* $Id: linktest1.p2,v 45.0 1997/09/19 05:43:33 jthomas Exp $ */
+
+#define NUMBER  30
+
+/***************** container record types  **************/
+
+typedef struct
+{
+   int  value;
+   int  instance;
+} ALPHA;
+
+
+/***************** typex declarations  ****************/
+/* note: we should try indexing layers, to see if predicates
+   that are "pushed" down work.  */
+
+typex {
+   te = ???[ dlist[ malloc[ transient ] ] ] ];   
+}
+
+/***************** container declarations **************/
+
+container <ALPHA>  stored_as te with
+{
+
+} alpha, beta;
+
+/***************** cursors declarations ****************/
+
+cursor < alpha > a;
+cursor < beta  > b;
+
+compcurs < a alpha, b beta > where "$a.value == $b.value"  k;
+
+void main( void )
+{
+ALPHA rec;
+int   i;
+
+   /* Step 1:  initialize cursors and containers */
+
+   open_cont( alpha );
+   open_cont( beta );
+   init_curs( a );
+   init_curs( b );
+   initk( k );
+
+   /* Step 2:  insert NUMBER records into each container */
+
+   for (i=0; i<=NUMBER; i++)
+   {
+      rec.value = i;
+      rec.instance = 0;
+      insert( a, rec );
+      rec.value = NUMBER - i;
+      insert( b, rec );
+      rec.instance = 1;
+      rec.instance = 2;
+   }
+
+   /* Step 3: form the join of both containers  - should print
+              (i,0) x (i,1) and (i,0) x (i,2) for i = 0 .. NUMBER */
+
+   foreach(k) {
+      printf("(%d,%d) x (%d,%d) %s\n", k.a.value, k.a.instance,
+                                       k.b.value, k.b.instance );
+   }
+
+   /* Step 4: close each container */
+
+   close_cont( alpha );
+   close_cont( beta );
+}

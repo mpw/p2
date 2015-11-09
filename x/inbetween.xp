@@ -1,0 +1,139 @@
+// $Id: inbetween.xp,v 45.0 1997/09/19 05:46:28 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds inbetween[ ds ] stable curs_state no annotation retrieval_always
+
+!#include "qopt.h"
+!#include "inbetween.h"
+
+#define ASSUME_INSTABILITY 1
+
+optimize( cursor )
+{
+  optimize( cursor );
+  %c.retrieval_layer = layer;
+  layer = %ln;
+}
+
+adv( cursor )
+{
+  layer = %c.retrieval_layer;
+
+#if ASSUME_INSTABILITY
+  if (1)
+#else
+  if (!are_cursors_stable_at_lower_layers( te, layer ))
+#endif
+  %{    
+     if (!end_adv( cursor )) {
+       if (cursor.inbetween && query( cursor )) {
+         cursor.inbetween = 0;
+       }
+       else {
+         adv( cursor );
+       }
+     }
+  %}
+  else
+  %{
+       adv(cursor);
+  %}
+  layer = %ln;
+}
+
+rev( cursor )
+{
+  layer = %c.retrieval_layer;
+
+#if ASSUME_INSTABILITY
+  if (1)
+#else
+  if (!are_cursors_stable_at_lower_layers( te, layer ))
+#endif
+  %{
+     if (cursor.inbetween && end_adv( cursor )) {
+       reset_end(cursor);
+     }
+     else {
+       rev( cursor );
+     }
+     cursor.inbetween = 0;
+  %}
+  else
+  %{
+       rev(cursor);
+  %}
+  layer = %ln;
+}
+
+delete( cursor )
+{
+  layer = %c.retrieval_layer;
+#if ASSUME_INSTABILITY
+  if (1)
+#else
+  if (!are_cursors_stable_at_lower_layers( te, layer ))
+#endif
+  %{
+     cursor.inbetween = 0; // Why do this here? (JAT)
+  %}
+  %{
+     delete ( cursor );
+  %}
+  layer = %ln;
+}
+
+reset_start( cursor )
+{
+  layer = %c.retrieval_layer;
+#if ASSUME_INSTABILITY
+  if (1)
+#else
+  if (!are_cursors_stable_at_lower_layers( te, layer ))
+#endif
+  %{
+     cursor.inbetween = 0; // Why do this here? (JAT)
+  %}
+  %{
+     reset_start( cursor );
+  %}      
+  layer = %ln;
+}
+
+reset_end( cursor )
+{
+  layer = %c.retrieval_layer;
+#if 1
+#if ASSUME_INSTABILITY
+  if (1)
+#else
+  if (!are_cursors_stable_at_lower_layers( te, layer ))
+#endif
+  %{
+     cursor.inbetween = 0; // Why do this here? (JAT)
+  %}
+#endif
+  %{
+     reset_end( cursor );
+  %}      
+  layer = %ln;
+}
+
+c_verbatim( cursor ) 
+%{ 
+    c_verbatim( cursor);
+%}
+
+def_cursor_func : 
+$HEADER
+{ 
+    layer = %c.retrieval_layer; 
+    $CALLDOWN ; 
+    layer = %ln;
+}
+
+def_container_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}

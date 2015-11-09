@@ -1,0 +1,218 @@
+/* $Id: lock05.p2,v 45.0 1997/09/19 05:43:37 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test P2_lock-manager mode P2_LOCK_X times N. */
+/* Limit the number of live children to M. */
+/* Analogous to lock04.p2 */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <assert.h>   /* assert() */
+#include <stdio.h>    /* fprintf() */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+#if 1
+/* If P2_LOCK_MANAGER is defined, then we will use P2 lock manager.
+   Otherwise, use the (more primitive) Unix IPC semaphores. */
+#define P2_LOCK_MANAGER
+#endif
+
+/* Label processes. */
+#ifdef P2_LOCK_MANAGER
+#ifdef TRACE
+#define LABEL
+#endif /* TRACE */
+#endif /* P2_LOCK_MANAGER */
+
+/* Total number of children to fork() */
+#define N 123
+
+/* Maxium number of live children */
+#define M 5
+
+/* Mutex lock name. */
+#define LOCK_NAME 5
+
+/* Mutex lock timeout. */
+#define LOCK_TIMEOUT 10
+
+/*****************************************************************************/
+/*                  Print errors.                                             */
+/*****************************************************************************/
+
+static void
+parent_error (const char *s, int i)
+{
+  fprintf(stderr, "pid=%d Parent", P2_my_process_id);
+  if (i == -1)
+    fprintf(stderr, ": ");
+  else
+    fprintf(stderr, " i=%d: ", i);
+  perror(s);
+  fflush(stderr);
+  exit(1);
+}
+
+static void
+child_error (const char *s, int i)
+{
+  fprintf(stderr, "pid=%d Child i=%d: ", P2_my_process_id, i);
+  perror(s);
+  fflush(stderr);
+}
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main()
+{
+  P2_PROCESS_ID child_pid[N];
+#ifdef P2_LOCK_MANAGER
+  P2_LOCK_REPLY lock_reply;
+#else
+  P2_SEMAPHORE_ID mutex;
+#endif /* P2_LOCK_MANAGER */
+  int i;
+
+#ifdef LABEL
+  /* Process label. */
+  char label[P2_PROCESS_ID_LABEL_SIZE];
+#endif /* LABEL */
+
+  /* Initialize process. */
+  P2_init_process();
+#ifdef P2_LOCK_MANAGER
+  /* Initialize lock manager. */
+  P2_init_lock_manager();
+#else
+  if (P2_init_semaphore(&mutex, 1) < 0)
+    parent_error("P2_init_semaphore(mutex) failed", -1);
+#endif /* P2_LOCK_MANAGER */
+
+#ifdef LABEL
+  /* Label the parent process. */
+  P2_label_process_id("Parent");
+#endif /* LABEL */
+
+  for (i = 0; i < N; i++)
+  {
+    /* Fork child. */
+    child_pid[i] = P2_fork_process();
+    if (child_pid[i] == -1)
+    {
+      /*** This is an error. ***/
+
+      parent_error("P2_fork_process() failed", i);
+    }
+    else if (child_pid[i] == 0)
+    {
+      /*** This is the child. ***/
+
+#ifdef LABEL
+      /* Label the child process. */
+      sprintf(label, "child %d", i);
+      P2_label_process_id(label);
+#endif /* LABEL */
+
+      /* Lock mutex lock. */
+#ifdef P2_LOCK_MANAGER
+      lock_reply = P2_lock(LOCK_NAME, P2_LOCK_X, P2_LOCK_MEDIUM, LOCK_TIMEOUT);
+      assert(lock_reply == P2_LOCK_OK
+	     || lock_reply == P2_LOCK_TIMEOUT
+	     || lock_reply == P2_LOCK_REQUEST_OVERFLOW
+	     || lock_reply == P2_LOCK_HEAD_OVERFLOW);
+      if (lock_reply != P2_LOCK_OK)
+#else
+      if (P2_lock_semaphore(&mutex) < 0)
+#endif /* P2_LOCK_MANAGER */
+        child_error("P2_lock(mutex) failed", i);
+      else
+      {
+        /* Print "Hello World" */
+#ifdef DEBUG
+        printf("pid=%d Hello World! i=%d\n", P2_my_process_id, i);
+#else
+        printf("Hello World!\n");
+#endif /* DEBUG */
+        /* Flush stdout. */
+        fflush(stdout);
+      }
+      /* Unlock mutex lock. */
+#ifdef P2_LOCK_MANAGER
+      lock_reply = P2_unlock(LOCK_NAME);
+      assert(lock_reply == P2_LOCK_OK);
+      if (lock_reply != P2_LOCK_OK)
+#else
+      if (P2_unlock_semaphore(&mutex) < 0)
+#endif /* P2_LOCK_MANAGER */
+        child_error("P2_unlock(mutex) failed", i);
+      /* Exit success. */
+      exit(0);
+    }
+    else
+    {
+      /*** This is the parent. ***/
+
+      /* Wait for child i-(M-1) to finish before forking child i.
+	 That is, limit the number of live children to M. */
+      if (i >= (M-1))
+        if (P2_join_process(child_pid[i-(M-1)]) != 0)
+          parent_error("P2_join_process() != 0", i);
+    }
+  }
+
+#if 0
+  P2_sleep_process(2);
+#endif
+
+  /* Barrier: Wait for the last M children to finish. */
+  for (i = N-(M-1); i < N; i++)
+    if (P2_join_process(child_pid[i]) != 0)
+      parent_error("P2_join_process() != 0", i);
+
+#ifdef P2_LOCK_MANAGER
+  /* Lock mutex lock. */
+  lock_reply = P2_lock(LOCK_NAME, P2_LOCK_X, P2_LOCK_MEDIUM, LOCK_TIMEOUT);
+  assert(lock_reply == P2_LOCK_OK
+	 || lock_reply == P2_LOCK_TIMEOUT
+	 || lock_reply == P2_LOCK_REQUEST_OVERFLOW
+	 || lock_reply == P2_LOCK_HEAD_OVERFLOW);
+  if (lock_reply != P2_LOCK_OK)
+#else
+  if (P2_lock_semaphore(&mutex) < 0)
+#endif /* P2_LOCK_MANAGER */
+    parent_error("P2_lock(mutex) failed", -1);
+
+#ifdef P2_LOCK_MANAGER
+  /* Delete lock manager. */
+  P2_delete_lock_manager();
+#else
+  if (P2_delete_semaphore(&mutex) < 0)
+    parent_error("P2_delete_semaphore(mutex) failed", -1);
+#endif
+  /* Delete process. */
+  P2_delete_process();
+
+  printf("Parent Exits\n");
+  /* Flush stdout. */
+  fflush(stdout);
+
+  /* Exit. */
+  exit(0);
+}

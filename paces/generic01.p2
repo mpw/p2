@@ -1,0 +1,108 @@
+/* $Id: generic01.p2,v 45.0 1997/09/19 05:43:25 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+   int   empno;
+   int   age;
+   char  *dept_name;
+   char  *name;
+} emp_type;
+
+/* Type expression must contain conceptual or
+   init_generic[generic_funcall[...]] */
+typex {
+   et = conceptual[odlist[P2_BOTTOM_LAYER]];
+   st = conceptual[bintree[P2_BOTTOM_LAYER]];
+}
+
+/* Employee. */
+container <emp_type> stored_as et with {
+  odlist key is name;
+  P2_BOTTOM_ANNOTE(empno, 10);
+} ek1, ek2;
+cursor <ek1> orderby empno ec1;
+cursor <ek2> ec2;
+
+/* Secretary. */
+container <emp_type> stored_as st with {
+  bintree key is name;
+  P2_BOTTOM_ANNOTE(empno, 10);
+} sk1, sk2;
+
+cursor <sk1> orderby empno sc1;
+cursor <sk2> sc2;
+
+typedef generic_cursor <emp_type> GC;
+
+typedef generic_container <emp_type> GK;
+
+void close_container( GK gk )
+{
+  close_cont( gk );
+}
+
+void insert_data( GC gc )
+{
+  static count = 1;
+
+  emp_type emp;
+
+  emp.empno     = count;
+  emp.age       = count++*11;
+  emp.dept_name = "dept_name1";
+  emp.name      = "name1";
+  insert( gc, emp );
+
+  emp.empno     = count;
+  emp.age       = count++*11;
+  emp.dept_name = "dept_name2";
+  emp.name      = "name2";
+  insert( gc, emp );
+
+  emp.empno     = count;
+  emp.age       = count++*11;
+  emp.dept_name = "dept_name3";
+  emp.name      = "name3";
+  insert( gc, emp );
+
+  emp.empno     = count;
+  emp.age       = count++*11;
+  emp.dept_name = "dept_name4";
+  emp.name      = "name4";
+  insert( gc, emp );
+}
+
+void print_data( GC gc, char *cursor_name )
+{
+  printf( "contents of %s:\n", cursor_name );
+  foreach( gc ) {
+    printf( "       name: %s\n", gc.name );
+    printf( "  dept_name: %s\n", gc.dept_name );
+    printf( "        age: %d\n", gc.age );
+    printf( "      empno: %d\n", gc.empno );
+  }
+}
+
+main()
+{
+  open_cont( ek1 );
+  open_cont( sk1 );
+  init_curs( ec1 );
+  init_curs( ec2 );
+  init_curs( sc1 );
+  init_curs( sc2 );
+
+  insert_data( (GC) &ec1);
+  insert_data( (GC) &sc1 );
+
+  print_data( (GC) &ec1, "employee container" );
+  printf( "\n" );
+  print_data( (GC) &sc1, "secretary container" );
+
+  close_container( (GK) &sk1 );
+  close_container( (GK) &ek1 );
+  exit( 0 );
+}

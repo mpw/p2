@@ -1,0 +1,97 @@
+// $Id: delflag_forarray.xp,v 45.0 1997/09/19 05:46:20 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds delflag_forarray [ ds ] stable optional annotation d2u
+
+!#include <assert.h> /* assert() */
+!#include "qopt.h"
+!#include "delflag_forarray.h"
+
+// delflag adds a boolean field to each element to indicate
+// whether or not it has been deleted.  The flag is cleared
+// on insertion and set on deletion.  Queries are modified
+// (actually, augmented) to ensure that deleted records
+// are not retrieved.
+
+// note: delflag is not a retrieval layer 
+
+//  xform - delflag adds boolean field df to elements
+
+ddlhint(argc, argv) 
+{ 
+  limit 1 argument;
+
+  /* The test for optional arguments! */
+  assert(argc > 0);
+  if (argc == 1) { 
+    strcpy(%a.deltype,"lots");
+  }
+  else {
+    get_ddlhint_argument(%a.deltype, argv[1]);
+  }
+}
+
+xform(element, container, cursor)
+{
+   add element : char  df;
+   xform(element, container, cursor);
+}
+
+
+// optimize
+
+optimize(cursor)
+{
+    char q[40];
+    
+
+    // If we suspect that a lot of deletions will be done, then 
+    //  we want the delflag test to appear before string comparision
+    //  tests, thereby calling delflag with "lots" annotation.
+    // If we suspect that very little deletion will be done, then we 
+    //  want the delflag test to be at the end, which we can call 
+    //  with any expression (including my favorite, "few"). 
+    
+    sprintf(q,"$.df%d == 0", %ln);
+
+    if (! strcmp(%a.deltype,"lots")) { 
+        pre_and(predicate, q);
+    }
+    else { 
+        post_and(predicate, q);
+    }
+
+    optimize(cursor);
+}
+
+
+// non-retrieval operations - insert, delete, swap
+
+insert(cursor, record)
+%{
+   insert(cursor, record);
+   cursor.df = 0; // FALSE.
+%}
+
+
+delete(cursor)
+%{
+   cursor.df = 1; // TRUE.
+%}
+
+
+swap(cursor0, cursor1)
+%{
+   {
+     int t;
+     t = cursor0.df;
+     cursor0.df = cursor1.df;
+     cursor1.df = t;
+     swap (cursor0, cursor1);
+   }
+%}
+
+adhoc deleted(cursor) 
+%{
+    (cursor.df == 1)
+%}

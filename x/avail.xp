@@ -1,0 +1,147 @@
+// $Id: avail.xp,v 45.2 1997/09/19 22:14:54 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds avail [ ds ] stable retrieval_always no annotation d2u
+
+// This layer adds a next_free field to objects.
+// This layer adds free_list field to container.
+
+// USAGE: this layer should appear IMMEDIATELY above the ds [ mem ]
+// layer (e.g. array or malloc), because this layer does NOT call down
+// on insert() when it reuses an already allocated slot.  Do NOT use
+// this layer with qsort, since avail makes a linked-list of tuples,
+// and qsort moves tuples.
+
+// Possible values of container.free_list and cursor.next_free:
+//           0 = element is not on free list (i.e., element is not deleted)
+//   otherwise = element is on free list (i.e., element is deleted)
+//          -1 = free list terminator (i.e., end of free list)
+
+!#include "qopt.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+xform(element, container, cursor)
+{
+   add container : struct element *free_list;
+   add element   : struct element *next_free;
+
+   xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+   optimize(cursor);
+}
+
+init_cont(container)
+%{
+   init_cont(container);
+   container.free_list = (void *) -1;
+%}
+
+// Non-retrieval operations - insert, delete, swap.
+
+insert(cursor, record)
+%{
+   if (container.free_list == (void *) -1)
+   {
+     // Create a new slot since one occupied by a deleted
+     // record is not available.
+     insert(cursor, record);
+   }
+   else
+   {
+     // Reuse an already allocated slot.
+     cursor.obj = container.free_list;
+#ifndef NDEBUG
+     if (cursor.next_free == 0)
+       P2_runtime_error("insert: cursor.next_free == 0"
+                        " for element on free list");
+#endif // NDEBUG
+     container.free_list = cursor.next_free;
+     * (struct orig_type *) cursor.obj = record;
+   }
+   cursor.next_free = 0;
+%}
+
+delete(cursor)
+%{
+   // Make sure cursor.obj is valid (or at least non-NULL).
+   if (cursor.obj == 0)
+     P2_runtime_error("delete: cannot delete cursor.obj == NULL");
+   // Put cursor.obj onto free list.
+   cursor.next_free = container.free_list;
+#ifndef NDEBUG
+   if (cursor.next_free == 0)
+     P2_runtime_error("delete: cursor.next_free == 0"
+                      " for element on free list");
+#endif // NDEBUG
+   container.free_list = cursor.obj;
+%}
+
+swap(cursor0, cursor1)
+%{
+   if (container.free_list == cursor0.obj)
+     container.free_list = cursor1.obj;
+   else if (container.free_list == cursor1.obj)
+     container.free_list = cursor0.obj;
+
+   {
+     struct obj_type *t;
+
+     t = cursor0.next_free;
+     cursor0.next_free = cursor1.next_free;
+     cursor1.next_free = t;
+     swap(cursor0, cursor1);
+   }
+%}
+
+// Retrieval operations.
+
+adv(cursor)
+{ 
+   %{
+      do
+      {
+        adv(cursor);
+      } while (!(end_adv(cursor)) && (cursor.next_free != 0));
+   %}
+}
+
+rev(cursor)
+{ 
+   %{
+      do
+      {
+        rev(cursor);
+      } while (!(end_rev(cursor)) && (cursor.next_free != 0));
+   %}
+}
+
+reset_start(cursor)
+%{
+   reset_start(cursor);
+   while (!(end_adv(cursor)) && (cursor.next_free != 0))
+   {
+      adv(cursor);
+   }
+%}
+
+reset_end(cursor)
+%{
+   reset_end(cursor);
+   while (!(end_rev(cursor)) && (cursor.next_free != 0))
+   {
+      rev(cursor);
+   }
+%}
+
+// Adhoc operations.
+
+adhoc deleted(cursor)
+%{ 
+    (cursor.next_free != 0)
+%}

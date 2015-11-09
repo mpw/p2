@@ -1,0 +1,677 @@
+// $Id: part.xp,v 45.0 1997/09/19 05:46:44 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds part[ top, top ] stable curs_state cont_state annotation retrieval_always
+
+// This is a partitioning layer, similar to the transposition layer of P1.
+
+// This layer has 2 parameters:
+//   (1) How primary objects are stored.
+//   (2) How secondary objects are stored.
+
+!#include "part.h"
+!#include "qopt.h"
+
+#define FIX 0
+
+#define END_MOVE(END_ADV) \
+{ \
+   call bindc(cursor); \
+   switch (%c.predicate_on_prim_sec_or_both) { \
+    case PRIM: \
+      %{ \
+        END_ADV(cursor3) \
+      %} \
+      break; \
+    case SEC: \
+    case BOTH: \
+      %{ \
+        END_ADV(cursor5) \
+      %} \
+      break; \
+   } \
+}
+
+// Advancing and reversing an abstract cursor requires one to
+// advance/reverse cursor that is directing the retrieval followed by
+// a positioning of the other cursor. (DSB)
+
+#define MOVE(ADV) \
+{ \
+   char *objfld = "obj"; \
+   call bindc(cursor); \
+   switch (%c.predicate_on_prim_sec_or_both) { \
+   case PRIM: \
+     %{ \
+       ADV(cursor3); \
+       cursor5.obj = cursor3.sec; \
+     %} \
+     break; \
+   case SEC: \
+   case BOTH: \
+     %{ \
+       ADV(cursor5); \
+       cursor3.obj = cursor5.prim; \
+     %} \
+     break; \
+   } \
+   %{ \
+      cursor..%v.objfld = (struct obj_type *) cursor3.obj; \
+   %} \
+}
+
+#define RESET(RESET_START) \
+{ \
+   char *objfld = "obj"; \
+   call bindc(cursor); \
+   switch (%c.predicate_on_prim_sec_or_both) { \
+   case PRIM: \
+     %{ \
+       RESET_START(cursor3); \
+       cursor5.obj = cursor3.sec; \
+     %} \
+     break; \
+   case SEC: \
+   case BOTH: \
+     %{ \
+       RESET_START(cursor5); \
+       cursor3.obj = cursor5.prim; \
+     %} \
+     break; \
+   } \
+   %{ \
+      cursor..%v.objfld = (struct obj_type *) cursor3.obj; \
+   %} \
+}
+
+// Primary.
+cursor_func cursorbind3(cursor)
+{
+   sprintf(cursor3,         "(%s.p%d)", cursor, %ln);
+   sprintf(cursor_type3,    "%s_prim_curs", container_type);
+   sprintf(obj_type3,       "%s_prim_xf", container_type);
+   sprintf(container3,      "(%s.prim%d)", container, %ln);
+   sprintf(container_type3, "%s_prim_cont", container_type);
+   sprintf(orig_type3,      "%s_prim", obj_type);
+   strcpy(predicate3,       %c.prim_p);
+   cursor_id3 = %c.id3;
+   cost3  = %c.retrieval_cost3;
+   layer3 = %c.retrieval_layer3;
+   funbody3 = MACRO_EXPAND_FUNBODY;
+}
+
+container_func containerbind3(container)
+{
+   sprintf(container3,      "(%s.prim%d)", container, %ln);
+   sprintf(container_type3, "%s_prim_cont", container_type);
+   sprintf(orig_type3,      "%s_prim", orig_type);
+   sprintf(obj_type3,       "%s_prim_xf", container_type);
+   container_id3 = UNKNOWN_CONT_ID;
+   funbody3 = MACRO_EXPAND_FUNBODY;
+}
+
+// Secondary.
+cursor_func cursorbind5(cursor)
+{
+   sprintf(cursor5,         "(%s.s%d)",   cursor, %ln);
+   sprintf(cursor_type5,    "%s_sec_curs", container_type);
+   sprintf(obj_type5,       "%s_sec_xf", container_type);
+   sprintf(container5,      "(%s.sec%d)", container, %ln);
+   sprintf(container_type5, "%s_sec_cont", container_type);
+   sprintf(orig_type5,      "%s_sec", obj_type);
+   strcpy(predicate5,       %c.sec_p);
+   cursor_id5 = %c.id5;
+   cost5  = %c.retrieval_cost5;
+   layer5 = %c.retrieval_layer5;
+   funbody5 = MACRO_EXPAND_FUNBODY;
+}
+
+container_func containerbind5(container)
+{
+   sprintf(container5,      "(%s.sec%d)", container, %ln);
+   sprintf(container_type5, "%s_sec_cont", container_type);
+   sprintf(orig_type5,      "%s_sec_xf", container_type);
+   sprintf(obj_type5,       "%s_sec", obj_type);
+   container_id5 = UNKNOWN_CONT_ID;
+   funbody5 = MACRO_EXPAND_FUNBODY;
+}
+
+cursor_func bindc (cursor)
+{
+   call cursorbind3 (cursor);
+   call cursorbind5 (cursor);
+}
+
+container_func bindk (container)
+{
+   call containerbind3 (container);
+   call containerbind5 (container);
+}
+
+// This layer has one annotation--part_at_field (for attribute)
+//
+// Containers:   primary
+//               secondary
+//
+// Primary record contains all fields after part_at_field.
+// Secondary record contains all fields before (and including) part_at_field.
+//
+// The annotations for part layer are:
+//
+// partition <fieldname>
+
+ddlhint(argc, argv)
+{
+   limit 1 argument;
+   get_ddlhint_argument(%a.part_at_field, argv[1]);
+}
+
+// xform creates the following:
+//    1 primary file  
+//    1 secondary file  
+
+xform(element, container, cursor)
+{
+  MCURSOR *m = new_mcursor(element);
+  BOOLEAN add_field_to_sec;
+  IDENT   *p; /* Primary. */
+  IDENT   *s; /* Secondary. */
+  char    name[MAX_IDENT_LEN];
+
+   // Step 1:  Create the primary and secondary container types.
+
+   sprintf(name, "%s_prim", obj_type);
+   p = new_struct(name, TRUE);
+
+   sprintf(name,"%s_sec", obj_type);
+   s = new_struct(name, TRUE);
+
+   add_field_to_sec = TRUE;
+   strcpy(%a.first_prim_field, "");
+
+   FOREACH_MEMBER(m) {
+     if (add_field_to_sec) {
+       add s : mcurs m;
+       if (strcmp(name_of(m), %a.part_at_field) == 0)
+         add_field_to_sec = FALSE;
+     }
+     else {
+       add p : mcurs m;
+       if (strcmp(%a.first_prim_field, "") == 0)
+         strcpy(%a.first_prim_field, name_of(m));
+     }
+   }
+   xfree(m);
+
+   // Step 2:  Create primary and secondary container types
+   //          this initializes variables element3, container3, 
+   //          cursor3 and element5, container5, cursor5.
+   //          NOTE: calling new_container_type automatically
+   //          calls xform().
+
+   sprintf(name,"%s_prim", strlen("P2_") + container_type);
+   new_container_type3 name with_type p mapped_via_param 0;
+
+   sprintf(name,"%s_sec", strlen("P2_") + container_type);
+   new_container_type5 name with_type s mapped_via_param 1;
+
+   // Step 3:  Add pointers to corresponding segment.
+ 
+   add element3 : struct element5  *sec;   // Add pointer to secondary segment.
+   add element5 : struct element3  *prim;  // Add pointer to primary segment.
+
+   // Step 4:  Create primary and secondary container instances
+
+   add container : struct container3 prim;
+   add container : struct container5 sec;
+
+   // Step 5:  Add to the abstract cursor, cursors over the primary and
+   //          secondary containers.
+
+   add cursor : struct cursor3 p;
+   add cursor : struct cursor5 s;
+
+   // Step 6:  Remember handles to each element type.
+
+   %k.p = p;
+   %k.s = s;
+   %k.a = element;
+}
+
+optimize(cursor)
+{
+char   prim_p[MAX_IDENT_LEN];
+char   sec_p[MAX_IDENT_LEN];
+char   res_p[MAX_IDENT_LEN];
+int    i;
+
+   // Step 1:  Split the predicate into prim_p && sec_p && res_p
+   //          where prim_p is a predicate over the primary
+   //          container, sec_p is a predicate over the secondary
+   //          container, and res_p is the residual predicate
+   //          which cannot be factored.
+
+   split_predicate(%k.p, predicate, prim_p, sec_p, res_p);
+
+   strcpy(%c.prim_p, prim_p);
+   strcpy(%c.sec_p,  sec_p);
+   strcpy(%c.res_p,  res_p);
+   %c.id3 = curs_id_counter++;
+   %c.id5 = curs_id_counter++;
+   %c.retrieval_cost3  = MAX_QOPT_COST;
+   %c.retrieval_cost5  = MAX_QOPT_COST;
+   %c.retrieval_layer3 = -1;
+   %c.retrieval_layer5 = -1;
+
+   // Step 2:  bind the cursors  
+
+   call bindc(cursor);
+   
+   // Step 3:  Determine search strategy
+
+   if (prim_p[0] == '1') {
+      // NULL primary predicate means scan secondary.
+      i = SEC;
+   }
+   else if (sec_p[0] == '1') {
+      // Non-NULL primary and NULL secondary means scan primary.
+      i = PRIM;
+   }
+   else {
+      // Predicates on both.
+      i = BOTH;
+   }
+      
+   // Step 4:  Now determine how to optimize each concrete cursor.
+   //          Always call optimization just to modify predicate
+   //          (if any) and remember the modifications, and results
+   //          passed back.
+
+   optimize(cursor3);
+
+   // Remember result of optimization.
+   %c.retrieval_cost3  = cost3;
+   %c.retrieval_layer3 = layer3;
+   strcpy(%c.prim_p, predicate3);
+
+   optimize(cursor5);
+
+   // Remember result of optimization.
+   %c.retrieval_cost5  = cost5;
+   %c.retrieval_layer5 = layer5;
+   strcpy(%c.sec_p, predicate5);
+
+   // Step 5:  Determine what to pass back to higher levels.
+
+   %c.predicate_on_prim_sec_or_both = i; 
+   switch(%c.predicate_on_prim_sec_or_both) {
+   case PRIM:
+     cost = cost3;
+     layer = %ln;
+     break;
+   case SEC:
+     cost = cost5;
+     layer = %ln;
+     break;
+   case BOTH:
+     // Query spans both halves.
+     // First search secondary segment, then search primary.
+     cost = cost5*PTR_FOLLOWING_QOPT_FACTOR;
+     layer = %ln;
+     break;
+   }
+}
+
+// Positioning involves positioning on dominant/primary
+// cursor and positioning secondary cursor.
+
+pos(cursor, expr)
+{
+  char *objfld = "obj";
+
+  call bindc(cursor);
+  %{ 
+     cursor3.obj = (struct obj_type3 *) expr;
+     if (cursor3.obj) {
+        cursor5.obj = cursor3.sec;
+     }
+     else {
+        cursor5.obj = 0;
+     }
+#if FIX
+     // What JAT thinks it should be.
+     {
+       struct obj_type3 *p = cursor3.obj;
+       cursor.obj = (struct obj_type *) p; // Here's the problem with the FIX.
+       // We can't call down to ref since
+       // calling down[0] references the prim and down[1] references the sec.
+     }
+#else
+    // What DSB thinks it should be.
+    // What works (except for mlist/part composition).
+    cursor..%v.objfld = (struct obj_type *) cursor3.obj;
+#endif
+  %}
+}
+
+query(cursor)
+{
+#if 0
+    char line[100];
+    char newline[100];
+    char field[30];
+    char temp[40];
+    int i,j; 
+    int dtype = 0;
+    char *position, *start;
+
+    call bindc(cursor);
+    strcpy(line, %c.res_p);
+    
+    %{ query(cursor3) && query(cursor5) && %}
+
+    // Hold it. This didn't work for the predicates in the residual.
+    //   bind_predicate(te, cursor, obj_type, res);
+    // Because if we have an expression ($.age>40||$.age<35), the 
+    //   name of the partition was absent. So we have to do something 
+    //   long & complex & parse unparseable strings because after all,
+    //   residuals are people too (BJG).
+
+    start = line;
+
+    while(position = strchr(start,'$')) { 
+        /* copy the head info */
+        strncpy(newline, start, position-start);
+        newline[(position-start)] = 0;
+        
+        %{%v.newline%}
+        
+        /* find the fieldname */
+        position++; /* point to next item */
+        if (*position == '.') {
+            dtype = 1;
+        } else /* position = : */ {
+            dtype = 2;
+        }
+
+        for(position++,i=0; (isalnum(*position)||(*position=='_')); position++,i++) {
+            field[i] = *position;
+        }
+        field[i] = 0;
+        if (dtype == 1) {
+            %{ref#(cursor,field)%} /* call this level's ref */
+        } else {
+            sprintf(newline,"%s.%s",cursor,field);
+            %{%v.newline%}
+        }
+        start = position;
+    }
+    strcpy(newline, start);
+    %{%v.newline%}
+#else
+  char *p;
+
+  call bindc(cursor);
+  p = bind_predicate(te, cursor, obj_type, %c.res_p);
+  %{
+     (query(cursor3) && query(cursor5) && (%v.p))
+  %}
+  xfree(p);
+#endif
+}
+
+insert(cursor, record)
+{
+  char prim_rec[MAX_IDENT_LEN*2+100];
+  char sec_rec[MAX_IDENT_LEN*2+100];
+  char *objfld = "obj";
+
+  call bindc(cursor);
+
+  %{
+     {
+       int s5;
+       int s3;
+  %}
+
+  sprintf(sec_rec, "*((struct %s *) &(%s))", orig_type5, record);
+  if (strcmp(%a.first_prim_field, "") == 0) {
+    sprintf(prim_rec, "*((struct %s *) 0)", orig_type3);
+    %{
+       s5 = sizeof(struct obj_type);
+    %}
+  }
+  else {
+    sprintf(prim_rec, "*((struct %s *) &((%s).%s))",
+      orig_type3, record, %a.first_prim_field);
+    %{
+       s5 = offsetof(struct obj_type, %a.first_prim_field);
+    %}
+  }
+  %{
+       s3 = sizeof(struct obj_type) - s5;
+
+       // Secondary.
+       if (s5 > 0) {
+         insert(cursor5, %v.sec_rec);
+       }
+       else {
+         struct orig_type5 dummy;
+         insert(cursor5, dummy);
+       }
+
+       // Primary.
+       if (s3 > 0) {
+         insert(cursor3, %v.prim_rec);
+       }
+       else {
+         struct orig_type3 dummy;
+         insert(cursor3, dummy);
+       }
+
+       cursor5.prim = cursor3.obj;
+       cursor3.sec  = cursor5.obj;
+#if FIX
+       // What JAT thinks it should be.
+       {
+         struct obj_type3 *p = cursor3.obj;
+         cursor.obj = (struct obj_type *) p;
+       }
+#elif 0
+       // What DSB thinks it should be.
+       cursor.obj = (struct obj_type *) cursor3.obj;
+#else
+       // What works (except for mlist/part composition).
+       {
+         struct obj_type3 *p = cursor3.obj;
+         cursor..%v.objfld = (struct obj_type *) p;
+       }
+#endif
+     }
+  %}
+}
+
+overflow(container)
+{
+int i;
+
+   // Have primary and secondary container overflowed?
+
+   call bindk(container);
+   %{
+      overflow(container3) || overflow(container5)
+   %}
+}
+
+ref(cursor, field)
+{
+  call bindc(cursor);
+  if (is_member_of(%k.p, field))
+  %{
+     ref(cursor3, field)
+  %}
+  else
+  %{
+     ref(cursor5, field)
+  %}
+}
+
+iref(cursor, field)
+{
+char buffer[MAX_IDENT_LEN];
+
+  call bindc(cursor);
+
+  // We're doing indirection: make sure that the types are correct. (DSB)
+
+  sprintf(buffer, "((struct %s *) %s)", obj_type3, cursor);
+  strcpy(cursor3, buffer);
+  sprintf(buffer, "((struct %s *) %s)", obj_type5, cursor);
+  strcpy(cursor5, buffer);
+
+  if (is_member_of(%k.p, field))
+  %{
+     iref(cursor3, field)
+  %}
+  else
+  %{
+     iref(cursor5, field)
+  %}
+}
+
+end_adv(cursor)
+{
+  END_MOVE(end_adv)
+}
+
+end_rev(cursor)
+{
+  END_MOVE(end_rev)
+}
+
+adv(cursor)
+{
+  MOVE(adv)
+}
+
+rev(cursor)
+{
+  MOVE(rev)
+}
+
+reset_start(cursor) 
+{  
+  RESET(reset_start)
+}
+
+reset_end(cursor)
+{  
+  RESET(reset_end)
+}
+
+swap(cursor0, cursor1)
+%{
+   P2_runtime_error("no swap mapping for part");
+%}
+
+getrec(cursor, record)
+{
+  call bindc(cursor);
+
+  %{
+     {
+       int s5;
+       int s3;
+  %}
+  if (strcmp(%a.first_prim_field, "") == 0)
+  %{
+       s5 = 0;
+  %}
+  else
+  %{
+       s5 = offsetof(struct obj_type, %a.first_prim_field);
+  %}
+  %{
+       s3 = sizeof(struct obj_type) - s5;
+       // Secondary.
+       if (s5 > 0)
+         memcpy(((char *) &(record)), (char *) cursor5.obj, s5);
+       // Primary.
+       if (s3 > 0)
+         memcpy(((char *) &(record))+s5, (char *) cursor3.obj, s3);
+     }
+  %}
+}
+   
+open_cont(container)
+{
+
+  // Open both primary and secondary containers.
+  // The initialization of the abstract container ==
+  // the initialization of the primary (or secondary) container. (DSB)
+
+  call bindk(container);
+  %{
+     open_cont(container3);
+     open_cont(container5);
+     container.initialized = container3.initialized;
+  %}
+}
+
+upd(cursor, field, expr)
+{
+   // Step 1:  Bind cursor5 and cursor3.  Remember that the
+   //          expression for cursor5 and cursor3 has already
+   //          been computed as a ref or iref.
+
+   call bindc(cursor);
+   //strcpy(cursor3, cursor);
+   //strcpy(cursor5, cursor);
+
+   // Step 2:  generate the appropriate code depending on the
+   //          field to update
+
+   if (is_member_of(%k.p, field))
+   %{
+      upd(cursor3, field, expr);
+   %}
+   else
+   %{
+      upd(cursor5, field, expr);
+   %}
+}
+
+// The cursor and container function defaults for expressions aren't
+// exactly correct, but they should be okay. (JAT)
+
+def_cursor_func : 
+$HEADER
+{
+    call bindc(cursor); 
+    if ($EXPR)
+    {
+      $CALLDOWN3;
+    }
+    else
+    {
+      $CALLDOWN3;
+      $CALLDOWN5; 
+    }
+    $GENSEMI; 
+} 
+
+def_container_func : 
+$HEADER
+{ 
+    call bindk(container); 
+    if ($EXPR)
+    {
+      $CALLDOWN3;
+    }
+    else
+    {
+      $CALLDOWN3; 
+      $CALLDOWN5; 
+    }
+    $GENSEMI; 
+}

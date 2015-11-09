@@ -1,0 +1,9 @@
+// $Id: transient.xp,v 45.0 1997/09/19 05:46:55 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer mem transient[] stable no annotations
+
+// Heap-mapped storage layer.
+
+#define MALLOC malloc
+#include "transient.xph"

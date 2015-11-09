@@ -1,0 +1,155 @@
+/* $Id: xact24.p2,v 45.0 1997/09/19 05:45:40 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Stress-test the lock manager, especially with respect to hashing,
+   by acquiring lots of locks in with random names and modes. */
+
+/* All of these locks are acquired by the same transaction,
+   so they SHOULD be compatible. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include <stdio.h>    /* prinitf() */
+#include <stdlib.h>   /* rand(), RAND_MAX */
+#include "P2_paces.h"
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* Trace and label processes. */
+#if 0
+#if !defined(TRACE)
+#define TRACE
+#endif /* TRACE */
+#endif
+
+/* Total locks to acquire. */
+#define N 10000
+
+#define LOCK_CLASS P2_LOCK_MEDIUM
+#define LOCK_TIMEOUT 60
+
+/*****************************************************************************/
+/*                  Declare typex and schema.                                */
+/*****************************************************************************/
+
+typex {
+#if defined(TRACE)
+  /* Debugging. */
+  t = conceptual[P2_LOG_LAYER[
+        xact[protocol_fine[lock[process[trace[
+         avail[array[transient]]]]]]]]];
+#else
+  /* Normal. */
+  t = P2_XACT_TYPEX(protocol_fine, P2_BOTTOM_LAYER);
+#endif
+}
+
+typedef struct {
+  int i;
+} E;
+
+schema {
+  container <E> k;
+} stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, 10);
+} s;
+
+/*****************************************************************************/
+/*                  Random lock name and mode.                               */
+/*****************************************************************************/
+
+P2_LOCK_NAME
+random_lock_name()
+{
+  P2_LOCK_NAME lock_name;
+  lock_name = (P2_LOCK_NAME) rand();
+  return(lock_name);
+}
+
+P2_LOCK_MODE
+random_lock_mode()
+{
+  P2_LOCK_MODE lock_mode;
+  lock_mode = (rand() % (P2_LOCK_X-P2_LOCK_IS+1)) + P2_LOCK_IS;
+  return(lock_mode);
+}
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main()
+{
+  int i;
+
+#if defined(TRACE)
+  /* Process label. */
+  char label[P2_PROCESS_ID_LABEL_SIZE];
+#endif /* TRACE */
+
+#if defined(DEBUG)
+  printf("Begin.\n");
+#endif /* TRACE */
+
+  open_schema(s);
+  begin_xact(s);
+
+#if defined(TRACE)
+  /* Label the process. */
+  P2_label_process_id("Parent");
+#endif /* TRACE */
+
+  for (i = 0; i < N; i++)
+  {
+    P2_LOCK_NAME lock_name;
+    P2_LOCK_MODE lock_mode;
+    P2_LOCK_REPLY lock_reply;
+
+    lock_name = random_lock_name();
+    lock_mode = random_lock_mode();
+
+#if defined(DEBUG)
+    printf("%d. P2_lock(%d, %s, %s, %d)\n",
+	   i,
+	   lock_name,
+	   P2_lock_mode_string(lock_mode),
+	   P2_lock_class_string(LOCK_CLASS),
+	   LOCK_TIMEOUT);
+#endif
+
+    lock_reply = P2_lock(lock_name, lock_mode, LOCK_CLASS, LOCK_TIMEOUT);
+    if (lock_reply != P2_LOCK_OK)
+    {
+      fprintf(stderr,
+	      "%d. P2_lock(%d, %s, %s, %d) failed: %s\n",
+	      i,
+	      lock_name,
+	      P2_lock_mode_string(lock_mode),
+	      P2_lock_class_string(LOCK_CLASS),
+	      LOCK_TIMEOUT,
+	      P2_lock_reply_string(lock_reply));
+      exit(1);
+    }
+  }
+
+  commit_xact(s);
+  close_schema(s);
+
+#if defined(DEBUG)
+  printf("Exit.\n");
+#endif /* TRACE */
+
+  exit(0);
+}

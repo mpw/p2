@@ -1,0 +1,11 @@
+// $Id: container_structure.xp,v 45.0 1997/09/19 05:46:19 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds container_structure [ ds ] stable annotation
+
+// Adds the fields of a given C struct to the container struct.
+
+!#include "container_structure.h"
+
+#undef CURSOR_STRUCTURE
+#include "structure.xph"

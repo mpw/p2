@@ -1,0 +1,4 @@
+(make foo ^bar 0)
+(watch 1)
+(run)
+(exit)

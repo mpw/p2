@@ -1,0 +1,40 @@
+/* $Id: orderby-inbetween.p2,v 45.0 1997/09/19 05:43:55 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+#include "P2_paces.h"
+
+/*
+   This file demonstrates a bug resulting in the following pb
+   assertion failure:
+
+     no c_state record found for cursor = (c).orderby_curs_ptr0,
+     id = 0, layerno = 3, layername = inbetween
+
+   The fix to this bug was to modify the init_curs(cursor) operation
+   in the orderby layer to initialize the orderby cursor
+   init_curs(cursor5) iff an orderby cursor is necessary. (JAT)
+*/
+
+typedef struct {
+  int i;
+} E;
+
+/* Minimal type expression to demonstrate this bug: */
+
+typex {
+  t = orderby_fast[array1[transient], inbetween[array2[transient]]];
+}
+
+container <E> stored_as t with {
+  array1 size is 10;
+  array2 size is 10;
+} k;
+
+cursor <k> c;
+
+int main ()
+{
+  init_curs(c);
+  printf("Done.\n");
+  return 0;
+}

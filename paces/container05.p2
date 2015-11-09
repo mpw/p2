@@ -1,0 +1,47 @@
+/* $Id: container05.p2,v 45.0 1997/09/19 05:43:08 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Schema member declaring list with more than one container. */
+/* Demonstrate a bug that occurs when a schema container declaring
+   list contains more than one container.  The problem is that the
+   proceduralizations of the container special operations are declared
+   more than once each. */
+
+#include "P2_paces.h"
+
+typedef struct {
+  int i;
+} E;
+
+typex {
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+}
+
+schema {
+  container <E> k1, k2;
+} stored_as t with {
+#ifdef P2_BOTTOM_SCHEMA_ANNOTE
+  P2_BOTTOM_SCHEMA_ANNOTE(k1, i, 1);
+  P2_BOTTOM_SCHEMA_ANNOTE(k2, i, 2);
+#endif /* P2_BOTTOM_SCHEMA_ANNOTE */
+} s;
+
+cursor <s.k1> c;
+
+int main (void) 
+{
+  E e;
+  int i;
+  open_schema(s);
+  open_cont(s.k1);
+  init_curs(c);
+  begin_xact(s);
+  e.i = 0;
+  insert(c, e);
+  i = c.i;
+  commit_xact(s);
+  delete_curs(c);
+  close_cont(s.k1);
+  close_schema(s);
+  return(i);
+}

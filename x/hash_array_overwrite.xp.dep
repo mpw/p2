@@ -1,0 +1,2 @@
+hash_array_overwrite.o: hash_array_overwrite.xp hash_array_overwrite.h \
+  hash_array.xph ../config.h adhoc.xph

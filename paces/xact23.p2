@@ -1,0 +1,96 @@
+/* $Id: xact23.p2,v 45.0 1997/09/19 05:45:40 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Demonstrate lock manager bug caused by the fact that hash_array
+   assumes perfect hashing, but wan't getting it (hash_array was
+   hashing distinct lock names to the same hash value.  The fix to
+   this bug was to add a front end to P2_lock() in order to hash the
+   lock name BEFORE P2 sees it. */
+
+/* All of these locks are acquired by the same transaction,
+   so they SHOULD be compatible. */
+
+#include <stdio.h>    /* prinitf() */
+#include "P2_paces.h"
+
+/* Trace and label processes. */
+#if 0
+#if !defined(TRACE)
+#define TRACE
+#endif /* TRACE */
+#endif
+
+#define LOCK_CLASS P2_LOCK_MEDIUM
+#define LOCK_TIMEOUT 60
+
+#if defined(TRACE)
+#define TEST(x) \
+  P2_print_lock_manager_state(); \
+  printf("%s\n", #x); \
+  if ((x) != P2_LOCK_OK) { perror("Lock failed"); exit(1); }
+#else
+#define TEST(x) \
+  printf("%s\n", #x); \
+  if ((x) != P2_LOCK_OK) { perror("Lock failed"); exit(1); }
+#endif /* TRACE */
+
+typex {
+#if defined(TRACE)
+  /* Debugging. */
+  t = conceptual[P2_LOG_LAYER[
+        xact[protocol_fine[lock[process[trace[
+         avail[array[transient]]]]]]]]];
+#else
+  /* Normal. */
+  t = P2_XACT_TYPEX(protocol_fine, P2_BOTTOM_LAYER);
+#endif
+}
+
+typedef struct {
+  int i;
+} E;
+
+schema {
+  container <E> k;
+} stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, 10);
+} s;
+
+int
+main()
+{
+#if defined(TRACE)
+  /* Process label. */
+  char label[P2_PROCESS_ID_LABEL_SIZE];
+#endif /* TRACE */
+
+  open_schema(s);
+  begin_xact(s);
+
+#if defined(TRACE)
+  /* Label the process. */
+  P2_label_process_id("Parent");
+#endif /* TRACE */
+
+  /* This bug is exhibited only by certain lock names: those
+     with the same hash value. */
+  /* Only need two locks to demonstrate bug. */
+  TEST(P2_lock(001, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+  TEST(P2_lock(101, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+#if 1
+  /* Let's stress-test the fix. */
+  TEST(P2_lock(201, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+  TEST(P2_lock(301, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+  TEST(P2_lock(401, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+  TEST(P2_lock(501, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+  TEST(P2_lock(601, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+  TEST(P2_lock(701, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+  TEST(P2_lock(801, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+  TEST(P2_lock(901, P2_LOCK_X, LOCK_CLASS, LOCK_TIMEOUT));
+#endif
+
+  commit_xact(s);
+  close_schema(s);
+
+  exit(0);
+}

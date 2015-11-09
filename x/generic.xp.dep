@@ -1,0 +1,1 @@
+generic.o: generic.xp ../common/qopt.h

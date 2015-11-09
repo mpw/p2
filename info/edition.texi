@@ -1,0 +1,4 @@
+@c $Id: edition.texi,v 45.0 1997/09/19 05:42:03 jthomas Exp $
+@c Copyright (C) 1997, The University of Texas at Austin.
+
+@set EDITION 0.8

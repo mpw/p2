@@ -1,0 +1,30 @@
+/* $Id: schema01.p2,v 45.0 1997/09/19 05:44:11 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Schema Regression Test. */
+/* Minimal schema program with SIMPLE typex. */
+
+/* Analogous to paces/schema02.p2 (COMPLEX typedef) */
+
+#include "P2_paces.h"
+
+typedef struct {
+  int i;
+} E;
+
+typex
+{
+  t = top2ds[array[transient]];
+}
+
+schema {
+  container <E> k;
+}
+stored_as t with {
+  array size of k is 10;
+} s;
+
+int main()
+{
+  return 0;
+}

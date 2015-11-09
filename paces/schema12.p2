@@ -1,0 +1,38 @@
+/* $Id: schema12.p2,v 45.0 1997/09/19 05:44:16 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Schema Regression Test. */
+/* Minimal simple schema program with COMPLEX typex. */
+
+/* Analogous to paces/schema01.p2 (SIMPLE typex). */
+
+#include "P2_paces.h"
+
+typedef struct {
+  int i;
+} E;
+
+typex
+{
+#if 0
+  t = P2_XACT_TYPEX(null, array[transient]);
+#else
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+#endif
+}
+
+schema {
+  container <E> k;
+}
+stored_as t with {
+#if 0
+  array size of k is 10;
+#else
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, 10);
+#endif
+} s;
+
+int main()
+{
+  return 0;
+}

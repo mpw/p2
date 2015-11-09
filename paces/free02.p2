@@ -1,0 +1,161 @@
+/* $Id: free02.p2,v 45.0 1997/09/19 05:43:21 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+EMP_TYPE rawdata[] = {
+   // 8 records
+   { 10001,69,"Biology","Aziz, Jim" },
+   { 10002,18,"Biology","Azure, Hank" },
+   { 10003,60,"Biology","Aka, Foo" },
+   { 10004,60,"Biology","Akers, Mark" },
+   { 10010,42,"Biology","Akin, Monica" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10030,23,"Biology","Anderson, Gwyn" },
+   { 10040,53,"Biology","Anderson, Mary" },
+   { 10050,42,"Biology","Anderson, Suzanne" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10070,22,"Biology","Andrews, Kay" },
+   { -1 }
+};
+
+typex {
+  /* free[...[malloc... */
+#if 0
+  /* This will not work if P2_DELFLAG_LAYER is avail, because free
+     will free the elements on the avail list. */
+  t = top2ds[inbetween[qualify[odlist[free[P2_DELFLAG_LAYER[
+        malloc[transient]]]]]]];
+#else
+  t = top2ds[inbetween[qualify[odlist[free[delflag[
+        malloc[transient]]]]]]];
+#endif
+}
+
+container <EMP_TYPE> stored_as t with {
+  odlist key is empno;
+} employee_container;
+
+cursor <employee_container> where "$.age > 40"      old_employees;
+cursor <employee_container> where "$.empno > 10050" recent_employees;
+cursor <employee_container> where "$.name <= 'Al' " ak_employees;
+cursor <employee_container>                         all_employees;
+
+/* This macro is expanded in print_container(void) and DELETE(c) with
+   formal parameter c bound to one of the deletion cursors
+   ({old,recent,ak}_employees), never to cursor all_employees.
+
+   For each cursor e, prints:
+     " " if c.obj != e.obj
+     "X"/"x" if c.obj == e.obj and c != e and e
+         e is/is not a deletion cursor (i.e. is not/is all_employees).
+     "O"/"o" if c.obj == e.obj and c == e and e
+         e is/is not a deletion cursor (i.e. is not/is all_employees).
+
+   Thus, never prints "o", since c is always bound to a deletion
+     cursor (i.e., never bound to all_employees).
+*/
+
+#define PRINT(c) \
+  printf("%2d %s%s%s%s %d %d %s\n", \
+  refcount(c) - 1, \
+  (c.obj != old_employees.obj)?    " " : (&c != &old_employees)?    "X" : "O",\
+  (c.obj != recent_employees.obj)? " " : (&c != &recent_employees)? "X" : "O",\
+  (c.obj != ak_employees.obj)?     " " : (&c != &ak_employees)?     "X" : "O",\
+  (c.obj != all_employees.obj)?    " " : (&c != &all_employees)?    "x" : "o",\
+  c.empno, c.age, c.name)
+
+void
+print_container (void)
+{
+  cursor <employee_container> c;
+  init_curs(c);
+  printf("Container:\n");
+  foreach(c)
+  {
+    PRINT(c);
+  }
+}
+
+#define DELETE(c) \
+{ \
+  if (!end_adv(c) && !deleted(c)) \
+  { \
+    PRINT(c); \
+    delete(c); \
+    adv(all_employees); \
+  } \
+}
+
+#define STEP(c) \
+{ \
+  if (!end_adv(c)) \
+  { \
+    adv(c); \
+  } \
+}
+
+int
+main (void) 
+{
+  EMP_TYPE *p;
+
+  open_cont(employee_container);
+  init_curs(old_employees);
+  init_curs(recent_employees);
+  init_curs(ak_employees);
+  init_curs(all_employees);
+
+  for (p = rawdata; p->empno != -1; p++) 
+  {
+      insert(all_employees, *p);
+  }
+
+  reset_start(old_employees);
+  reset_start(recent_employees);
+  reset_start(ak_employees);
+  reset_start(all_employees);
+
+  printf(
+    "On each \"Container:\" line, the number (refcount of element)\n"
+    "should equal the total number of capital and lowercase\n"
+    "\"X/x\"'s and \"O/o\"'s (cursors referencing the element).\n\n"
+    "On each \"Deleting:\" line, the number should equal the total\n"
+    "number of lowercase \"x\"'s and \"o\"'s (non-deletion cursors\n"
+    "referencing the element)\n\n"
+  );
+
+  print_container();
+
+#if 1
+  while (!(end_adv(old_employees)
+	   && end_adv(recent_employees)
+	   && end_adv(ak_employees)))
+  {
+    printf("\nDeleting:\n");
+
+    DELETE(old_employees);
+    DELETE(recent_employees);
+    DELETE(ak_employees);
+
+    STEP(old_employees);
+    STEP(recent_employees);
+    STEP(ak_employees);
+
+    printf("\n");
+    print_container();
+  }
+#endif
+
+  close_cont(employee_container);
+  exit(0);
+}

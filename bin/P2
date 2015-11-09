@@ -1,0 +1,600 @@
+#!/bin/sh
+# $Id: P2.in,v 45.2 1997/09/20 10:40:22 jthomas Exp $
+# Copyright (C) 1997, The University of Texas at Austin.
+# Generated automatically from P2.in by configure.
+#
+# The P2 compiler.
+#
+
+#
+# Initialization.
+#
+
+uname=`uname`
+fullname=""
+
+#
+# Tools
+#
+
+awk="awk"
+# Normal case.
+cc="gcc"
+# HP
+###cc="/bin/cc"
+cpp="gcc -E"
+echo_c="\c"
+echo_n=""
+sed="sed"
+egrep="egrep"
+pbflags=""
+
+# Many versions of indent are broken.
+# Only use GNU indent version 1.9 or higher.
+indent="touch"
+
+#
+# Program defaults.
+#
+
+# Common defaults.
+indentation="no"     # "no" for release/distribution. (JAT)
+keep="no"            # "no" for release/distribution. (JAT)
+link="yes"
+
+if [ "bin/P2" = "INSTALL-P2" -o "bin/P2" = "INSTALL-HETERO-P2" ]; then
+  # These are the defaults a P2 user wants.
+  cppflags="-I/usr/local/include" # /usr/local/include contains $header_files
+  cflags=""
+  lflags=""
+  if [ "bin/P2" = "INSTALL-P2" ]; then
+    # Normal install.
+    bindir="/usr/local/bin"
+    libdir="/usr/local/lib"
+  else
+    # Heterogeneous install.
+    config_guess=`/usr/local/bin/config.guess`
+    bindir="/usr/local/bin/$config_guess"
+    libdir="/usr/local/lib/$config_guess"
+  fi
+  datadir="/usr/local/share"
+  drc="yes"
+  lines="yes"
+  verbose=0
+else
+  # These are the defaults a P2 developer wants.
+  cppflags="-I/Users/marcel/Downloads/p2-0.9.9/include -I/Users/marcel/Downloads/p2-0.9.9/paces -I/Users/marcel/Downloads/p2-0.9.9/rl"
+  # Normal case.
+  cflags="-O -W"
+  # HP
+  ###cflags="-O +Onolimit -W"
+  lflags="-lm"
+  bindir="/Users/marcel/Downloads/p2-0.9.9/bin"
+  datadir="/Users/marcel/Downloads/p2-0.9.9/share"
+  libdir="/Users/marcel/Downloads/p2-0.9.9/lib"
+  drc="no"
+  lines="no"
+  verbose=1            # 1 for release/distribution. (JAT)
+fi
+
+#
+# Process command line
+#
+
+usage="Usage: P2 [options] file.p2"
+for option do
+  ###echo "option = $option"
+  case $option in
+    -h|--help)
+      echo "Copyright (C) 1997, The University of Texas at Austin."
+      echo $usage
+      echo "Options:"
+      echo " -c                     Suppress loading"
+      echo " --cc=...               CC compiler"
+      echo " --cpp=...              C preprocessor"
+      echo " --cppflags=...         C preprocessor flags"
+      echo " -I, -D, -U             Appended to cppflags"
+      echo " --cflags=...           C compiler flags"
+      echo " -g, -O, +O             Appended to cflags"
+      echo " --lflags=...           Linker flags"
+      echo " -l, -L                 Appended to lflags"
+      echo " --pbflags=...          Appended to pbflags"
+      echo " --bindir=directory     Executable program (ddl, pb) location"
+      echo " --datadir=directory    Data file (.awk, .txt) location"
+      echo " --libdir=directory     Library (libp2.a) location"
+
+      if [ "$drc" = "yes" ]; then
+        d="Do (default) [not]"
+      else
+        d="Do [not] (default)"
+      fi
+      echo " --[no-]drc             $d perform design rule checking"
+
+      if [ "$indent" != "touch" ]; then
+        if [ "$indentation" = "yes" ]; then
+          d="Do (default) [not]"
+        else
+          d="Do [not] (default)"
+        fi
+        echo " --[no-]indent          $d indent generated code"
+      fi
+
+      if [ "$keep" = "yes" ]; then
+        d="Do (default) [not]"
+      else
+        d="Do [not] (default)"
+      fi
+      echo " --[no-]keep            $d keep intermediate files"
+
+      if [ "$lines" = "yes" ]; then
+        d="Do (default) [not]"
+      else
+        d="Do [not] (default)"
+      fi
+      echo " --[no-]lines           $d keep original line numbers"
+
+      if [ "$verbose" -lt 1 ]; then
+        d="Do (default) [not]"
+      else
+        d="Do [not] (default)"
+      fi
+      echo " -v, --[no-]verbose     $d print stages of processing"
+
+      echo " -h, --help             Print this message"
+      echo " -V, --version          Print the version number and exit"
+      exit 0;;
+
+    -V|--version)
+      echo "P2 version 0.9.9"
+      exit 0;;
+
+    --keep)
+      keep=yes;;
+    --no-keep)
+      keep=no;;
+
+    # Verbose levels:
+    #   3 echos commands verbatim (gcc -W -g foo foo.o ../lib/libp2.a -lm) 
+    #   2 echos file name transformations (foo.o -> foo)
+    #   1 echos processing steps (compile ... done)
+    #   0 silent
+
+    -v3|--verbose=3)
+      verbose=3;;
+    -v2|--verbose=2)
+      verbose=2;;
+    -v1|--verbose=1)
+      verbose=1;;
+    -v0|--verbose=0|--no-verbose)
+      verbose=0;;
+    -v|--verbose)
+      verbose=1;;
+
+    --lines)
+      lines=yes;;
+    --no-lines)
+      lines=no;;
+
+    --drc)
+      drc=yes;;
+    --no-drc)
+      drc=no;;
+
+    --indent)
+      if [ "$indent" = "touch" ]; then
+        echo "P2: could not find indent"
+      else
+        indentation=yes
+      fi;;
+    --no-indent)
+      indentation=no;;
+
+    --bindir=*)
+      bindir=`echo $option | $sed 's:^--bindir=::'`;;
+    --datadir=*)
+      datadir=`echo $option | $sed 's:^--datadir=::'`;;
+    --libdir=*)
+      libdir=`echo $option | $sed 's:^--libdir=::'`;;
+    --cc=*)
+      cc=`echo $option | $sed 's:^--cc=::'`;;
+    --cflags=*)
+      cflags="$cflags `echo $option | $sed 's:^--cflags=::'`";;
+    --cpp=*)
+      cpp=`echo $option | $sed 's:^--cpp=::'`;;
+    --cppflags=*)
+      cppflags="$cppflags `echo $option | $sed 's:^--cppflags=::'`";;
+    --lflags=*)
+      lflags="$lflags `echo $option | $sed 's:^--lflags=::'`";;
+    --pbflags=*)
+      pbflags="$pbflags `echo $option | $sed 's:^--pbflags=::'`";;
+    -c)
+      link="no";;
+    -I*|-D*|-U*)
+      cppflags="$cppflags `echo $option`";;
+    -g*|-O*|+O*)
+      cflags="$cflags `echo $option`";;
+    -l*|-L*)
+      lflags="$lflags `echo $option`";;
+
+    *.p2)
+      if [ -z "$fullname" ]; then
+        fullname=$option
+      else
+	echo "P2: more than one .p2 file specified"
+        echo $usage
+        exit 1
+      fi;;
+
+    *-)
+      echo "P2: illegal or unrecognized option \"$option\""
+      exit 1;;
+
+    *) 
+      lflags="$lflags $option"
+     ;;
+  esac
+done
+
+if [ -z "$fullname" ]; then
+  # No files specified.
+  echo "P2: no .p2 file specified"
+  echo $usage
+  exit 1
+fi
+
+#
+# Initialization.
+#
+
+# Add #include lines for each of the following files.
+# See analogous definition, HDRS, in paces/Makefile.in
+# Note: should we include or exclude P2_trace-manager.h??? (JAT)
+header_files="P2.h P2_fastmalloc.h P2_lock-manager.h P2_log-manager.h P2_mmap.h P2_op-vec-manager.h P2_process-manager.h P2_trace-manager.h P2_xact-manager.h"
+
+# Set basename to fullname minus the .p2 suffix.
+basename=`basename ${fullname} .p2`
+
+# Initialize the list of temporary files.
+intermediate_files=""
+
+#
+# liner
+#
+
+infile=${fullname}
+
+if [ "$lines" = "yes" ]; then
+  outfile=${basename}-liner.c
+  if [ "$verbose" -ge 1 ]; then
+    echo ${echo_n} "liner ${echo_c}"
+    if [ "$verbose" -ge 2 ]; then
+      echo ${echo_n} " ($infile -> $outfile) ${echo_c}"
+    fi
+    echo ${echo_n} "... ${echo_c}"
+  fi
+  ( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+      ${awk} -f $datadir/liner.awk ${infile} > ${outfile} )
+  if [ $? -ne 0 ]; then exit 1; fi
+  if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+else
+  # cpp requires an input file with a ".c" extension.
+  # There are several options for doing this:
+  #   cp
+  #     - permissions might be wrong
+  #   ln -s 
+  #     - delete the link before again writing to it
+  #   cat
+  #     - slow
+  outfile=${basename}-copy.c
+  if [ "$verbose" -ge 1 ]; then
+    echo ${echo_n} "copy "  ${echo_c}
+    if [ "$verbose" -ge 2 ]; then
+      echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+    fi
+    echo ${echo_n} "... ${echo_c}"
+  fi
+  ( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+      rm -f ${outfile}; cp ${infile} ${outfile}; chmod u+w ${outfile} )
+  if [ $? -ne 0 ]; then exit 1; fi
+  if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+fi
+
+#
+# Include P2-specific and layer-specific header files.
+# Need to do this *before* cpp.
+#
+
+infile=${outfile}
+outfile=${basename}-include.c
+
+if [ "$verbose" -ge 1 ]; then
+  echo ${echo_n} "add #include files ${echo_c}"
+  if [ "$verbose" -ge 2 ]; then
+    echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+  fi
+  echo ${echo_n} "... ${echo_c}"
+fi
+
+( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+    rm -f ${outfile} )
+if [ $? -ne 0 ]; then exit 1; fi
+
+for f in ${header_files}; do
+  ( if [ "$verbose" -ge 3 ]; then set -x; fi; \
+      echo "#include \"$f\"" >> ${outfile} )
+  if [ $? -ne 0 ]; then exit 1; fi
+done
+
+( if [ "$verbose" -ge 3 ]; then set -x; fi; \
+    cat ${infile} >> $outfile )
+if [ $? -ne 0 ]; then exit 1; fi
+
+intermediate_files="${intermediate_files} ${infile}"
+if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+    
+#
+# cpp
+#
+
+infile=${outfile}
+outfile=`basename ${infile} .c`.i
+
+if [ "$verbose" -ge 1 ]; then
+  echo ${echo_n} "cpp ${echo_c}"
+  if [ "$verbose" -ge 2 ]; then
+    echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+  fi
+  echo ${echo_n} "... ${echo_c}"
+fi
+( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+  ${cpp} ${cppflags} -o ${outfile} ${infile} )
+if [ $? -ne 0 ]; then exit 1; fi
+intermediate_files="${intermediate_files} ${infile}"
+if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done "; fi
+
+#
+# egrep
+#
+ 
+# Eliminate all lines beginning with "#" (e.g. lines added by cpp)
+# except lines beginning with "#pragma liner" (i.e. lines added by liner).
+
+infile=${outfile}
+outfile=${basename}.ddl
+ 
+if [ "$verbose" -ge 1 ]; then
+  echo ${echo_n} "egrep ${echo_c}"
+  if [ "$verbose" -ge 2 ]; then
+    echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+  fi
+  echo ${echo_n} "... ${echo_c}"
+fi
+( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+  $egrep '^#pragma liner|^$|^[^#]' ${infile} > ${outfile} )
+if [ $? -ne 0 ]; then exit 1; fi
+intermediate_files="${intermediate_files} ${infile}"
+if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+ 
+#
+# ddl
+#
+
+infile=${outfile}
+outfile=`basename ${infile} .ddl`.pb
+
+if [ "$verbose" -ge 1 ]; then
+  echo ${echo_n} "ddl ${echo_c}"
+  if [ "$verbose" -ge 2 ]; then
+    echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+  fi
+  echo ${echo_n} "... ${echo_c}"
+fi
+( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+  $bindir/ddl ${infile} > ${outfile} )
+if [ $? -ne 0 ]; then exit 1; fi
+intermediate_files="${intermediate_files} ${infile}"
+if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+
+#
+# indent
+#
+
+if [ "$indent" != "touch" ]; then
+  infile=${outfile}
+  outfile=${infile}
+  if [ "$indentation" = "yes" ]; then
+    if [ "$verbose" -ge 1 ]; then
+      echo ${echo_n} "indent ${echo_c}"
+      if [ "$verbose" -ge 2 ]; then
+        echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+      fi
+      echo ${echo_n} "... ${echo_c}"
+    fi
+    ( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+      ${indent} ${infile} )
+    if [ $? -ne 0 ]; then exit 1; fi
+    intermediate_files="${intermediate_files} ${infile}~ ${infile}.BAK"
+    if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+  fi
+fi
+
+#
+# pb
+#
+
+infile=${outfile}
+outfile=${basename}-pb.c
+
+if [ "$verbose" -ge 1 ]; then
+  if [ "$drc" = "yes" ]; then
+    echo ${echo_n} "pb and drc ${echo_c}"
+  else
+    echo ${echo_n} "pb ${echo_c}"
+  fi
+  if [ "$verbose" -ge 2 ]; then
+    echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+  fi
+  echo ${echo_n} "... ${echo_c}"
+fi
+
+if [ "$drc" = "yes" ]; then
+  ( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+    $bindir/pb ${pbflags} -a${datadir}/P2_attr.txt ${infile} > ${outfile} )
+else
+  ( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+    $bindir/pb ${pbflags} ${infile} > ${outfile} )
+fi
+
+if [ $? -ne 0 ]; then exit 1; fi
+intermediate_files="${intermediate_files} ${infile}"
+if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+
+#
+# deliner
+#
+
+infile=${outfile}
+
+if [ "$lines" = "yes" ]; then
+  outfile=${basename}-deliner.c
+  if [ "$verbose" -ge 1 ]; then
+    echo ${echo_n} "deliner ${echo_c}"
+    if [ "$verbose" -ge 2 ]; then
+      echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+    fi
+    echo ${echo_n} "... ${echo_c}"
+  fi
+  ( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+    ${awk} -f $datadir/deliner.awk ${infile} > ${outfile} )
+  if [ $? -ne 0 ]; then exit 1; fi
+  intermediate_files="${intermediate_files} ${infile}"
+  if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+else
+  outfile=${infile}
+fi
+
+#
+# indent
+#
+
+# In theory, any indent should work for .c files.
+# In practice, many versions of indent are broken.
+
+if [ "$indent" != "touch" ]; then
+  infile=${outfile}
+  outfile=${infile}
+  if [ "$indentation" = "yes" ]; then
+    if [ "$verbose" -ge 1 ]; then
+      echo ${echo_n} "indent ${echo_c}"
+      if [ "$verbose" -ge 2 ]; then
+        echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+      fi
+      echo ${echo_n} "... ${echo_c}"
+    fi
+    ( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+      ${indent} ${infile} )
+    if [ $? -ne 0 ]; then exit 1; fi
+    intermediate_files="${intermediate_files} ${infile}~ ${infile}.BAK"
+    if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+  fi
+fi
+
+#
+# Include the cpp-command-only portion of the
+# P2-specific and layer-specific header files.
+# Need to do this *after* pb.
+#
+
+infile=${outfile}
+
+# Might be more systematic to use the suffix "-cpp.c", but ".c" is
+# nice for debugging. (JAT)
+outfile=${basename}.c
+
+if [ "$verbose" -ge 1 ]; then
+  echo ${echo_n} "add #include \"P2_cpp.h\" ${echo_c}"
+  if [ "$verbose" -ge 2 ]; then
+    echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+  fi
+  echo ${echo_n} "... ${echo_c}"
+fi
+
+( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+  echo "/* Generated automatically from ${basename}.p2 by P2. */" > ${outfile};
+  echo "#include \"P2_cpp.h\"" >> ${outfile} )
+if [ $? -ne 0 ]; then exit 1; fi
+
+( if [ "$verbose" -ge 3 ]; then set -x; fi; \
+    cat ${infile} >> $outfile )
+if [ $? -ne 0 ]; then exit 1; fi
+
+intermediate_files="${intermediate_files} ${infile}"
+if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done "; fi
+
+#
+# Compile.
+#
+
+infile=${outfile}
+
+# Note: outfile must be ${basename}.o (not, for example, ${basename}-foo.o)
+# so that the -c (suppress linking) option makes sense. (JAT)
+outfile=${basename}.o
+
+if [ "$verbose" -ge 1 ]; then
+  echo ${echo_n} "compile ${echo_c}"
+  if [ "$verbose" -ge 2 ]; then
+    echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+  fi
+  echo ${echo_n} "... ${echo_c}"
+fi
+( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+  ${cc} ${cflags} ${cppflags} -c -o ${outfile} ${infile} )
+if [ $? -ne 0 ]; then exit 1; fi
+intermediate_files="${intermediate_files} ${infile}"
+if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+
+#
+# Link.
+#
+
+infile=${outfile}
+outfile=${basename}
+
+if [ "$link" = "yes" ]; then
+  if [ "$verbose" -ge 1 ]; then
+    echo ${echo_n} "link ${echo_c}"
+    if [ "$verbose" -ge 2 ]; then
+      echo ${echo_n} "($infile -> $outfile) ${echo_c}"
+    fi
+    echo ${echo_n} "... ${echo_c}"
+  fi
+  ( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+     ${cc} ${cflags} -o ${outfile} ${infile} $libdir/libp2.a ${lflags} )
+  if [ $? -ne 0 ]; then exit 1; fi
+  intermediate_files="${intermediate_files} ${infile}"
+  if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+fi
+
+#
+# Clean-up intermediate files.
+#
+
+# By delaying removing intermediate files to the end of the script,
+# intermediate files will be removed iff keep="no" *and* the script
+# runs to completion (without errors).
+
+if [ "$keep" = "no" ]; then
+  if [ "$verbose" -ge 1 ]; then
+    echo ${echo_n} "clean-up ... ${echo_c}"
+  fi
+  ( if [ "$verbose" -ge 3 ]; then echo; set -x; fi; \
+    rm -f ${intermediate_files} )
+  if [ "$verbose" -ge 1 -a "$verbose" -lt 3 ]; then echo "done"; fi
+fi
+
+#
+# Exit.
+#
+
+exit 0

@@ -1,0 +1,58 @@
+// $Id: timestamp.xp,v 45.0 1997/09/19 05:46:52 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds timestamp[ ds ] stable annotation
+
+// layer adds a timestamp to each element.
+// The counter is passed in as an annotation:
+//    timestamp on <countername>
+// which the main program has to initialize.
+// The counter is incremented for each insert and update.
+
+!#include "timestamp.h"
+
+xform(element, container, cursor)
+{
+    add element : int P2_timestamp;
+    xform(element, container, cursor);
+}
+
+ddlhint(argc, argv)
+{
+    limit 1 argument;
+    get_ddlhint_argument(%a.countername, argv[1]);
+}
+
+cursor_func settime(cursor)
+%{
+    cursor.P2_timestamp = %a.countername;
+    %a.countername++;
+%}
+
+insert(cursor, record)
+%{
+    insert(cursor, record);
+    call settime(cursor)
+%}
+
+upd(cursor, field, expr)
+%{
+    upd(cursor, field, expr);
+    call settime(cursor)
+%}
+
+swap(cursor0, cursor1)
+%{
+  {
+    int t;
+    t = cursor0.P2_timestamp;
+    cursor0.P2_timestamp = cursor1.P2_timestamp;
+    cursor1.P2_timestamp = t;
+  }
+  swap(cursor0, cursor1);
+%}
+
+adhoc timestamp(cursor)
+%{
+    (cursor.P2_timestamp)
+%}

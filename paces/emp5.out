@@ -1,0 +1,34 @@
+SQL: #
+SQL: # utility paces script#1
+SQL: #
+SQL: # retrieval test
+SQL: select * from employees where age = 35 order by empno
+10500,35,"Computer Science","Brooks, Leslie"
+12230,35,"Philosophy","Johanson, Barbara"
+13400,35,"Pre-medicine","Palousek, Cheryl"
+SQL: # insertion test
+SQL: insert into employees : 100, 8, "Biology", "Surrogate, John"
+SQL: insert into employees : 102, 9, "Biology", "Surrogate, Mary"
+SQL: select * from employees where empno < 1000 order by age
+100,8,"Biology","Surrogate, John"
+102,9,"Biology","Surrogate, Mary"
+SQL: # update test
+SQL: update employees set age = 35 where empno = 100 or empno = 102
+SQL: select name, age from employees where age = 35 order by name
+"Brooks, Leslie",35
+"Johanson, Barbara",35
+"Palousek, Cheryl",35
+"Surrogate, John",35
+"Surrogate, Mary",35
+SQL: # deletion test
+SQL: select * from employees where empno < 104 order by empno
+100,35,"Biology","Surrogate, John"
+102,35,"Biology","Surrogate, Mary"
+SQL: delete employees where empno < 104
+SQL: select * from employees where age = 35 order by empno
+10500,35,"Computer Science","Brooks, Leslie"
+12230,35,"Philosophy","Johanson, Barbara"
+13400,35,"Pre-medicine","Palousek, Cheryl"
+SQL: commit
+SQL: #
+SQL: exit

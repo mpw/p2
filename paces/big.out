@@ -1,0 +1,302 @@
+size of emp1 = 521
+## 1 ##
+10500,35,"Computer Science","Brooks, Leslie",51
+12230,35,"Philosophy","Johanson, Barbara",223
+13400,35,"Pre-medicine","Palousek, Cheryl",339
+## 2 ##
+15230,30,"Archeology","Zygmunt, Amy",521
+15220,30,"Archeology","Zogg, John",520
+15210,47,"Archeology","Zoe, John",519
+15200,66,"Archeology","Zinnecker, Steve",518
+15190,62,"Archeology","Zeek, Tonda",517
+15180,31,"Archeology","Zahn, Cayce",516
+15170,33,"Archeology","Yeager, Chris",515
+15160,39,"Archeology","Ybarra, Maria",514
+15150,48,"Archeology","Wright, Madalyn",513
+15140,41,"Archeology","Wright, Judith",512
+15130,31,"Archeology","Worsham, Dennis",511
+15120,57,"Archeology","Wolf, Ann",510
+15110,40,"Archeology","Wofford, Deborah",509
+10190,41,"Biology","Barclay, Jim",20
+10180,20,"Biology","Barbosa, Tammy",19
+10170,50,"Biology","Barber, Gretchen",18
+10160,21,"Biology","Banks, Richard",17
+10150,42,"Biology","Balagia, Jack",16
+10140,61,"Biology","Baker, Kathy",15
+10130,42,"Biology","Ayad, Vic",14
+10120,63,"Biology","Avera, Jean",13
+10110,67,"Biology","Atherton, Susan",12
+10100,28,"Biology","Ashley, Anne",11
+10090,25,"Biology","Armbrust, Cheryl",10
+10080,60,"Biology","Arimes, Sharon",9
+10070,22,"Biology","Andrews, Kay",8
+10060,61,"Biology","Andrews, John",7
+10050,42,"Biology","Anderson, Suzanne",6
+10040,53,"Biology","Anderson, Mary",5
+10030,23,"Biology","Anderson, Gwyn",4
+10020,21,"Biology","Alexander, Joe",3
+10010,42,"Biology","Akin, Monica",2
+10000,60,"Biology","Akers, Mark",1
+## 2 - refs ##
+15230,30,"Archeology","Zygmunt, Amy",521
+15220,30,"Archeology","Zogg, John",520
+15210,47,"Archeology","Zoe, John",519
+15200,66,"Archeology","Zinnecker, Steve",518
+15190,62,"Archeology","Zeek, Tonda",517
+15180,31,"Archeology","Zahn, Cayce",516
+15170,33,"Archeology","Yeager, Chris",515
+15160,39,"Archeology","Ybarra, Maria",514
+15150,48,"Archeology","Wright, Madalyn",513
+15140,41,"Archeology","Wright, Judith",512
+15130,31,"Archeology","Worsham, Dennis",511
+15120,57,"Archeology","Wolf, Ann",510
+15110,40,"Archeology","Wofford, Deborah",509
+10190,41,"Biology","Barclay, Jim",20
+10180,20,"Biology","Barbosa, Tammy",19
+10170,50,"Biology","Barber, Gretchen",18
+10160,21,"Biology","Banks, Richard",17
+10150,42,"Biology","Balagia, Jack",16
+10140,61,"Biology","Baker, Kathy",15
+10130,42,"Biology","Ayad, Vic",14
+10120,63,"Biology","Avera, Jean",13
+10110,67,"Biology","Atherton, Susan",12
+10100,28,"Biology","Ashley, Anne",11
+10090,25,"Biology","Armbrust, Cheryl",10
+10080,60,"Biology","Arimes, Sharon",9
+10070,22,"Biology","Andrews, Kay",8
+10060,61,"Biology","Andrews, John",7
+10050,42,"Biology","Anderson, Suzanne",6
+10040,53,"Biology","Anderson, Mary",5
+10030,23,"Biology","Anderson, Gwyn",4
+10020,21,"Biology","Alexander, Joe",3
+10010,42,"Biology","Akin, Monica",2
+10000,60,"Biology","Akers, Mark",1
+## 1 - getrec ##
+10500,35,"Computer Science","Brooks, Leslie",51
+12230,35,"Philosophy","Johanson, Barbara",223
+13400,35,"Pre-medicine","Palousek, Cheryl",339
+## 2 - expanded foreach ##
+15230,30,"Archeology","Zygmunt, Amy",521
+15220,30,"Archeology","Zogg, John",520
+15210,47,"Archeology","Zoe, John",519
+15200,66,"Archeology","Zinnecker, Steve",518
+15190,62,"Archeology","Zeek, Tonda",517
+15180,31,"Archeology","Zahn, Cayce",516
+15170,33,"Archeology","Yeager, Chris",515
+15160,39,"Archeology","Ybarra, Maria",514
+15150,48,"Archeology","Wright, Madalyn",513
+15140,41,"Archeology","Wright, Judith",512
+15130,31,"Archeology","Worsham, Dennis",511
+15120,57,"Archeology","Wolf, Ann",510
+15110,40,"Archeology","Wofford, Deborah",509
+10190,41,"Biology","Barclay, Jim",20
+10180,20,"Biology","Barbosa, Tammy",19
+10170,50,"Biology","Barber, Gretchen",18
+10160,21,"Biology","Banks, Richard",17
+10150,42,"Biology","Balagia, Jack",16
+10140,61,"Biology","Baker, Kathy",15
+10130,42,"Biology","Ayad, Vic",14
+10120,63,"Biology","Avera, Jean",13
+10110,67,"Biology","Atherton, Susan",12
+10100,28,"Biology","Ashley, Anne",11
+10090,25,"Biology","Armbrust, Cheryl",10
+10080,60,"Biology","Arimes, Sharon",9
+10070,22,"Biology","Andrews, Kay",8
+10060,61,"Biology","Andrews, John",7
+10050,42,"Biology","Anderson, Suzanne",6
+10040,53,"Biology","Anderson, Mary",5
+10030,23,"Biology","Anderson, Gwyn",4
+10020,21,"Biology","Alexander, Joe",3
+10010,42,"Biology","Akin, Monica",2
+10000,60,"Biology","Akers, Mark",1
+## 1 - expanded rofeach ##
+13400,35,"Pre-medicine","Palousek, Cheryl",339
+12230,35,"Philosophy","Johanson, Barbara",223
+10500,35,"Computer Science","Brooks, Leslie",51
+## 3 - print ##
+10500,35,"Computer Science","Brooks, Leslie"
+12230,35,"Philosophy","Johanson, Barbara"
+13400,35,"Pre-medicine","Palousek, Cheryl"
+## 3 - deletions ##
+## 3 - print ##
+## 4 - print ##
+15110,40,"Archeology","Wofford, Deborah"
+15030,40,"Archeology","Williamson, Tricia"
+14670,40,"Computer Eng.","Vance, Mary"
+14210,40,"Mechanical Eng.","Smith, Mary"
+12890,40,"Liberal Arts","McQuerry, Kati"
+12810,40,"Electrical Eng.","Mayfield, Julie"
+12590,40,"Electrical Eng.","Linder-Tate, Janis"
+12320,40,"Latin Studies","Kelly, Kim"
+11590,40,"English","Gil, Belinda"
+11310,40,"Chemistry","Eudy, Barbara"
+11080,40,"Architecture","Doury, Jennifer"
+10700,40,"Anthropology","Chapa, Carola"
+10600,40,"Computer Science","Cannon, Erika"
+10540,40,"Computer Science","Bundy, Stevie"
+## 4 - update so dept_name is 'Fried Oyster Poboy' ##
+## 4 - print ##
+15110,40,"Fried Oyster Poboy","Wofford, Deborah"
+15030,40,"Fried Oyster Poboy","Williamson, Tricia"
+14670,40,"Fried Oyster Poboy","Vance, Mary"
+14210,40,"Fried Oyster Poboy","Smith, Mary"
+12890,40,"Fried Oyster Poboy","McQuerry, Kati"
+12810,40,"Fried Oyster Poboy","Mayfield, Julie"
+12590,40,"Fried Oyster Poboy","Linder-Tate, Janis"
+12320,40,"Fried Oyster Poboy","Kelly, Kim"
+11590,40,"Fried Oyster Poboy","Gil, Belinda"
+11310,40,"Fried Oyster Poboy","Eudy, Barbara"
+11080,40,"Fried Oyster Poboy","Doury, Jennifer"
+10700,40,"Fried Oyster Poboy","Chapa, Carola"
+10600,40,"Fried Oyster Poboy","Cannon, Erika"
+10540,40,"Fried Oyster Poboy","Bundy, Stevie"
+Triggered overflow condition at 500 records
+--Second Container--
+size of emp2 = 500
+## 5 ##
+10500,35,"Computer Science","Brooks, Leslie",586
+12230,35,"Philosophy","Johanson, Barbara",758
+13400,35,"Pre-medicine","Palousek, Cheryl",874
+## 6 ##
+15020,41,"Archeology","Williams, Susan",1035
+15010,48,"Archeology","Williams, Larry",1034
+10290,48,"Biology","Beller, Karen",565
+10280,62,"Biology","Bell, Brenda",564
+10270,27,"Biology","Behrend, Sam",563
+10260,41,"Biology","Beeson, John",562
+10250,67,"Biology","Beerman, Norma",561
+10240,33,"Biology","Beegs, Chris",560
+10230,30,"Biology","Beckner, B.M.",559
+10220,38,"Biology","Bayne, Bette",558
+10210,24,"Biology","Bassion, Susan",557
+10200,23,"Biology","Barry, Pat",556
+10190,41,"Biology","Barclay, Jim",555
+10180,20,"Biology","Barbosa, Tammy",554
+10170,50,"Biology","Barber, Gretchen",553
+10160,21,"Biology","Banks, Richard",552
+10150,42,"Biology","Balagia, Jack",551
+10140,61,"Biology","Baker, Kathy",550
+10130,42,"Biology","Ayad, Vic",549
+10120,63,"Biology","Avera, Jean",548
+10110,67,"Biology","Atherton, Susan",547
+10100,28,"Biology","Ashley, Anne",546
+10090,25,"Biology","Armbrust, Cheryl",545
+10080,60,"Biology","Arimes, Sharon",544
+10070,22,"Biology","Andrews, Kay",543
+10060,61,"Biology","Andrews, John",542
+10050,42,"Biology","Anderson, Suzanne",541
+10040,53,"Biology","Anderson, Mary",540
+10030,23,"Biology","Anderson, Gwyn",539
+10020,21,"Biology","Alexander, Joe",538
+10010,42,"Biology","Akin, Monica",537
+10000,60,"Biology","Akers, Mark",536
+## 7 - print ##
+10500,35,"Computer Science","Brooks, Leslie"
+12230,35,"Philosophy","Johanson, Barbara"
+13400,35,"Pre-medicine","Palousek, Cheryl"
+## 7 - deletions ##
+## 7 - print ##
+## 8 - print ##
+14670,40,"Computer Eng.","Vance, Mary"
+14210,40,"Mechanical Eng.","Smith, Mary"
+12890,40,"Liberal Arts","McQuerry, Kati"
+12810,40,"Electrical Eng.","Mayfield, Julie"
+12590,40,"Electrical Eng.","Linder-Tate, Janis"
+12320,40,"Latin Studies","Kelly, Kim"
+11590,40,"English","Gil, Belinda"
+11310,40,"Chemistry","Eudy, Barbara"
+11080,40,"Architecture","Doury, Jennifer"
+10700,40,"Anthropology","Chapa, Carola"
+10600,40,"Computer Science","Cannon, Erika"
+10540,40,"Computer Science","Bundy, Stevie"
+## 8 - update so dept_name is 'Fried Oyster Poboy' ##
+## 8 - print ##
+14670,40,"Fried Oyster Poboy","Vance, Mary"
+14210,40,"Fried Oyster Poboy","Smith, Mary"
+12890,40,"Fried Oyster Poboy","McQuerry, Kati"
+12810,40,"Fried Oyster Poboy","Mayfield, Julie"
+12590,40,"Fried Oyster Poboy","Linder-Tate, Janis"
+12320,40,"Fried Oyster Poboy","Kelly, Kim"
+11590,40,"Fried Oyster Poboy","Gil, Belinda"
+11310,40,"Fried Oyster Poboy","Eudy, Barbara"
+11080,40,"Fried Oyster Poboy","Doury, Jennifer"
+10700,40,"Fried Oyster Poboy","Chapa, Carola"
+10600,40,"Fried Oyster Poboy","Cannon, Erika"
+10540,40,"Fried Oyster Poboy","Bundy, Stevie"
+--Third Container--
+size of emp3 = 521
+## 9 ##
+10500,35,"Computer Science","Brooks, Leslie",1098
+12230,35,"Philosophy","Johanson, Barbara",1270
+13400,35,"Pre-medicine","Palousek, Cheryl",1386
+## 10 ##
+15230,30,"Archeology","Zygmunt, Amy",1568
+15220,30,"Archeology","Zogg, John",1567
+15210,47,"Archeology","Zoe, John",1566
+15200,66,"Archeology","Zinnecker, Steve",1565
+15190,62,"Archeology","Zeek, Tonda",1564
+15180,31,"Archeology","Zahn, Cayce",1563
+15170,33,"Archeology","Yeager, Chris",1562
+15160,39,"Archeology","Ybarra, Maria",1561
+15150,48,"Archeology","Wright, Madalyn",1560
+15140,41,"Archeology","Wright, Judith",1559
+15130,31,"Archeology","Worsham, Dennis",1558
+15120,57,"Archeology","Wolf, Ann",1557
+15110,40,"Archeology","Wofford, Deborah",1556
+10190,41,"Biology","Barclay, Jim",1067
+10180,20,"Biology","Barbosa, Tammy",1066
+10170,50,"Biology","Barber, Gretchen",1065
+10160,21,"Biology","Banks, Richard",1064
+10150,42,"Biology","Balagia, Jack",1063
+10140,61,"Biology","Baker, Kathy",1062
+10130,42,"Biology","Ayad, Vic",1061
+10120,63,"Biology","Avera, Jean",1060
+10110,67,"Biology","Atherton, Susan",1059
+10100,28,"Biology","Ashley, Anne",1058
+10090,25,"Biology","Armbrust, Cheryl",1057
+10080,60,"Biology","Arimes, Sharon",1056
+10070,22,"Biology","Andrews, Kay",1055
+10060,61,"Biology","Andrews, John",1054
+10050,42,"Biology","Anderson, Suzanne",1053
+10040,53,"Biology","Anderson, Mary",1052
+10030,23,"Biology","Anderson, Gwyn",1051
+10020,21,"Biology","Alexander, Joe",1050
+10010,42,"Biology","Akin, Monica",1049
+10000,60,"Biology","Akers, Mark",1048
+## 11 - print ##
+10500,35,"Computer Science","Brooks, Leslie"
+12230,35,"Philosophy","Johanson, Barbara"
+13400,35,"Pre-medicine","Palousek, Cheryl"
+## 11 - deletions ##
+## 11 - print ##
+## 12 - print ##
+15110,40,"Archeology","Wofford, Deborah"
+15030,40,"Archeology","Williamson, Tricia"
+14670,40,"Computer Eng.","Vance, Mary"
+14210,40,"Mechanical Eng.","Smith, Mary"
+12890,40,"Liberal Arts","McQuerry, Kati"
+12810,40,"Electrical Eng.","Mayfield, Julie"
+12590,40,"Electrical Eng.","Linder-Tate, Janis"
+12320,40,"Latin Studies","Kelly, Kim"
+11590,40,"English","Gil, Belinda"
+11310,40,"Chemistry","Eudy, Barbara"
+11080,40,"Architecture","Doury, Jennifer"
+10700,40,"Anthropology","Chapa, Carola"
+10600,40,"Computer Science","Cannon, Erika"
+10540,40,"Computer Science","Bundy, Stevie"
+## 12 - update so dept_name is 'Macy's' ##
+## 12 - print ##
+15110,40,"Macy's","Wofford, Deborah"
+15030,40,"Macy's","Williamson, Tricia"
+14670,40,"Macy's","Vance, Mary"
+14210,40,"Macy's","Smith, Mary"
+12890,40,"Macy's","McQuerry, Kati"
+12810,40,"Macy's","Mayfield, Julie"
+12590,40,"Macy's","Linder-Tate, Janis"
+12320,40,"Macy's","Kelly, Kim"
+11590,40,"Macy's","Gil, Belinda"
+11310,40,"Macy's","Eudy, Barbara"
+11080,40,"Macy's","Doury, Jennifer"
+10700,40,"Macy's","Chapa, Carola"
+10600,40,"Macy's","Cannon, Erika"
+10540,40,"Macy's","Bundy, Stevie"

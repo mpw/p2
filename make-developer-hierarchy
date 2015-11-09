@@ -1,0 +1,222 @@
+#!/bin/sh
+#
+# $Id: make-developer-hierarchy,v 45.0 1997/09/19 05:40:44 jthomas Exp $
+#
+# Program to set up a directory hierarchy for P2 developers.
+#
+# This program takes two or three arguments:
+#   Argument 1 specifies the root of the new src hierarchy.
+#   Argument 2 specifies the root of the new obj hierarchy.
+#   Argument 3 (if present) specifies the root of the old src
+#     hierarchy from which to copy all files that the user
+#     has checked out locked.
+#
+# This program may be used in two ways:
+#   With 2 arguments, to create a brand-new P2 developer hierarchy.
+#   With 3 arguments, to test to make sure that a P2 developer's
+#     changes are compatible with the files in the RCS directories.
+#     It is a good idea to run this program with three arguments
+#     before running ci-all.
+#
+
+#
+# The directory archive_root is the root of the P2 archival
+# directory.
+#
+#archive_root="/v/ahhnold/v3/predator"
+#archive_root="/v/sally/v1/predator"
+#archive_root="/v/cs/v2/predator"
+#archive_root="/v/deepthought/v1/predator"
+archive_root="/v/hank/v50/predator/p2/src"
+
+#
+# The mkinstalldirs program makes a directory hierarchy.
+#
+mkinstalldirs="/u/jthomas/bin/mkinstalldirs"
+
+#
+# The list sub_dirs is a list of the sub-directories of the root.
+#
+sub_dirs="common ddl doc gc info paces pb rl tools x xp"
+
+#
+# Process command line arguments.
+#
+
+new_src_root=$1
+new_obj_root=$2
+
+if [ $# -eq 2 ]; then
+  echo "I will create a brand-new P2 developer hierarchy with:"
+  echo "  new src root: ${new_src_root}"
+  echo "  new obj root: ${new_obj_root}"
+elif [ $# -eq 3 ]; then
+  old_src_root=$3
+  echo "I will make sure that your changes are compatible with"
+  echo "the files in the P2 RCS directories, by first making a"
+  echo "new P2 developer hierarchy with:"
+  echo "  new src root: ${new_src_root}"
+  echo "  new obj root: ${new_obj_root}"
+  echo "And then copying all files checked-out locked from:"
+  echo "  old src root: ${old_src_root}"
+else
+  echo "usage: make-developer-hierarchy new-src-root new-obj-root [old-src-root]"
+  exit 1
+fi
+
+echo -n "Is this correct [y]? "
+read answer
+if [ x"$answer" = x"n" ]; then
+  exit 1
+fi
+
+#
+# Make new_src_root.
+#
+
+if [ -d $new_src_root ]; then
+  echo "$new_src_root already exists"
+else
+  echo "rm -f $new_src_root"
+  rm -f $new_src_root
+  echo "mkinstalldirs $new_src_root"
+  ${mkinstalldirs} $new_src_root
+fi
+
+#
+# Change current directory to new_src_root.
+#
+
+cwd=`pwd`
+echo "cd $new_src_root"
+cd $new_src_root
+src_dir=`pwd`
+
+#
+# Make the root RCS link.
+#
+
+echo "rm -f RCS"
+rm -f RCS
+echo "ln -s $archive_root/RCS RCS"
+ln -s $archive_root/RCS RCS
+
+#
+# Make sub-directories, obj sub-sub-directories and RCS links.
+#
+
+for dir in $sub_dirs ; do
+  #
+  # Make sub-directories.
+  #
+  if [ -d $dir ]; then
+      echo "$dir already exists"
+  else
+    echo "rm -f $dir"
+    rm -f $dir
+    echo "mkdir $dir"
+    mkdir $dir
+  fi
+  #
+  # Change current directory to the sub-directory.
+  #
+  echo "cd $dir"
+  cd $dir
+  #
+  # Make RCS links.
+  #
+  echo "rm -f RCS"
+  rm -f RCS
+  echo "ln -s $archive_root/$dir/RCS RCS"
+  ln -s $archive_root/$dir/RCS RCS
+  echo "cd .."
+  cd ..
+done
+
+#
+# Check-out co-all, then execute co-all.
+#
+
+echo "co co-all"
+co co-all
+
+echo "co-all"
+./co-all
+
+#
+# Copy all files from $old_src_root that the user has checked-out locked.
+#
+
+if [ $# -eq 3 ]; then
+  echo "Copying files from $old_src_root"
+  echo cd $old_src_root
+  cd $old_src_root
+  for dir in . $sub_dirs ; do
+    echo cd $dir
+    cd $dir
+    for file in * ; do
+      rcsfile="RCS/$file,v"
+	if [ -f $rcsfile ] \
+	   && [ -w $file ] \
+           && [ "x`rlog -L -R $rcsfile`" = "x$rcsfile" ]
+	then
+	   echo "cp -f $file $new_src_root/$dir"
+	   cp -f $file $new_src_root/$dir
+	fi
+    done
+    if [ $dir != . ]
+    then
+      echo "cd .."
+      cd ..
+    fi
+  done
+  echo cd $new_src_root
+  cd $new_src_root
+fi
+
+#
+# Autoconf
+#
+
+echo "autoheader"
+autoheader
+if [ $? -ne 0 ]; then exit 1 ; fi
+
+echo "autoconf"
+autoconf
+if [ $? -ne 0 ]; then exit 1 ; fi
+
+echo "cd $cwd"
+cd $cwd
+
+#
+# Make new_obj_root.
+#
+
+if [ -d $new_obj_root ]; then
+        echo "$new_obj_root already exists"
+else
+        echo "rm -f $new_obj_root"
+        rm -f $new_obj_root
+        echo "mkinstalldirs $new_obj_root"
+        ${mkinstalldirs} $new_obj_root
+fi
+
+#
+# Configure, and Make
+#
+
+echo "cd $new_obj_root"
+cd $new_obj_root
+
+echo "$src_dir/configure"
+$src_dir/configure
+if [ $? -ne 0 ]; then exit 1 ; fi
+
+echo "make"
+make
+
+#
+# Exit.
+#
+exit 0

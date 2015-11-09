@@ -1,0 +1,46 @@
+/* $Id: container08.p2,v 45.0 1997/09/19 05:43:09 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include "P2_paces.h"
+
+/* Array schema member delaring list with more than one container,
+   and with ANNOTATION. */
+
+/* Analogous to paces/container05.p2 (non-array container) */
+/* Analogous to paces/container06.p2 (NO annotation) */
+/* Analogous to paces/container07.p2 (declaring list with one container) */
+/* Analogous to paces/container09.p2 (P2_XACT_TYPEX) */
+
+typedef struct {
+  int i;
+} E;
+
+typex {
+  t = top2ds[array[transient]];
+}
+
+schema {
+  container <E> k1, k2[2], *k3;
+} stored_as t with {
+  array size of k1 is 10;
+  array size of k2 is 10;
+  array size of k3 is 10;
+} s;
+
+cursor <s.k2[0]> c;
+
+int main (void) 
+{
+  E e;
+  int i;
+  open_schema(s);
+  open_cont(s.k2[0]);
+  init_curs(c);
+  e.i = 0;
+  insert(c, e);
+  i = c.i;
+  delete_curs(c);
+  close_cont(s.k2[0]);
+  close_schema(s);
+  return(i);
+}

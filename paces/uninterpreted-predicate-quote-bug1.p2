@@ -1,0 +1,134 @@
+/* $Id: uninterpreted-predicate-quote-bug1.p2,v 45.0 1997/09/19 05:44:39 jthomas Exp $ */
+/* Copyright (C) 1995, The University of Texas at Austin. */
+
+/* Regression test for bug involving single quotes in
+   uninterpreted predicates. (JAT) */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#define UNINTERPRETED_PREDICATES 1
+
+typedef struct {
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+EMP_TYPE rawdata[] = {
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10070,22,"Biology","Andrews, Kay" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10010,40,"Biology","Akin, Monica" },
+   { 10050,42,"Biology","Akerson, Suzanne" },
+   { 10040,53,"Biology","Akerson, Mary" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10030,23,"Biology","Akerson, Gwyn" },
+   { -1 }
+};
+
+typex {
+  paces_typex = P2_PACES_TYPEX;
+}
+
+container <EMP_TYPE> stored_as paces_typex with {
+  P2_PACES_ANNOTE(age, 10);
+} emp_cont;
+
+typedef cursor <emp_cont>
+  orderby P2_DESCENDING empno
+ALL_EMP_TYPE;
+ALL_EMP_TYPE  all_emp;
+
+cursor <emp_cont>
+#if UNINTERPRETED_PREDICATES
+  where "strcmp($.name,'Al')<=0"
+#else
+  where "$.name < 'Al'"
+#endif
+  orderby P2_DESCENDING name
+ak_emp;
+
+cursor <emp_cont>
+  where "$.empno > 10020"
+  orderby P2_DESCENDING empno
+recent_emp;
+
+typedef cursor <emp_cont>
+  where "$.age > 40"
+  orderby  P2_ASCENDING age
+OLD_EMP_TYPE;
+OLD_EMP_TYPE  old_emp;
+
+int main (void) 
+{
+  open_cont(emp_cont);
+  init_curs(old_emp);
+  init_curs(all_emp);
+  init_curs(recent_emp);
+  init_curs(ak_emp);
+
+  {
+    EMP_TYPE *p;
+    for (p = rawdata; p->empno != -1; p++) {
+      insert(all_emp, *p);
+    }
+  }
+
+  printf("\nall emp are:\n(orderby descending empno)\n"); 
+  P2_ITERATOR(all_emp)
+  {
+    EMP_TYPE r;
+    getrec(all_emp, r);
+    printf("%d %d %s\n", r.empno, 
+                          r.age,
+                          r.name); 
+  }
+
+  printf("\nak emp are:\n(orderby descending name)\n");
+  P2_ITERATOR(ak_emp)
+  {
+    printf("%d %d %s\n", ak_emp.empno,
+                         ak_emp.age,
+                         ak_emp.name);
+  }
+
+  printf("\nrecent (empno > 10020) emp are:\n(orderby descending empno)\n");
+  P2_ITERATOR(recent_emp)
+  {
+    printf("%d %d %s\n", recent_emp.empno, 
+                         recent_emp.age,
+                         recent_emp.name); 
+  }
+ 
+  printf("\nold emp are:\n(orderby ascending age)\n"); 
+  P2_ITERATOR(old_emp)
+  {
+    EMP_TYPE r;
+    getrec(old_emp, r);
+    printf("%d %d %s\n", r.empno, 
+                          r.age,
+                          r.name); 
+    delete(old_emp);
+  }
+
+  printf("\nold emp are:\n(orderby ascending age)\n"); 
+  P2_ITERATOR(old_emp)
+  {
+    printf("%d %d %s\n", old_emp.empno, 
+                         old_emp.age,
+                         old_emp.name); 
+  }
+
+  printf("\nremaining emp are:\n(orderby descending empno)\n"); 
+  P2_ITERATOR(all_emp)
+  {
+    printf("%d %d %s\n", all_emp.empno, 
+                          all_emp.age,
+                          all_emp.name); 
+  }
+
+  close_cont(emp_cont);
+  exit(0);
+}

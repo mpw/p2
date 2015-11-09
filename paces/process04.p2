@@ -1,0 +1,217 @@
+/* $Id: process04.p2,v 45.0 1997/09/19 05:44:04 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test semaphores. */
+/* Each child locks multiple semaphores. */
+/* total = 0+1+2+3+4+5+6+7+8+9+10 = 45 */
+/* Analogous to:
+   process03.p2 (each child locks a simgle semaphore)
+   (JAT) */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <stdio.h>    /* printf() */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* Number of semaphores. */
+#define NUM_SEMAPHORE 3
+
+/* Use a non-NULL container base struct type
+   (rather than a container element) to store the shared data. */
+#if 1
+#define CONTAINER_STRUCTURE
+#endif
+
+/*****************************************************************************/
+/*                  Globals.                                                 */
+/*****************************************************************************/
+
+typedef struct {
+  int i;
+} DATA;
+
+typex {
+#ifdef CONTAINER_STRUCTURE
+  t = top2ds[container_structure[array[mmap_shared]]];
+#else
+  t = top2ds[array[mmap_shared]];
+#endif /* CONTAINER_STRUCTURE */
+}
+
+container <DATA> stored_as t with {
+  array size is 1;
+#ifdef CONTAINER_STRUCTURE
+  /* In general, the container base structure is NOT the same as the
+     element data structure.  In this particular case, however, it is,
+     because the data that would be stored in the single anchor
+     element is instead stored in the container struct.
+     This is elegant, but potentially confusing. (JAT) */
+  container_structure "DATA";
+#endif /* CONTAINER_STRUCTURE */
+  mmap_shared file is "/tmp/P2_process04-data" with size 100;
+} cont;
+
+#ifndef CONTAINER_STRUCTURE
+cursor <cont> curs;
+#endif /* CONTAINER_STRUCTURE */
+
+/*****************************************************************************/
+/*                  Print errors.                                            */
+/*****************************************************************************/
+
+void
+print_error (const char *s, int i)
+{
+  fprintf(stderr, s, i);
+  perror(" ");
+  fflush(stderr);
+}
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main ()
+{
+  P2_PROCESS_ID child_pid;
+  P2_SEMAPHORE_ID semaphore[NUM_SEMAPHORE];
+#ifndef CONTAINER_STRUCTURE
+  DATA data;
+#endif /* CONTAINER_STRUCTURE */
+  int i;
+  int s;
+  int total;
+
+  /* Initialize process manager. */
+  P2_init_process();
+
+  open_cont(cont);
+#ifdef CONTAINER_STRUCTURE
+  cont.i = 0;
+#else
+  init_curs(curs);
+  data.i = 0;
+  insert(curs, data);
+#endif /* CONTAINER_STRUCTURE */
+
+  for (s = 0; s < NUM_SEMAPHORE; s++)
+    if (P2_init_semaphore(&semaphore[s], 1) < 0)
+    {
+      print_error("Can't initialize semaphore[%d]", s);
+      exit(1);
+    }
+
+  for (i = 0; i < 10; i++)
+  {
+    child_pid = P2_fork_process();
+    if (child_pid == -1)
+    {
+      /*** This is an error. ***/
+
+      print_error("Can't fork child %d", i);
+      exit(1);
+    }
+    else if (child_pid == 0)
+    {
+      /*** This is the child. ***/
+
+      /* Unlock semaphores in ascending order. */
+      for (s = 0; s < NUM_SEMAPHORE; s++)
+	if (P2_lock_semaphore(&semaphore[s]) < 0)
+	  print_error("Can't lock semaphore [%d]", s);
+
+#ifdef CONTAINER_STRUCTURE
+
+      /* cont.i = cont.i + i */
+      total = cont.i + i;
+#ifndef DEBUG
+      /* For paces: always produce the same output. */
+      printf("Pause\n");
+#else
+      /* For debugging: print detailed info. */
+      printf("Pause %d + %d = %d\n", cont.i, i, total);
+#endif /* DEBUG */
+      cont.i = total;
+
+#else /* CONTAINER_STRUCTURE */
+
+      /* curs.i = curs.i + i */
+      total = ref(curs, i) + i;
+#ifndef DEBUG
+      /* For paces: always produce the same output. */
+      printf("Pause\n");
+#else
+      /* For debugging: print detailed info. */
+      printf("Pause %d + %d = %d\n", ref(curs, i), i, total);
+#endif /* DEBUG */
+      upd(curs, i, total);
+
+#endif /* CONTAINER_STRUCTURE */
+
+      /* Flush stdout. */
+      fflush(stdout);
+
+      /* Unlock semaphores in descending order. */
+      for (s = NUM_SEMAPHORE-1; s >= 0; s--)
+	if (P2_unlock_semaphore(&semaphore[s]) < 0)
+	  print_error("Can't unlock semaphore[%d]", s);
+
+      exit(0);
+    }
+    else
+    {
+      /*** This is the parent. ***/
+    }
+  }
+
+  /* Wait until all children are finished with the semaphore. */
+#ifdef CONTAINER_STRUCTURE
+  while(cont.i < 45)
+#else
+  while(ref(curs, i) < 45)
+#endif /* CONTAINER_STRUCTURE */
+    P2_sleep_process(1);
+
+  /* Lock the semaphores. */
+  for (s = 0; s < NUM_SEMAPHORE; s++)
+    if (P2_lock_semaphore(&semaphore[s]) < 0)
+    {
+      print_error("Can't lock semaphore[%d]", s);
+      exit(1);
+    }
+  /* Delete the semaphores. */
+  for (s = NUM_SEMAPHORE-1; s >= 0; s--)
+    if (P2_delete_semaphore(&semaphore[s]) < 0)
+    {
+      print_error("Can't delete semaphore[%d]", s);
+      exit(1);
+    }
+
+#ifdef CONTAINER_STRUCTURE
+  total = cont.i;
+#else
+  total = ref(curs, i);
+#endif /* CONTAINER_STRUCTURE */
+  printf("total = %d\n", total);
+  close_cont(cont);
+
+  /* Delete process manager. */
+  P2_delete_process();
+
+  exit(0);
+}

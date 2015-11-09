@@ -1,0 +1,203 @@
+/* $Id: lock13.p2,v 45.0 1997/09/19 05:43:40 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test lock_compat_matrix. */
+/* Note: this file generates 27 timeouts, each of duration
+   LOCK_TIMEOUT = 1 second.  Thus, the value of TIMEOUT defined in
+   paces/Makefile.in should be at least 30 seconds, or this program is
+   likely to be assumed incorrect and killed before it finishes
+   execution. (JAT) */
+
+/*****************************************************************************/
+/*                  Includes and defines.                                    */
+/*****************************************************************************/
+
+#include "P2_paces.h"
+
+#include <assert.h>   /* assert() */
+#include <stdio.h>    /* perror(), printf() */
+#include <stdarg.h>   /* va_list, va_start(), va_end() */
+
+/* Lock name. */
+#define LOCK_NAME 13
+
+/* Lock timeout. */
+#if 1
+#define LOCK_TIMEOUT 1
+#else
+#define LOCK_TIMEOUT 10
+#endif
+
+/*****************************************************************************/
+/*                  Print error.                                             */
+/*****************************************************************************/
+
+void
+print_error(const char *format, ...)
+{
+  va_list args;
+
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fflush(stderr);
+  exit(1);
+}
+
+/*****************************************************************************/
+/*                  Lock mode string.                                        */
+/*****************************************************************************/
+
+char *
+lock_mode_string (P2_LOCK_MODE mode)
+{
+  assert(mode >= P2_LOCK_FREE && mode <= P2_LOCK_WAIT);
+
+  switch (mode)
+  {
+  case P2_LOCK_FREE: return("P2_LOCK_FREE");
+  case P2_LOCK_S:    return("P2_LOCK_S");
+  case P2_LOCK_X:    return("P2_LOCK_X");
+  case P2_LOCK_U:    return("P2_LOCK_U");
+  case P2_LOCK_IS:   return("P2_LOCK_IS");
+  case P2_LOCK_IX:   return("P2_LOCK_IX");
+  case P2_LOCK_SIX:  return("P2_LOCK_SIX");
+  case P2_LOCK_WAIT: return("P2_LOCK_WAIT");
+  default:
+    print_error("illegal P2_LOCK_MODE %d", mode);
+    return("???");
+  }
+}
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int
+main()
+{
+  P2_LOCK_REPLY lock_reply;
+  P2_PROCESS_ID child_pid;
+  P2_SEMAPHORE_ID semaphore;
+  int i, j; /* Index over mode. */
+  /* Iterate over array of stored modes, instead of iterating over
+     modes in numeric order.  This has two advantages:
+     (1) output matches definition of lock_compat_matrix in
+         paces/P2_lock-manager.p2
+     (2) output does not change if numeric order of P2_LOCK_MODE
+        constants changes. */
+  P2_LOCK_MODE mode[] =
+  {
+    P2_LOCK_FREE,
+    P2_LOCK_S,
+    P2_LOCK_X,
+    P2_LOCK_U,
+    P2_LOCK_IS,
+    P2_LOCK_IX,
+    P2_LOCK_SIX,
+    P2_LOCK_WAIT /* Terminator */
+  };
+
+  /* Initialize process and lock manager. */
+  P2_init_process();
+  P2_init_lock_manager();
+  assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+
+  /* Initialize semaphore to 0. */
+  if (P2_init_semaphore(&semaphore, 0) < 0)
+    print_error("P2_init_semaphore(&semaphore) failed");
+
+  /* Child lock mode. */
+  for (j = 0; mode[j] != P2_LOCK_WAIT; j++)
+  {
+    /* Parent lock mode. */
+    for (i = 0; mode[i] != P2_LOCK_WAIT; i++)
+    {
+      /* Lock */
+      lock_reply = P2_lock(LOCK_NAME, mode[i], P2_LOCK_MEDIUM, LOCK_TIMEOUT);
+      assert(lock_reply == P2_LOCK_OK
+	     || lock_reply == P2_LOCK_TIMEOUT
+	     || lock_reply == P2_LOCK_REQUEST_OVERFLOW
+	     || lock_reply == P2_LOCK_HEAD_OVERFLOW);
+      if (lock_reply != P2_LOCK_OK)
+	printf("Parent: P2_lock(%d, %s, P2_LOCK_MEDIUM, %d) != P2_LOCK_OK\n",
+	       LOCK_NAME, lock_mode_string(mode[i]), LOCK_TIMEOUT);
+      /* Flush stdout. */
+      fflush(stdout);
+
+      child_pid = P2_fork_process();
+      if (child_pid == -1)
+      {
+	/*** This is an error. ***/
+
+	print_error("P2_fork_process() failed");
+      }
+      else if (child_pid == 0)
+      {
+	/*** This is the child. ***/
+
+	/* See if child's lock mode (mode[j]) is compatible with
+           parent's lock mode (mode[i]). */
+	assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+	lock_reply = P2_lock(LOCK_NAME, mode[j], P2_LOCK_MEDIUM, LOCK_TIMEOUT);
+	assert(lock_reply == P2_LOCK_OK
+	       || lock_reply == P2_LOCK_TIMEOUT
+	       || lock_reply == P2_LOCK_REQUEST_OVERFLOW
+	       || lock_reply == P2_LOCK_HEAD_OVERFLOW);
+	{
+	  char parent_mode_string[20];
+	  char child_mode_string[20];
+	  sprintf(child_mode_string, "[%s]", lock_mode_string(mode[j]));
+	  sprintf(parent_mode_string, "[%s]", lock_mode_string(mode[i]));
+	  printf("lock_compat_matrix %-14s %-14s = %s\n",
+		 child_mode_string, parent_mode_string,
+		 (lock_reply == P2_LOCK_OK)? "TRUE" : "FALSE");
+	}
+	/* Flush stdout. */
+	fflush(stdout);
+	/* Unlock. */
+	if (lock_reply == P2_LOCK_OK)
+	  if (P2_unlock(LOCK_NAME) != P2_LOCK_OK)
+	    print_error("Child: P2_unlock(%d) failed", LOCK_NAME);
+	/* Increment semaphore. */
+	if (P2_unlock_semaphore(&semaphore) < 0)
+	  print_error("Child: P2_unlock_semaphore(&semaphore) failed");
+	exit(0);
+      }
+      else
+      {
+	/*** This is the parent. ***/
+
+	assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+	/* Wait for child to increment semaphore. */
+	if (P2_lock_semaphore(&semaphore) < 0)
+	  print_error("Parent: P2_lock_semaphore(&semaphore) failed");
+	/* Unlock. */
+	if (P2_unlock(LOCK_NAME) != P2_LOCK_OK)
+	  print_error("Parent: P2_unlock(%d) failed", LOCK_NAME);
+	/* Wait for child to finish. */
+	if (P2_join_process(child_pid) != 0)
+	  perror("P2_join_process() != 0");
+      }
+    }
+    printf("\n");
+    /* Flush stdout. */
+    fflush(stdout);
+  }
+
+  /* Delete the semaphore. */
+  if (P2_delete_semaphore(&semaphore) < 0)
+    print_error("Parent: P2_delete_semaphore(&semaphore) failed");
+  /* Delete process and lock manager. */
+  /* We must call P2_delete_lock_manager() only once.
+     In this case, we only call it from the parent. */
+  assert(child_pid != 0);
+  printf("Parent Exits\n");
+  /* Flush stdout. */
+  fflush(stdout);
+  P2_delete_lock_manager();
+  P2_delete_process();
+
+  /* Exit. */
+  exit(0);
+}

@@ -1,0 +1,51 @@
+/* $Id: element02.p2,v 45.0 1997/09/19 05:43:17 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* element<...> used in expressions. */
+
+/* This program demonstrates a (now fixed) bug in element<...>.
+   Previously, the routine that implemented the action for
+   element<...> would set decl->btype, but not return the correct
+   ptree.  In particular, the ptree it returned was "element<...>"
+   (the untransformed input ptree) rather than a ptree containing the
+   type of the element.  This was okay when element< ... > was used
+   in a declaration (since P2 ignores the ptree and prints transformed
+   type declarations), but not okay in expressions (such as
+   "sizeof(element<...>)") (since P2 prints untransformed expressions). */
+
+#include <stdio.h>     /* printf() */
+#include "P2_paces.h"
+
+typex {
+  paces_typex = P2_PACES_TYPEX;
+}
+
+typedef struct {
+  int age;
+} E;
+
+container <E> stored_as paces_typex with {
+  P2_PACES_ANNOTE(age, 1);
+} cont;
+
+cursor <cont> curs;
+
+int
+main ()
+{
+  int sizeof_element_cont, sizeof_element_curs;
+#if 1
+  /* BUG: Sytax that demonstrates the bug: element<...> */
+  sizeof_element_cont = sizeof(element<cont>);
+  sizeof_element_curs = sizeof(element<curs>);
+#else
+  /* For debugging: Similar syntax that avoids the bug: typeof(...) */
+  sizeof_element_cont = sizeof(typeof(cont));
+  sizeof_element_curs = sizeof(typeof(curs));
+#endif
+#ifdef DEBUG
+  printf("sizeof(element<cont>) = %d\n", sizeof_element_cont);
+  printf("sizeof(element<curs>) = %d\n", sizeof_element_curs);
+#endif /* DEBUG */
+  exit(sizeof_element_cont - sizeof_element_curs);
+}

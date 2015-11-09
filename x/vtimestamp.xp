@@ -1,0 +1,54 @@
+// $Id: vtimestamp.xp,v 45.0 1997/09/19 05:46:56 jthomas Exp $
+// Copyright (C) 1996, The University of Texas at Austin.
+
+layer ds vtimestamp[ ds ] stable annotation
+
+// layer updates the field <fld> already present in the element 
+// with a value that is defined in the main program called
+//    <countername>
+// The annotation is:
+//    vtimestamp field is <field> counter is <countername> 
+
+!#include "vtimestamp.h"
+
+xform(element, container, cursor)
+{ 
+    xform(element, container, cursor);
+}
+
+ddlhint(argc, argv)
+{ 
+    limit 2 arguments;
+    get_ddlhint_argument(%a.fld, argv[1]);
+    get_ddlhint_argument(%a.countername,   argv[2]);
+}
+
+cursor_func settime (cursor) 
+%{ 
+    cursor.%a.fld = %a.countername; 
+    %a.countername++;
+%}
+    
+insert(cursor, record)
+%{  
+    insert(cursor, record) ; 
+    call settime(cursor) 
+%}
+
+upd(cursor, field, expr) 
+{
+   if (strcmp(field, %a.fld) == 0) {
+      warning(4, "cannot update timestamp field - assignment ignored");
+   }
+   else 
+   %{  
+       upd(cursor, field, expr); 
+       call settime(cursor) 
+   %}  
+}
+
+swap(cursor0, cursor1) 
+%{ 
+  swap(cursor0, cursor1);
+%}
+    

@@ -1,0 +1,189 @@
+// $Id: array.xp,v 45.2 1997/09/29 03:50:32 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds array[ mem ] stable annotation retrieval_sometimes
+
+!#include "qopt.h"
+!#include "array.h"
+
+// This layer adds next_element, elements[size] to container.
+
+xform (element, container, cursor)
+{
+  add container : struct element *next_element;
+  add container : struct element elements[%a.size];
+
+  // Call down.
+  xform(element, container, cursor);
+}
+
+ddlhint(argc, argv) 
+{
+  // Annotation may be a (constant) expression.
+  long e;
+
+  limit 1 argument;
+  get_ddlhint_argument(%a.size, argv[1]);
+#ifndef NDEBUG
+  if (strlen(%a.size) > MAX_IDENT_LEN)
+    parse_error("string too long: array size annotation string \"%s\"",
+                %a.size);
+#endif
+
+  if (!eval_expr(%a.size, &e))
+    error("cannot evaluate size annotation \"%s\"", %a.size);
+  else
+    sprintf(%a.size_minus_one, "%d", e - 1);
+#ifndef NDEBUG
+  if (strlen(%a.size_minus_one) > 25)
+    parse_error("string too long: array size minus one string \"%s\"",
+                %a.size_minus_one);
+#endif
+
+  // Do not call down.
+}
+
+#define P2_LAYER_COST LINEAR_TIME_QOPT_COST*ARRAY_QOPT_FACTOR
+
+optimize(cursor)
+{
+  cost  = P2_LAYER_COST;
+  layer = %ln;
+  retrieval_direction = 0;
+  // Do not call down.
+}
+
+init_curs(cursor)
+%{
+  // Do not call down.
+%}
+
+init_cont(container)
+%{
+  init_cont (container);
+  // container.elements == &container.elements[0]
+  container.next_element = container.elements;
+  // Do not call down.
+%}
+
+pos(cursor, expr)
+%{
+  cursor.obj = expr;
+  // Do not call down.
+%}
+
+query(cursor)
+{
+  char *p = bind_predicate(te, cursor, obj_type, predicate);
+  %{  
+     %v.p
+  %}
+  xfree(p);
+  // Do not call down.
+}
+
+insert(cursor, record)
+%{
+  cursor.obj = container.next_element++;
+  * (struct orig_type *) cursor.obj = record;
+  // Do not call down.
+%}
+
+varinsert(cursor, record, expr)
+%{
+  P2_runtime_error("cannot varinsert records in array");
+%}
+
+overflow(container)
+%{ 
+  // Check for container full.
+  // Should we worry about optimizing the address expression? (JAT)
+  (container.next_element > &container.elements[%a.size_minus_one])
+  // Do not call down.
+%}
+
+end_adv(cursor)
+%{
+  (cursor.obj >= container.next_element)
+  // Do not call down.
+%}
+
+end_rev(cursor)
+%{
+  // container.elements == &container.elements[0]
+  (cursor.obj < container.elements)
+  // Do not call down.
+%}
+
+adv(cursor)
+%{
+  (cursor.obj++);
+  // Do not call down.
+%}
+
+rev(cursor)
+%{
+   (cursor.obj--);
+   // Do not call down.
+%}
+
+delete(cursor)
+%{
+   P2_runtime_error("cannot delete records in array");
+%}
+
+reset_start(cursor)
+%{
+  // container.elements == &container.elements[0]
+  cursor.obj = container.elements;
+  // Do not call down.
+%}      
+
+reset_end(cursor)
+%{
+  cursor.obj = ((struct obj_type *) (container.next_element)) - 1;
+  // Do not call down.
+%}
+
+swap(cursor0, cursor1)
+%{
+#if 0
+  // Structure assignment: implicit memcpy()
+  {
+    struct obj_type r = *(cursor0.obj);
+    *(cursor0.obj) = *(cursor1.obj);
+    *(cursor1.obj) = r;
+  }
+#else
+  // explicit memcpy()
+  {
+    struct orig_type r;
+    memcpy(&r, cursor0.obj, sizeof(struct orig_type));
+    memcpy(cursor0.obj, cursor1.obj, sizeof(struct orig_type));
+    memcpy(cursor1.obj, &r, sizeof(struct orig_type));
+  }
+#endif
+  // Do not call down.
+%}
+
+getrec(cursor, record)
+%{
+  record = *(struct orig_type *) cursor.obj;
+  // Do not call down.
+%}
+
+upd(cursor, field, expr)
+{
+  char func[MAX_IDENT_LEN+10];
+  ENTRY *e = symtab_lookup(symtab[SUE], orig_type);
+  strcpy(func, find_data_type(e->ident, field)->typename);
+  strcat(func,"_CPY");
+%{
+  %v.func(cursor.field, expr);
+%}
+  // Do not call down.
+}
+
+// Default adhoc operations. 
+
+#include "adhoc.xph"

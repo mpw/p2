@@ -1,0 +1,118 @@
+/* $Id: part.p2,v 45.0 1997/09/19 05:43:57 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  *dept_name;
+   char  *name;
+} emp_type;
+
+emp_type rawdata[] = {  // 8 records
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10010,42,"Biology","Akin, Monica" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10030,23,"Biology","Anderson, Gwyn" },
+   { 10040,53,"Biology","Anderson, Mary" },
+   { 10050,42,"Biology","Anderson, Suzanne" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10070,22,"Biology","Andrews, Kay" }
+};
+
+typex {
+#if 1
+   t = top2ds[part[top2ds[qualify[P2_DELFLAG_LAYER[array1[transient]]]],
+		  top2ds[qualify[P2_DELFLAG_LAYER[array2[transient]]]]]];
+#else
+   t = conceptual[part[conceptual[P2_DELFLAG_LAYER[array1[transient]]],
+		      conceptual[P2_DELFLAG_LAYER[array2[transient]]]]];
+#endif
+}
+
+container <emp_type> stored_as t with {
+  part at field age;
+  array1 size is 10;
+  array2 size is 10;
+} emp_class;
+
+cursor <emp_class> where "$.age > 40" old_employees;
+cursor <emp_class> all_employees;
+cursor <emp_class> where "$.empno > 10050" recent_employees;
+cursor <emp_class> where "$.name <= 'Al' " ak_employees;
+
+int main ( void ) 
+{
+  int                  loop;
+  int                  i;
+  emp_type             *er;
+
+  open_cont( emp_class );
+  init_curs( old_employees );
+  init_curs( all_employees );
+  init_curs( recent_employees );
+  init_curs( ak_employees );
+
+  for (i=0, er = rawdata; i<8; i++, er++) 
+  {
+      insert( all_employees, *er );
+  }
+
+  printf("\nall employees are:\n"); 
+  foreach( all_employees )
+  {
+    emp_type r;
+    getrec( all_employees, r );
+    printf( "%d %d %s\n", r.empno, 
+                          r.age,
+                          r.name); 
+  }
+
+  printf("\nak employees are:\n");
+  foreach( ak_employees )
+  {
+    printf("%d %d %s\n", ak_employees.empno,
+                         ak_employees.age,
+                         ak_employees.name);
+  }
+
+  printf( "\nold employees are:\n"); 
+  foreach( old_employees )
+  {
+    emp_type r;
+    getrec( old_employees, r );
+    printf( "%d %d %s\n", r.empno, 
+                          r.age,
+                          r.name); 
+    delete( old_employees );
+  }
+
+  printf( "\nold employees are:\n"); 
+  foreach( old_employees )
+  {
+    printf("%d %d %s\n", old_employees.empno, 
+                         old_employees.age,
+                         old_employees.name); 
+  }
+
+  printf( "\nremaining employees are:\n"); 
+  foreach( all_employees)
+  {
+    printf( "%d %d %s\n", all_employees.empno, 
+                          all_employees.age,
+                          all_employees.name); 
+  }
+
+  printf( "\nrecent (empno > 10050) employees are:\n");
+  foreach( recent_employees )
+  {
+    printf("%d %d %s\n", recent_employees.empno, 
+                         recent_employees.age,
+                         recent_employees.name); 
+  }
+  close_cont( emp_class );
+  exit( 0 );
+}

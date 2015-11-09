@@ -1,0 +1,7 @@
+conceptual[bintree_name[hash_SSN[malloc[transient]]]]
+Insertion (30%) : 
+Deletion (20%) : 
+Update (10%) : 
+Scan orderby name (10%) : 
+Ret (SSN = var) (10%) : 
+Ret (name = var) && (dept = const) (20%) : 

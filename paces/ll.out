@@ -1,0 +1,38 @@
+   7 10030 Akerson, Gwyn
+   6 10060 Andrews, John
+   5 10040 Akerson, Mary
+   4 10050 Akerson, Suzanne
+   3 10010 Akin, Monica
+   2 10020 Alexander, Joe
+   1 10070 Andrews, Kay
+   0 10000 Akers, Mark
+
+case1 
+   6 10060 Andrews, John
+   5 10040 Akerson, Mary
+   4 10050 Akerson, Suzanne
+   3 10010 Akin, Monica
+   0 10000 Akers, Mark
+
+
+case2 
+   5 10040 Akerson, Mary
+   4 10050 Akerson, Suzanne
+   3 10010 Akin, Monica
+   0 10000 Akers, Mark
+
+
+case3 
+   6 10060 Andrews, John
+
+
+   5 10040 Akerson, Mary
+   4 10050 Akerson, Suzanne
+   0 10000 Akers, Mark
+
+   0 10000 Akers, Mark
+
+   0 10000 Akers, Mark
+
+   0 10000 Akers, Mark
+

@@ -1,0 +1,43 @@
+all emp are:
+(orderby descending empno)
+10070 22 Andrews, Kay
+10060 61 Andrews, John
+10050 42 Akerson, Suzanne
+10040 53 Akerson, Mary
+10030 23 Akerson, Gwyn
+10020 21 Alexander, Joe
+10010 40 Akin, Monica
+10000 60 Akers, Mark
+
+ak emp are:
+(orderby descending name)
+10010 40 Akin, Monica
+10050 42 Akerson, Suzanne
+10040 53 Akerson, Mary
+10030 23 Akerson, Gwyn
+10000 60 Akers, Mark
+
+recent (empno > 10020) emp are:
+(orderby descending empno)
+10070 22 Andrews, Kay
+10060 61 Andrews, John
+10050 42 Akerson, Suzanne
+10040 53 Akerson, Mary
+10030 23 Akerson, Gwyn
+
+old emp are:
+(orderby ascending age)
+10050 42 Akerson, Suzanne
+10040 53 Akerson, Mary
+10000 60 Akers, Mark
+10060 61 Andrews, John
+
+old emp are:
+(orderby ascending age)
+
+remaining emp are:
+(orderby descending empno)
+10070 22 Andrews, Kay
+10030 23 Akerson, Gwyn
+10020 21 Alexander, Joe
+10010 40 Akin, Monica

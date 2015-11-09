@@ -1,0 +1,662 @@
+/*
+                An implementation of top-down splaying
+                         (by Daniel Sleator)
+
+  "Splay trees", or "self-adjusting search trees" are a simple and
+  efficient data structure for storing an ordered set.  The data
+  structure consists of a binary tree, without parent pointers, and no
+  additional fields.  It allows searching, insertion, deletion,
+  deletemin, deletemax, splitting, joining, and many other operations,
+  all with amortized logarithmic performance.  Since the trees adapt to
+  the sequence of requests, their performance on real access patterns is
+  typically even better.
+
+  The code here is adapted from simple top-down splay. It was obtained
+  via anonymous ftp from ftp.pc.cs.cmu.edu in directory /usr/sleator/.
+
+  The splay operation works even if the item being splayed is not in the
+  tree, and even if the tree root of the tree is NULL.  So the line:
+
+                              splay(i);
+
+  causes it to search for item with key i in the tree rooted.  If it's
+  there, it is splayed to the root.  If it isn't there, then the node put
+  at the root is the last one before NULL that would have been reached in a
+  normal binary search for i.  (It's a neighbor of i in the tree.)
+
+  Operations insert, delete, reset, adv, rev, etc. on containers were added
+  here, and little modifications were made in order for the algorithm to
+  work with cursors and containers in P2.
+
+  THIS IMPLEMENTATION DOES "NOT" ALLOWS DUPLICATES!!!!!!!!!!!!!!
+*/
+
+layer ds splaytree[ ds ] unstable annotation curs_state retrieval_sometimes
+
+!#include "qopt.h"
+!#include "splaytree.h"
+
+#define ADV(RIGHT, LEFT) \
+  if (cursor.RIGHT) { \
+     /* Go to RIGHT child and follow down all LEFT branches. */ \
+     cursor.obj = cursor.RIGHT; \
+     while (cursor.LEFT) \
+       cursor.obj = cursor.LEFT; \
+  } \
+  else { \
+     cursor.obj = 0; \
+  }
+
+cursor_func splay(cursor , "char *func")
+{ 
+  char left    [10];
+  char right   [10];
+  sprintf(left,"left%d",%ln);
+  sprintf(right,"right%d",%ln);
+
+%{
+  if(container.root){
+
+     // Can't sprintf these into string variables, because xp gets
+     // confused by %v.foo.%v.bar (JAT)
+     struct obj_type P2_N,*P2_left,*P2_right,*P2_y;
+     P2_N.%v.left = 0;
+     P2_N.%v.right = 0;
+     P2_left=&P2_N;
+     P2_right=&P2_N;
+     cursor.obj = container.root;
+
+     for(;;){
+        // if cursor.ofield > record.ofield then goto left
+
+        if (%v.func(cursor.%a.ofield, P2_val)) {
+           if(!cursor.left) break;
+           if(%v.func(cursor.left->%a.ofield,P2_val)){
+              P2_y=cursor.left;
+              cursor.left=P2_y->%v.right;
+              P2_y->%v.right = cursor.obj;
+              cursor.obj=P2_y;
+              if(!cursor.left)break;
+           }
+           P2_right->%v.left = cursor.obj;
+           P2_right=cursor.obj;
+           cursor.obj= cursor.left;
+        }else
+           if (%v.func(P2_val,cursor.%a.ofield)){
+              if (!cursor.right) break;
+              if(%v.func(P2_val,cursor.right->%a.ofield)){
+                 P2_y=cursor.right;
+                 cursor.right=P2_y->%v.left;
+                 P2_y->%v.left = cursor.obj;
+                 cursor.obj=P2_y;
+                 if(!cursor.right) break;
+              }
+              P2_left->%v.right = cursor.obj;
+              P2_left = cursor.obj;
+              cursor.obj = cursor.right;
+           } else
+           {
+             break;
+           }
+     } //for
+     P2_left->%v.right = cursor.left;
+     P2_right->%v.left = cursor.right;
+     cursor.left = P2_N.%v.right;
+     cursor.right=P2_N.%v.left;
+     container.root=cursor.obj;
+  } //not empty
+%}
+}
+
+xform(element, container, cursor)
+{
+   // Step 1:  add pointers to element and container
+
+   add element : struct element *left;
+   add element : struct element *right;
+   add container : struct element *root;
+
+   // Step 2:  remember additional info about annotations
+
+   %a.typeptr     = find_data_type(element, %a.ofield);
+   %a.ofield_type = %a.typeptr->typename;
+   %a.bi          = %a.typeptr->bounds_impact;
+
+   // Step 3:  transform the input data types
+
+   xform(element, container, cursor);
+}
+
+#define COST0   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*2
+#define COST1   LINEAR_TIME_QOPT_COST*RANGE_QOPT_SEL*PTR_FOLLOWING_QOPT_FACTOR*2
+#define COST2   LOG_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+
+optimize(cursor)
+{
+   optimize(cursor);
+   switch(use_layer(te, &(%c.b), cursor, predicate, %a.ofield, %a.bi)) {
+
+   case 0:  // Use this layer if there is nothing else available.
+
+            if (cost>COST0) {
+                cost = COST0;
+                layer = %ln;
+                if (strcmp(%a.ofield, orderby_field) == 0)
+                  retrieval_direction = 1;
+                else
+                  retrieval_direction = 0;
+            }
+            break;
+
+   case 1:  // We can do a range search--use this layer if
+            // there is nothing better.
+
+            if (cost>COST1) {
+                cost = COST1;
+                layer = %ln;
+                if (strcmp(%a.ofield, orderby_field) == 0)
+                  retrieval_direction = 1;
+                else
+                  retrieval_direction = 0;
+            }
+            break;
+            
+   case 2:  // Bingo--this is probably the best layer to use.
+            if (cost > COST2) {
+                cost = COST2;
+                layer = %ln;
+                if (strcmp(%a.ofield, orderby_field) == 0)
+                  retrieval_direction = 1;
+                else
+                  retrieval_direction = 0;
+            }
+            break;
+
+   default: error("use_layer failed");
+   }
+}
+
+
+init_curs(cursor)
+{
+  define_bounds(te, &(%c.b), cursor, predicate, %a.ofield, %a.bi);    
+  %{
+     init_curs(cursor);
+  %}
+}
+
+query(cursor)
+{
+  %{
+     query(cursor)
+  %}
+}
+
+//******************************************************
+//  ddlhints are of the form:
+//
+//  splaytree KEY [container] IS _expr 
+//  
+//  Note: since we don't know the element type, annotations
+//  (bi, typeptr) won't be filled in until xform is called.
+//
+//**********************************************************
+
+ddlhint(argc, argv)
+{
+   limit 1 argument;
+   get_ddlhint_argument(%a.ofield, argv[1]);
+}
+
+
+init_cont(container)
+%{
+   init_cont (container);
+   container.root = 0;
+%}
+
+
+insert(cursor, record)
+{
+  char   func[100];
+  char   type[100];
+  char   left[10];
+  char   right[10];
+
+  sprintf(left,"left%d",%ln);
+  sprintf(right,"right%d",%ln);
+  strcpy(func, %a.ofield_type);
+  strcat(func,"_GT");
+
+  if (strcmp(%a.ofield_type, "str") == 0)
+    sprintf(type, "char*");
+  else
+    sprintf(type, "%s", %a.ofield_type);
+
+  %{ 
+      insert(cursor, record);
+      { struct obj_type *P2_aux; 
+        %v.type P2_val;
+        P2_val = cursor.%a.ofield;
+        P2_aux = cursor.obj;
+        if (!container.root){
+           container.root=cursor.obj;
+           cursor.left=0;
+           cursor.right=0;
+        } else{
+           call splay(cursor , "func"); //Upon return cursor.obj=container.root
+           if(%v.func(cursor.%a.ofield,P2_val)){
+              P2_aux->%v.left = cursor.left;
+              P2_aux->%v.right = cursor.obj;
+              cursor.left = 0;
+              cursor.obj = P2_aux;
+              container.root = P2_aux;
+           }else if(%v.func(P2_val,cursor.%a.ofield)){
+              P2_aux->%v.right = cursor.right;
+              P2_aux->%v.left = cursor.obj;
+              cursor.right = 0;
+              cursor.obj = P2_aux;
+              container.root = P2_aux;
+           }else{//Duplicated node to the left
+             P2_runtime_error("splaytree does not support duplicates");
+           }
+        }
+      }
+  %}
+}
+
+
+end_adv(cursor)
+{
+  char   lim[100];
+  char   func[50];
+  char   fld[50];
+
+     if (%c.b.top)
+     %{ 
+         !cursor.obj
+     %}
+     else {
+        strcpy(lim,%c.b.upper);
+        strcpy(func,%a.ofield_type);
+        if (%c.b.inc_upper) 
+           strcat(func,"_GT");
+        else
+           strcat(func,"_GE");
+        %{
+           (!cursor.obj || %v.func(cursor.%a.ofield, %v.lim))
+        %}
+     }
+}
+
+end_rev(cursor)
+{
+  char   lim[100];
+  char   func[50];
+  char   fld[50];
+
+     if (%c.b.bottom)
+     %{
+         !cursor.obj
+     %}
+     else {
+        strcpy(lim,%c.b.lower);
+        strcpy(func,%a.ofield_type);
+        if (%c.b.inc_lower)
+           strcat(func,"_LT");
+        else
+           strcat(func,"_LE");
+
+        %{
+           (!cursor.obj || %v.func(cursor.%a.ofield, %v.lim))
+        %}
+     }
+}
+
+adv(cursor)
+{
+  char   func[100];
+  char   type[100];
+
+  // define_bounds(&b, cursor, predicate, %a.ofield, %a.bi);
+  strcpy(func, %a.ofield_type);
+  strcat(func,"_GT");
+
+  if (strcmp(%a.ofield_type, "str") == 0)
+    sprintf(type, "char*");
+  else
+    sprintf(type, "%s", %a.ofield_type);
+
+   if (layer != %ln)
+   %{
+      adv(cursor);
+   %} else %{
+      {
+        %v.type P2_val;
+        if (container.root){ //there are nodes in the tree
+           ADV(right, left);
+           if(cursor.obj){
+              P2_val = cursor.%a.ofield;
+              call splay(cursor, "func");
+           }
+        }
+      }
+   %}
+}
+
+rev(cursor)
+{
+  char   func[100];
+  char   type[100];
+
+  // define_bounds(&b, cursor, predicate, %a.ofield, %a.bi);
+  strcpy(func, %a.ofield_type);
+  strcat(func,"_GT");
+
+  if (strcmp(%a.ofield_type, "str") == 0)
+    sprintf(type, "char*");
+  else
+    sprintf(type, "%s", %a.ofield_type);
+
+   if (layer != %ln)
+   %{
+      rev(cursor);
+   %} else %{
+     {
+        %v.type P2_val;
+        if (container.root){ //there are nodes in the tree
+           ADV(left,right);
+           if(cursor.obj){
+              P2_val = cursor.%a.ofield;
+              call splay(cursor, "func");
+           }
+        }
+      }
+   %}
+}
+
+delete(cursor) //delete the root
+{
+  char   func[100];
+  char   type[100];
+  char   left[10];
+  char   right[10];
+
+  sprintf(left,"left%d",%ln);
+  sprintf(right,"right%d",%ln);
+  strcpy(func, %a.ofield_type);
+  strcat(func,"_GT");
+
+  if (strcmp(%a.ofield_type, "str") == 0)
+    sprintf(type, "char*");
+  else
+    sprintf(type, "%s", %a.ofield_type);
+  %{ {
+        struct obj_type *P2_aux,*P2_t;
+        %v.type P2_val;
+        if (container.root){ //there are nodes in the tree
+           P2_t = cursor.obj;      //node to delete is the root node
+           if(!cursor.left){
+              cursor.obj=cursor.right;
+              container.root = cursor.obj;
+           } else if(!cursor.right){
+              cursor.obj=cursor.left;
+              container.root = cursor.obj;
+           }else{ 
+                P2_val = cursor.%a.ofield;
+                container.root = cursor.left;
+                call splay(cursor, "func");
+                cursor.right = P2_t->%v.right;
+            }
+         }
+  %}
+  if (layer == %ln)
+  %{
+         P2_aux = cursor.obj;
+         cursor.obj=P2_t;
+         delete(cursor);
+         cursor.obj = P2_aux;
+         cursor.inbetween = 1;
+  %} else %{
+         cursor.obj = P2_t;
+         delete(cursor);
+  %}
+
+  %{
+      }
+  %}
+}
+
+reset_start(cursor)
+{
+char   lim[100];
+char   func[50];
+char   type[100];
+  // first position semantics
+
+     // we will have to appeal to a macro
+     strcpy(func,%a.ofield_type);
+     if (!%c.b.bottom) {
+        if (%c.b.inc_lower)
+           strcat(func,"_GE");
+        else
+           strcat(func,"_GT");
+        strcpy(lim,%c.b.lower);
+     }
+     else {
+        strcat(func,"_TRUE");
+        strcpy(lim,"0");
+     }
+
+     if(strcmp(%a.ofield_type,"str")==0)
+       sprintf(type,"char*");
+     else
+       sprintf(type,"%s",%a.ofield_type);
+
+    %{if (container.root) 
+      {
+       struct obj_type *pl; 
+       pl = 0;
+       cursor.obj = container.root;
+       while (1) {
+          if (%v.func(cursor.%a.ofield, %v.lim)) {
+             if (cursor.left == 0)
+                break;
+             else {
+                pl = cursor.obj;
+                cursor.obj = cursor.left;
+             }
+          }
+          else {
+             if (cursor.right)
+                cursor.obj = cursor.right;
+             else {
+                cursor.obj = pl;
+                break;
+             }
+          }
+       }
+      if(cursor.obj) //A match found
+      {
+     %}
+      strcpy(func, %a.ofield_type);
+      strcat(func,"_GT");
+     %{ 
+       { %v.type P2_val;
+         P2_val = cursor.%a.ofield;
+         call splay(cursor , "func");
+       }
+      } //if not end_adv
+    } //if not empty
+ %}
+}
+
+reset_end(cursor)
+{
+char   lim[100];
+char   func[50];
+char   type[100];
+  // first position semantics
+
+     // we will have to appeal to a macro
+     strcpy(func,%a.ofield_type);
+     if (!%c.b.bottom) {
+        if (%c.b.inc_lower)
+           strcat(func,"_GE");
+        else
+           strcat(func,"_GT");
+        strcpy(lim,%c.b.lower);
+     }
+     else {
+        strcat(func,"_TRUE");
+        strcpy(lim,"0");
+     }
+
+     if(strcmp(%a.ofield_type,"str")==0)
+       sprintf(type,"char*");
+     else
+       sprintf(type,"%s",%a.ofield_type);
+
+     %{if (container.root)
+       { struct obj_type *pr;  // previous right
+         pr = 0;
+         cursor.obj = container.root;
+         while (1) {
+            if (%v.func(cursor.%a.ofield, %v.lim)) {
+               if (cursor.right == 0)
+                  break;
+               else {
+                  pr = cursor.obj;
+                  cursor.obj = cursor.right;
+               }
+            }
+            else {
+               if (cursor.left)
+                  cursor.obj = cursor.left;
+               else {
+                  cursor.obj = pr;
+                  break;
+               }
+            }
+         }
+      if(cursor.obj) //A match found
+      {
+       %}
+      strcpy(func, %a.ofield_type);
+      strcat(func,"_GT");
+       %{
+       { %v.type P2_val;
+         P2_val = cursor.%a.ofield;
+         call splay(cursor , "func");
+       }
+      }// if a match found
+    }// if non-empty container
+  %}
+}
+
+swap(cursor0, cursor1) 
+%{
+   P2_runtime_error("cannot swap records in splay tree");
+%}
+
+upd(cursor, field, expr)
+{
+  if (strcmp(field, %a.ofield) != 0)
+  %{
+     upd(cursor, field, expr);
+  %}
+  else
+  {
+    if (layer == %ln)
+    %{
+       // This error is run-time rather than compile-time
+       // because we may generate upd code that is never called
+       // (especially when proceduralizing). (JAT)
+       P2_runtime_error("halloween: cannot update key field in splaytree");
+    %}
+    else
+    {
+       char func[100];
+       char type[100];
+
+       strcpy(func,%a.ofield_type);
+       strcat(func,"_GT");
+
+       if (strcmp(%a.ofield_type, "str") == 0)
+         sprintf(type, "char*");
+       else
+         sprintf(type, "%s", %a.ofield_type);
+
+       %{
+          {
+            %v.type P2_val;
+
+            P2_val = cursor.%a.ofield;
+
+            call splay(cursor,"func"); //Need to be unlinked an relinked
+            upd(cursor, field, expr);
+          }
+       %}
+    }
+  }
+}
+/* old version
+pos( cursor, expr )
+{ char   func[100];
+  char   type[100];
+
+  char funcx[100];
+  ENTRY *e = symtab_lookup(symtab[SUE], obj_type); //orig_type
+  strcpy(funcx, find_data_type(e->ident, %a.ofield)->typename);
+  strcat(funcx,"_CPY");
+
+  // define_bounds(&b, cursor, predicate, %a.ofield, %a.bi);
+  strcpy(func, %a.ofield_type);
+  strcat(func,"_GT");
+
+  if (strcmp(%a.ofield_type, "str") == 0)
+    sprintf(type, "char*");
+  else
+    sprintf(type, "%s", %a.ofield_type);
+
+   if (layer != %ln)
+   %{
+      pos(cursor,expr);
+   %} else %{
+     {
+        %v.type val;
+        if (container.root){ //there are nodes in the tree
+           %v.funcx(val, expr);
+           call splay(cursor, "func");
+        }
+      }
+   %}
+}
+*/
+
+pos( cursor, expr )
+{ char   func[100];
+  char   type[100];
+
+  strcpy(func, %a.ofield_type);
+  strcat(func,"_GT");
+
+  if (strcmp(%a.ofield_type, "str") == 0)
+    sprintf(type, "char*");
+  else
+    sprintf(type, "%s", %a.ofield_type);
+
+   if (layer != %ln)
+   %{
+      pos(cursor,expr);
+   %} else %{
+     {
+        %v.type P2_val;
+        if (container.root){ //there are nodes in the tree
+           cursor.obj = expr;
+           P2_val = cursor.%a.ofield;
+           call splay(cursor, "func");
+        }
+      }
+   %}
+}

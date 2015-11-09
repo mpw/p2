@@ -1,0 +1,53 @@
+/* $Id: xact22.p2,v 45.0 1997/09/19 05:45:39 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Minimal schema program. */
+
+#include <stdio.h>    /* printf() */
+#include "P2_paces.h"
+
+#define N 10
+
+typedef struct {
+  int i;
+} E;
+
+typex
+{
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+}
+
+schema {
+  container <E> k;
+}
+stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, N);
+} s;
+
+cursor <s.k> c;
+
+int main()
+{
+  E e;
+  open_schema(s);
+  init_cont(s.k);
+  init_curs(c);
+
+  /* Transaction 1. */
+  begin_xact(s);
+  for (e.i = 0; e.i < N; e.i++)
+    insert(c, e);
+  foreach(c)
+    printf("%d\n", c.i);
+  abort_xact(s);
+
+  /* Transaction 2. */
+  begin_xact(s);
+  foreach(c)
+    printf("%d\n", c.i);
+  commit_xact(s);
+
+  close_cont(s.k);
+  close_schema(s);
+  exit(0);
+}

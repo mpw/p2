@@ -1,0 +1,15 @@
+/* $Id: binop-bug.p2,v 45.0 1997/09/19 05:42:50 jthomas Exp $ */
+
+/* Binary operator bug regression test. */
+
+/* This program exposes a now-fixed bug in P2.
+   I have retained this program as a regression test. (JAT) */
+
+/* The bug was that pointers to void did not typematch other types of pointers,
+   such as pointers to char. */
+
+main()
+{
+  int *foo = 0;
+  return(foo != (void *) 0);
+}

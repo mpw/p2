@@ -1,0 +1,134 @@
+/* $Id: mlist1.p2,v 45.0 1997/09/19 05:43:44 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} emp_type;
+
+emp_type rawdata[] = {
+   // 8 records
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10010,42,"Biology","Akin, Monica" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10030,23,"Biology","Anderson, Gwyn" },
+   { 10040,53,"Biology","Anderson, Mary" },
+   { 10050,42,"Biology","Anderson, Suzanne" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10070,22,"Biology","Andrews, Kay" }
+};
+
+#define ALL_CURSORS 1
+
+typex {
+   t = conceptual[mlist[P2_DELFLAG_LAYER[array1[transient]],
+         conceptual[P2_DELFLAG_LAYER[array2[transient]]]]];
+}
+
+container <emp_type> stored_as t with {
+  array1 size is 30;
+  array2 size is 30;
+#if 1
+  mlist on age;
+  mlist on dept_name;
+#endif
+} emp_cont;
+
+cursor <emp_cont>
+  where "$.age > 40"
+  orderby P2_ASCENDING empno
+old_employees;
+
+#if ALL_CURSORS
+cursor <emp_cont>
+  orderby P2_ASCENDING empno
+all_employees;
+
+cursor <emp_cont>
+  where "$.empno > 10050"
+  orderby P2_ASCENDING empno
+recent_employees;
+
+cursor <emp_cont>
+  where "$.age == 42"
+  orderby P2_ASCENDING empno
+fourty_two_emps;
+        
+#endif
+
+void main(void) 
+{
+  int                  loop;
+  int                  i;
+  emp_type             *er;
+
+  open_cont( emp_cont );
+  init_curs( old_employees );
+#if ALL_CURSORS
+  init_curs( all_employees );
+  init_curs( recent_employees );
+  init_curs( fourty_two_emps );
+#endif
+
+  for (i=0, er = rawdata; i<8; i++, er++) 
+  {
+#if ALL_CURSORS
+    insert( all_employees, *er );
+#else
+    insert( old_employees, *er );
+#endif
+  }
+
+#if ALL_CURSORS
+  printf("\nall employees are:\n"); 
+  P2_ITERATOR( all_employees )
+  {
+    printf( "%d  %d %s %s\n", all_employees.empno, 
+           all_employees.age, all_employees.name, all_employees.dept_name);
+  }
+ 
+  printf("\n42 emps are:\n");
+  P2_ITERATOR( fourty_two_emps )
+  {
+    printf("%d  %d  %s\n", fourty_two_emps.empno, 
+           fourty_two_emps.age, fourty_two_emps.name); 
+  }
+#endif
+   
+  printf( "\nold employees are:\n"); 
+  P2_ITERATOR( old_employees )
+  {
+    printf("%d %d %s\n", old_employees.empno, old_employees.age, 
+             old_employees.name); 
+    delete( old_employees );
+  }
+
+  printf( "\nold employees are:\n"); 
+  P2_ITERATOR( old_employees )
+  {
+    printf("%d  %s\n", old_employees.empno, old_employees.name); 
+  }
+
+#if ALL_CURSORS
+  printf( "\nremaining employees are:\n"); 
+  P2_ITERATOR( all_employees)
+  {
+    printf( "%d  %s\n", all_employees.empno, all_employees.name); 
+  }
+
+  printf( "\nrecent employees are:\n");
+  P2_ITERATOR( recent_employees )
+  {
+    printf("%d %s\n", recent_employees.empno, recent_employees.name); 
+  }
+  close_cont( emp_cont );
+#endif
+
+  exit( 0 );
+}

@@ -1,0 +1,36 @@
+/* $Id: generic12.p2,v 1.1 1997/09/24 14:54:08 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* SCHEMA, indirect reference, indirect_only */
+
+/* Make sure we can have a schema member container that IS an indirect
+   reference, and does not have type expression that has indirect_only
+   equal to TRUE. */
+
+#include "P2_paces.h" /* P2_PACES_ELEMENT, PACES_SCHEMA_ANNOTE */
+
+typex {
+  t = P2_PACES_TYPEX;
+}
+
+schema {
+#if 0
+  /* Works. */
+  container <P2_PACES_ELEMENT> k;
+  container <P2_PACES_ELEMENT> *pk;
+#else
+  /* Works. */
+  container <P2_PACES_ELEMENT> k, *pk;
+#endif
+} stored_as t with {
+  P2_PACES_SCHEMA_ANNOTE(k, i, 10);
+  P2_PACES_SCHEMA_ANNOTE(pk, i, 10);
+} s;
+
+#define P2_PACES_CONTAINER *s.pk
+
+#define P2_PACES_INITIALIZATION s.pk = &s.k;
+
+cursor <*s.pk> c;
+
+#include "generic04.p2h"

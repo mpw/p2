@@ -1,0 +1,20 @@
+/* $Id: pb-test08.p2,v 45.0 1997/09/19 05:44:00 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* Enunerations. */
+
+enum e {
+  A = 0,
+  B = A+1,
+  C,
+  D,
+  E,
+  F = 100
+};
+
+int main()
+{
+  enum e foo;
+  foo = A;
+  return foo;
+}

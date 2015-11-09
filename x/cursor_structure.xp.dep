@@ -1,0 +1,1 @@
+cursor_structure.o: cursor_structure.xp cursor_structure.h structure.xph

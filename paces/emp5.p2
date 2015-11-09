@@ -1,0 +1,134 @@
+/* $Id: emp5.p2,v 45.0 1997/09/19 05:43:18 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+#if 0
+#include "curr_type.h"
+#endif
+
+typedef struct {
+	int	empno;
+	int	age;
+	char	dept_name[20];
+	char	name[22];
+} emp_type;
+
+typex {
+	t = conceptual[P2_DELFLAG_LAYER[array[transient]]];
+}
+
+container <emp_type> stored_as t with {
+	array size is 600; /* bintree key is empno; */
+} emp_class;
+
+#define CDEF3(N,P,O) cursor <emp_class> where P orderby ascending O N
+#define CDEF2(N,P) cursor <emp_class> where P N
+
+cursor <emp_class> all_emp;
+
+void readinfile(), init_all_curs();
+
+CDEF3(curs_0001,"$.age == 35",empno);
+CDEF3(curs_0002,"$.empno < 1000",age);
+CDEF2(curs_0003,"($.empno==100||$.empno==102)");
+CDEF3(curs_0004,"$.age == 35",name);
+CDEF3(curs_0005,"$.empno < 104",empno);
+CDEF2(curs_0006,"$.empno < 104");
+CDEF3(curs_0007,"$.age == 35",empno);
+
+
+void readinfile()
+{
+	FILE     *fp;
+	emp_type _t1;
+	char	 s[1000];
+
+	if(!(fp=fopen("emp.data","r"))) {
+	  puts("Error opening file");
+	  exit(1);
+	}
+	if (fscanf( fp, "%s %s %s %s %s", &s, &s, &s, &s, &s ) != 5) {
+	  if (!feof(fp)) {
+	    fprintf( stderr, "Illegal employee file header format.\n" );
+	    exit( 1 );
+	  }
+	}
+	while( fscanf(fp,"%d,%d,\"%[^\"]\",\"%[^\"]\"",&(_t1.empno),&(_t1.age),_t1.dept_name,_t1.name) == 4) {
+	  insert(all_emp, _t1);
+	  }
+
+	fclose(fp);
+	}
+
+#define eqstr(A,B) (!(strcmp(A,B)))
+/***#define upd1(gc,fld,val) upd(gc,fld,val) ****/
+
+void init_all_curs()
+{
+	init_curs(curs_0001);
+	init_curs(curs_0002);
+	init_curs(curs_0003);
+	init_curs(curs_0004);
+	init_curs(curs_0005);
+	init_curs(curs_0006);
+	init_curs(curs_0007);
+	init_curs(all_emp);
+	}
+
+main()
+{
+	open_cont( emp_class );
+	init_all_curs();
+	readinfile();
+
+	puts("SQL: #");
+	puts("SQL: # utility paces script#1");
+	puts("SQL: #");
+	puts("SQL: # retrieval test");
+	puts("SQL: select * from employees where age = 35 order by empno");
+	foreach(curs_0001)
+	  { printf("%d,%d,\"%s\",\"%s\"\n",curs_0001.empno,curs_0001.age,curs_0001.dept_name,curs_0001.name);}
+
+	puts("SQL: # insertion test");
+	puts("SQL: insert into employees : 100, 8, \"Biology\", \"Surrogate, John\"");
+	{ emp_type _t = { 100, 8, "Biology", "Surrogate, John" }; insert(all_emp, _t); }
+
+	puts("SQL: insert into employees : 102, 9, \"Biology\", \"Surrogate, Mary\"");
+	{ emp_type _t = { 102, 9, "Biology", "Surrogate, Mary" }; insert(all_emp, _t); }
+
+	puts("SQL: select * from employees where empno < 1000 order by age");
+	foreach(curs_0002)
+	  { printf("%d,%d,\"%s\",\"%s\"\n",curs_0002.empno,curs_0002.age,curs_0002.dept_name,curs_0002.name);}
+
+	puts("SQL: # update test");
+	puts("SQL: update employees set age = 35 where empno = 100 or empno = 102");
+	foreach(curs_0003)
+	  { if (curs_0003.age != 35) { upd(curs_0003,age,35);} };
+
+	puts("SQL: select name, age from employees where age = 35 order by name");
+	foreach(curs_0004)
+	  { printf("\"%s\",%d\n",curs_0004.name,curs_0004.age);}
+
+	puts("SQL: # deletion test");
+	puts("SQL: select * from employees where empno < 104 order by empno");
+	foreach(curs_0005)
+	  { printf("%d,%d,\"%s\",\"%s\"\n",curs_0005.empno,curs_0005.age,curs_0005.dept_name,curs_0005.name);}
+
+	puts("SQL: delete employees where empno < 104");
+	foreach(curs_0006)
+	  { delete(curs_0006); }
+
+	puts("SQL: select * from employees where age = 35 order by empno");
+	foreach(curs_0007)
+	  { printf("%d,%d,\"%s\",\"%s\"\n",curs_0007.empno,curs_0007.age,curs_0007.dept_name,curs_0007.name);}
+
+	puts("SQL: commit");
+	puts("SQL: #");
+	puts("SQL: exit");
+
+
+	close_cont( emp_class );
+	exit( 0 );
+}

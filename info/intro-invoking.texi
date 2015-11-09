@@ -1,0 +1,430 @@
+@c $Id: intro-invoking.texi,v 45.0 1997/09/19 05:42:04 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node Invoking P2, P2 Bibliography, P2 Layers, Top
+@chapter Invoking P2
+@cindex P2 execution
+@cindex execution
+@cindex running
+@cindex invocation of P2
+
+@menu
+* Writing P2 programs::    The program @file{sample.p2} is dissected into parts
+* Executing P2::           The compilation and execution of @file{sample.p2}
+* P2 options::             Options for the P2 system
+@end menu
+
+
+@node Writing P2 programs, Executing P2, Invoking P2, Invoking P2
+@section Writing P2 programs
+@cindex P2, writing
+
+Writing a P2 program is like writing a C program, but there are
+differences. We will look at  @file{sample.p2}  bit by bit to analyze
+what's going on and why are things done that way. 
+The program reads in employee data into a container and displays them if
+the meet some propery.
+The full program is in
+@ref{Example P2 program}.
+
+
+@menu
+* p2.sample - Declaring Types::  
+* p2.sample - Containers::      
+* p2.sample - Cursor Declarations::  
+* p2.sample - Functions and Data::  
+* p2.sample - Main Program::    
+@end menu
+
+@node p2.sample - Declaring Types, p2.sample - Containers, Writing P2 programs, Writing P2 programs
+@subsection p2.sample -  Declaring Types
+
+The first part of the file is where the types are declared.
+Here we declare an employee structure, @code{E}, which contains an
+employee number, age, temperature, department name, and finally, the
+employee name.
+
+
+@example
+@group
+#include <stdio.h>
+
+// Element.
+
+typedef struct @{
+  int   empno;
+  int   age;
+  float temp;
+  char  *dept_name;
+  char  name[20];
+@} E;
+@end group
+@end example
+
+@node p2.sample - Containers, p2.sample - Cursor Declarations, p2.sample - Declaring Types, Writing P2 programs
+@subsection p2.sample - Containers
+
+This portion of the code declares the containers and the types they are
+based on. Container @code{k} orders the elements by age and allocates
+space for only 10 elements: attempts to insert an 11th element will
+result in a overflow warning. The other container, @code{pk}, allocates
+1000 bytes in the file @file{/tmp/P2_sample-data} for persistent storage.
+This container orders elements both by age and by name.
+
+@example
+@group
+// Type expressions.
+
+typex @{
+  p = conceptual[odlist1[odlist2[malloc[mmap_persistent]]]];
+  t = conceptual[odlist[delflag[array[transient]]]];
+@}
+
+// Containers.
+
+container <E> stored_as t with @{
+  odlist key is age;
+  array size is 10;
+@} k;
+
+container <E> stored_as p with @{
+  odlist1 key is age;
+  odlist2 key is name;
+  mmap_persistent file is "/tmp/P2_sample-data" with size 1000;
+@} pk;
+@end group
+@end example
+
+@node p2.sample - Cursor Declarations, p2.sample - Functions and Data, p2.sample - Containers, Writing P2 programs
+@subsection p2.sample - Cursor Declarations
+
+This example shows that cursor @code{c} and pointer to cursor @code{pc}
+are declared over the container @code{k}. Both cursors will select only
+elements where the temperature field is greater or equal to 98.6. Both
+cursors will also retrieve elements in alphabetical order over the
+element's name field.
+
+@example
+@group
+// Cursors.
+
+cursor <k>
+  where "$.temp >= 98.6"  // Predicate.
+  orderby ascending name  // Orderby clause.
+c,                        // c is a cursor variable.
+*pc;                      // pc is a pointer to cursor
+@end group
+@end example
+
+In the second cursor example below, the cursor structure is used as part of a
+@code{typedef}. The third example below shows that cursors can match exactly
+those elements with the department name "Computer Sciences".
+The last cursor portion is the declaration of generic cursor, and its
+use in typedefs. Generic cursors have neither an ordering nor a
+predicate. @xref{Generic Containers/Cursors}.
+
+@example
+@group
+typedef cursor <k>
+  where "$.temp >= 98.6"
+  orderby ascending name
+C;
+C v;
+
+cursor <k>
+  where "$.dept_name == `Computer Sciences'"
+  orderby descending empno
+cs;
+
+// Generic cursors.
+
+generic_cursor <E> gc;
+typedef generic_cursor <E> GC;
+GC gv;
+@end group
+@end example
+
+
+@node p2.sample - Functions and Data, p2.sample - Main Program, p2.sample - Cursor Declarations, Writing P2 programs
+@subsection p2.sample - Functions and Data
+
+The macro @code{F} iterates over a cursor @code{X}, which will
+point to successive elements in the container. The next function
+@code{f} uses specific cursors, whereas the last function
+@code{gf} uses generic cursors.
+
+@example
+@group
+// Function body.
+
+#define F( X ) \
+@{ \
+  foreach( X ) @{ \
+    printf( "%d, %d, %.1f, \"%s\", \"%s\"\n", \
+      X.empno, X.age, X.temp, X.dept_name, X.name ); \
+  @} \
+@}
+
+// Function with a non-generic formal parameter.
+
+int f( C x )
+@{
+  F( x )
+@}
+
+// Function with a generic formal parameter.
+
+int gf( GC gx )
+@{
+  F( gx )
+@}
+@end group
+@end example
+
+The employee data used in the program.
+
+@example
+@group
+// Employee data.
+
+E rawdata[] = @{
+   @{ 10000, 60, 99.5,           "English",    "Akers, Mark" @},
+   @{ 10070, 22, 99.4,           "Physics",   "Andrews, Kay" @},
+   @{ 10020, 18, 99.0,           "History",     "Aaron, Bob" @},
+   @{ 10040, 42, 98.5, "Computer Sciences", "Singhal, Vivek" @},
+   @{ 10010, 40, 98.7, "Computer Sciences",    "Batory, Don" @},
+   @{ 10040, 53, 96.3,        "Accounting",  "Akerson, Mary" @},
+   @{ 10060, 65, 98.8,         "Nutrition", "Zacks, William" @},
+   @{ 10050, 23, 96.1, "Computer Sciences",   "Thomas, Jeff" @},
+   @{ 10080, 31, 98.7,     "Culinary Arts",   "Geraci, Bart" @},
+   @{ -1 @}
+@};
+@end group
+@end example
+
+
+
+@node p2.sample - Main Program,  , p2.sample - Functions and Data, Writing P2 programs
+@subsection p2.sample - Main Program
+
+First, the container @code{k} is opened, two cursors are initialized, and
+the elements in the data are inserted into the container. And any cursor, qualified or not, can be used for the
+@code{insert} operation.
+
+
+@example
+@group
+// Main.
+
+main()
+@{
+  int i;
+  E   *e;
+
+  open( k );
+  init_curs( c );
+  init_curs( cs );
+
+  for (i=0, e=rawdata; e->empno != -1; i++, e++) @{
+    insert( c, *e );
+  @}
+@end group
+@end example
+
+
+These are the examples of legal and illegal assignments. Recall that @code{f(c)}
+will print all those elements that cursor @code{c} can point to, namely, 
+elements where the temp >= 98.6. In addition, the elements will be
+printed in alphabetical order, based on name. 
+
+@example
+@group
+  // You may pass c as a actual to formal c
+  // and assign c to temporary cursor variable v:
+
+  printf( "f( c ):\n" );
+  f( c ); // Legal.
+  v = c;  // Legal.
+
+  // You may not pass cs as an actual to formal c,
+  // nor assign cs to temporary cursor variable v:
+
+#if 0
+  printf( "\n" );
+  printf( "f( cs ):\n" );
+
+  f( cs ); // Not legal.
+  v = cs;  // Not legal.
+#endif
+@end group
+@end example
+
+
+These are more example of legal assignments. The code @code{gf( (GC) &c );}
+demonstrates that a generic cursor can take on any cursor and therefore
+procedures such as @code{gf()} can be written to apply to any cursor.
+
+@example 
+@group
+  // You may pass c and cs as actuals to generic formal gx,
+  // and assign c and cs to generic temporary cursor variable gv:
+
+  printf( "\n" );
+  printf( "gf( c ):\n" );
+
+  gf( (GC) &c );  // Legal.
+
+  printf( "\n" );
+  printf( "gf( cs ):\n" );
+
+  gf( (GC) &cs ); // Legal.
+
+  gv = (GC) &c;   // Legal.
+  gv = (GC) &cs;  // Legal.
+
+  close( k );
+  exit( 0 );
+@}
+@end group
+@end example
+
+
+@node Executing P2, P2 options, Writing P2 programs, Invoking P2
+@section Executing P2
+
+Just type @code{P2 @file{foo.p2}} as in the example below. 
+
+@example
+@group
+% P2 sample.p2
+liner ... done
+ddl ... done
+pb ... done
+cat ... done
+deliner ... done
+compile ... done
+link ... done
+clean-up ... done
+% sample 
+
+f( c ):
+10020, 18, 99.0, "History", "Aaron, Bob"
+10000, 60, 99.5, "English", "Akers, Mark"
+10070, 22, 99.4, "Physics", "Andrews, Kay"
+10010, 40, 98.7, "Computer Sciences", "Batory, Don"
+10060, 65, 98.8, "Nutrition", "Zacks, William"
+10080, 31, 98.7, "Culinary Arts", "Geraci, Bart" @},
+
+gf( c ):
+10020, 18, 99.0, "History", "Aaron, Bob"
+10000, 60, 99.5, "English", "Akers, Mark"
+10070, 22, 99.4, "Physics", "Andrews, Kay"
+10010, 40, 98.7, "Computer Sciences", "Batory, Don"
+10060, 65, 98.8, "Nutrition", "Zacks, William"
+10080, 31, 98.7, "Culinary Arts", "Geraci, Bart" 
+
+gf( cs ):
+10050, 23, 96.1, "Computer Sciences", "Thomas, Jeff"
+10040, 42, 98.5, "Computer Sciences", "Singhal, Vivek"
+10010, 40, 98.7, "Computer Sciences", "Batory, Don"
+@end group
+@end example
+
+
+@node P2 options,  , Executing P2, Invoking P2
+@section P2 options
+@cindex options
+
+@vindex P2_FLAGS
+These are the options that can be set for running P2. 
+
+@example
+@code{P2} [ @var{P2_options} ] @var{filename}@code{.p2}
+@end example
+
+@defvr {P2 Option} @code{@w{-c}}
+Suppress loading.
+@end defvr
+
+@defvr {P2 Option} @code{@w{--cc = @var{compiler name}}}
+Set the CC compiler to @var{compiler name}.
+@end defvr
+
+@defvr {P2 Option} @code{@w{--cppflags = @var{list}}}
+Set the C preprocessor flags to @var{list}.
+@end defvr
+
+@defvr {P2 Option}  @code{-I}
+@defvrx {P2 Option} @code{-D}
+@defvrx {P2 Option} @code{-U}
+Appended to the C preprocessor flags.
+@end defvr
+
+@defvr {P2 Option} @code{@w{--cflags = @var{list}}}
+Set the C compiler flags to @var{list}.
+@end defvr
+
+@defvr {P2 Option}  @code{-g}
+@defvrx {P2 Option} @code{-O}
+Appended to the C compiler flags.
+@end defvr
+
+@defvr {P2 Option}  @code{@w{--lflags = @var{list}}}
+Set the linker flags to @var{list}.
+@end defvr
+
+@defvr {P2 Option}  @code{-l}
+@defvrx {P2 Option} @code{-L}
+Appended to the linker flags.
+@end defvr
+
+@defvr {P2 Option} @code{@w{--datadir = @var{directory}}}
+Location of host independent files (@file{.h} and @file{attr.txt}).
+@end defvr
+
+@defvr {P2 Option} @code{@w{--libdir = @var{directory}}}
+Location of host dependent files (@file{libp2.a}, @file{ddl}, and @file{pb}).
+@end defvr
+
+@defvr {P2 Option} @code{@w{--[no-]drc}}
+Do [not] perform design rule checking. 
+@end defvr
+
+@defvr {P2 Option} @code{@w{--[no-]indent}}
+Do [not] indent the @file{foo.c} generated code.
+@end defvr
+
+@defvr {P2 Option} @code{@w{--[no-]keep}}
+Do [not] keep intermediate files.
+Not keeping the intermediate files will save disk storage space,
+and keep your directory from filling up with junk.
+@end defvr
+
+@defvr {P2 Option}  @code{@w{--[no-]lines}}         
+Do [not] keep original line numbers.
+If @code{--lines} is chosen,
+then errors caught by the C compiler will refer to the original
+@file{foo.p2} line numbers.
+If @code{--no-lines} is chosen, the errors caught by the C compiler
+will refer to the @file{foo.c} generated code.
+@end defvr
+
+@defvr {P2 Option} @code{@w{--[no-]verbose}}
+Do [not] print stages of processing.
+If @code{--no-verbose} is selected, 
+then the only thing the system will display is: 
+@example
+% P2 foo
+% 
+@end example
+@end defvr
+
+@defvr {P2 Option} @code{-h}
+@defvrx {P2 Option} @code{--help}
+Print the list of options and exit.
+@end defvr 
+
+@defvr {P2 Option} @code{-v}
+@defvrx {P2 Option} @code{--version}
+Print the version number and exit.
+@end defvr 

@@ -1,0 +1,80 @@
+/* $Id: xact19.p2,v 45.0 1997/09/19 05:45:38 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* ABORT one BIG transaction. */
+/* Analogous to paces/xact18.p2 (COMMIT one BIG transaction). */
+/* Analogous to paces/xact21.p2 (ABORT lots of LITTLE transactions). */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include <assert.h>     /* assert() */
+#include <stdio.h>      /* printf() */
+#include "P2_paces.h"
+
+/* Number of operations in the transaction. */
+#define N 10000
+
+/*****************************************************************************/
+/*                  Globals.                                                 */
+/*****************************************************************************/
+
+typex {
+#if 0
+  /* Debugging. */
+  t = conceptual[P2_LOG_LAYER[xact[lock[process[avail[array[transient]]]]]]];
+#else
+  /* Normal. */
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+#endif
+}
+
+typedef struct {
+  int i;
+} E;
+
+schema {
+  container <E> k;
+} stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(k, i, N);
+} s;
+
+cursor <s.k> c;
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int main()
+{
+  E e;
+  
+  /* Initialize. */
+  open_schema(s);
+  open_cont(s.k);
+  init_curs(c);
+
+  /* Begin transaction. */
+  begin_xact(s);
+  /* Transaction. */
+  for (e.i = 0; e.i < N; e.i++)
+    insert(c, e);
+
+#if 1
+  /* Abort transaction. */
+  abort_xact(s);
+
+  /* Finalize. */
+  close_cont(s.k);
+  close_schema(s);
+#endif
+
+#if 0
+  /* Print log anchor. */
+  P2_print_log_anchor();
+#endif
+
+  /* Exit. */
+  exit(0);
+}

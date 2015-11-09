@@ -1,0 +1,71 @@
+// $Id: lock.xp,v 45.0 1997/09/19 05:46:31 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Lock manager.
+
+layer ds lock [ ds ] stable no annotation retrieval_always
+
+xform(element, container, cursor)
+{
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  optimize(cursor);
+}
+
+init_schema(schema)
+%{
+   init_schema(schema);
+   P2_init_lock_manager();
+%}
+
+close_schema(schema)
+%{
+   P2_delete_lock_manager();
+   close_schema(schema);
+%}
+
+abort_xact(schema)
+%{
+  abort_xact(schema);
+#if 1
+  // Do this here or somewhere else, e.g. lock protocol layer???
+  P2_unlock_class(P2_LOCK_LONG);
+#endif
+%}
+
+begin_xact(schema)
+%{
+  // Insert record into xact_cb_cont???
+  // Call P2_log_transaction???
+  begin_xact(schema);
+%}
+
+commit_xact(schema)
+%{
+  commit_xact(schema);
+#if 1
+  // Do this here or somewhere else, e.g. lock protocol layer???
+  P2_unlock_class(P2_LOCK_LONG);
+#endif
+%}
+
+checkpoint_schema(schema)
+%{
+  // Call down.
+  checkpoint_schema(schema);
+%}
+
+def_cursor_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}
+
+def_container_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}

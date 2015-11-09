@@ -1,0 +1,157 @@
+/* $Id: sample.p2,v 45.0 1997/09/19 05:44:10 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+// This example program was written by BJG.  It is used as an example
+// in the manual, so don't change this file without also changing the
+// manual, particularly info/intro-invoking.texi, info/language.texi,
+// and info/p2-intro.top.texinfo (JAT)
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+// Element.
+
+typedef struct {
+  int   empno;
+  int   age;
+  float temp;
+  char  *dept_name;
+  char  name[20];
+} E;
+
+// Type expressions.
+
+typex {
+  p = conceptual[odlist1[odlist2[malloc[mmap_persistent]]]];
+  t = conceptual[odlist[delflag[array[transient]]]];
+}
+
+// Containers.
+
+container <E> stored_as t with {
+  odlist key is age;
+  array size is 10;
+} k;
+
+container <E> stored_as p with {
+  odlist1 key is age;
+  odlist2 key is name;
+  mmap_persistent file is "/tmp/P2_sample-data" with size 1000;
+} pk;
+
+// Cursors.
+
+cursor <k>
+  where "$.temp >= 98.6"  // Predicate.
+  orderby ascending name  // Orderby clause.
+c,                        // c is a cursor variable.
+*pc;                      // pc is a pointer to cursor
+
+typedef cursor <k>
+  where "$.temp >= 98.6"
+  orderby ascending name
+C;
+C v;
+
+cursor <k>
+  where "$.dept_name == 'Computer Sciences'"
+  orderby descending empno
+cs;
+
+// Generic cursors.
+
+generic_cursor <E> gc;
+typedef generic_cursor <E> GC;
+GC gv;
+
+// Function body.
+
+#define F( X ) \
+{ \
+  foreach( X ) { \
+    printf( "%d, %d, %.1f, \"%s\", \"%s\"\n", \
+      X.empno, X.age, X.temp, X.dept_name, X.name ); \
+  } \
+}
+
+// Function with a non-generic formal parameter.
+
+int f( C x )
+{
+  F( x )
+}
+
+// Function with a generic formal parameter.
+
+int gf( GC gx )
+{
+  F( gx )
+}
+
+// Employee data.
+
+E rawdata[] = {
+   { 10000, 60, 99.5,           "English",    "Akers, Mark" },
+   { 10070, 22, 99.4,           "Physics",   "Andrews, Kay" },
+   { 10020, 18, 99.0,           "History",     "Aaron, Bob" },
+   { 10040, 42, 98.5, "Computer Sciences", "Singhal, Vivek" },
+   { 10010, 40, 98.7, "Computer Sciences",    "Batory, Don" },
+   { 10040, 53, 96.3,        "Accounting",  "Akerson, Mary" },
+   { 10060, 65, 98.8,         "Nutrition", "Zacks, William" },
+   { 10050, 23, 96.1, "Computer Sciences",   "Thomas, Jeff" },
+   { 10080, 31, 98.7,     "Culinary Arts",   "Geraci, Bart" },
+   { -1 }
+};
+
+// Main.
+
+main()
+{
+  int i;
+  E   *e;
+
+  open_cont( k );
+  init_curs( c );
+  init_curs( cs );
+
+  for (i=0, e=rawdata; e->empno != -1; i++, e++) {
+    insert( c, *e );
+  }
+
+  // You may pass c as a actual to formal c
+  // and assign c to temporary cursor variable v:
+
+  printf( "f( c ):\n" );
+  f( c ); // Legal.
+  v = c;  // Legal.
+
+  // You may not pass cs as an actual to formal c,
+  // nor assign cs to temporary cursor variable v:
+
+#if 0
+  printf( "\n" );
+  printf( "f( cs ):\n" );
+
+  f( cs ); // Not legal.
+  v = cs;  // Not legal.
+#endif
+
+  // You may pass c and cs as actuals to generic formal gx,
+  // and assign c and cs to generic temporary cursor variable gv:
+
+  printf( "\n" );
+  printf( "gf( c ):\n" );
+
+  gf( (GC) &c );  // Legal.
+
+  printf( "\n" );
+  printf( "gf( cs ):\n" );
+
+  gf( (GC) &cs ); // Legal.
+
+  gv = (GC) &c;   // Legal.
+  gv = (GC) &cs;  // Legal.
+
+  close_cont( k );
+  exit( 0 );
+}

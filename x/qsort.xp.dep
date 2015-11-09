@@ -1,0 +1,1 @@
+qsort.o: qsort.xp qsort.h ../common/qopt.h adhoc.xph

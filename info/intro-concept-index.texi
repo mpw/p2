@@ -1,0 +1,6 @@
+@c $Id: intro-concept-index.texi,v 45.0 1997/09/19 05:42:03 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node       Concept Index, Functions and Variables Index, P2 Bibliography, Top
+@unnumbered Concept Index
+@printindex cp

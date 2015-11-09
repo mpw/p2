@@ -1,0 +1,59 @@
+/* $Id: lock15.p2,v 45.0 1997/09/19 05:43:41 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Exhibit bug: lock headers not deleted. */
+
+/* Print debugging output. */
+#if 1
+#if !defined(DEBUG)
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+#define N 1000
+#define LOCK_MODE P2_LOCK_X
+#define LOCK_CLASS P2_LOCK_SHORT
+#define LOCK_TIMEOUT 10
+
+int name;
+int reply;
+
+main()
+{
+  /* Initialize process. */
+  P2_init_process();
+  /* Initialize lock manager. */
+  P2_init_lock_manager();
+
+  for (name = 0; name < N; name++)
+  {
+    reply = P2_lock(name, LOCK_MODE, LOCK_CLASS, LOCK_TIMEOUT);
+    if (reply != P2_LOCK_OK)
+    {
+#if defined(DEBUG) || defined(TRACE)
+      printf("P2_lock() failed: %s\n", P2_lock_reply_string(reply));
+#else
+      printf("P2_lock() failed\n");
+#endif /* TRACE */
+      return(1);
+    }
+    reply = P2_unlock(name);
+    if (reply != P2_LOCK_OK)
+    {
+#if defined(DEBUG) || defined(TRACE)
+      printf("P2_unlock() failed: %s\n", P2_lock_reply_string(reply));
+#else
+      printf("P2_unlock() failed\n");
+#endif /* TRACE */
+      return(1);
+    }
+  }
+
+  /* Delete lock manager. */
+  P2_delete_lock_manager();
+  /* Delete process. */
+  P2_delete_process();
+
+  printf("Success!\n");
+  return(0);
+}

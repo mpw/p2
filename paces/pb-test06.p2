@@ -1,0 +1,15 @@
+/* $Id: pb-test06.p2,v 45.0 1997/09/19 05:44:00 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* This file tests pb's handling of formal parameters. */
+
+int foo (int a, int b)
+{
+  return(a && b);
+}
+
+int main (void)
+{
+  int result = foo(0, 1);
+  return(result);
+}

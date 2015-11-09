@@ -1,0 +1,33 @@
+// $Id: null.xp,v 45.0 1997/09/19 05:46:40 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Null (no op) layer.
+// Useful as a placeholder while debugging.
+
+layer ds null[ ds ] stable no annotation retrieval_never
+
+ddlhint(argc, argv)
+{
+}
+
+xform(element, container, cursor)
+{
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  optimize(cursor);
+}
+
+def_cursor_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}
+
+def_container_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}

@@ -1,0 +1,6 @@
+@c $Id: adv-concept-index.texi,v 45.0 1997/09/19 05:42:00 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node       Concept Index, Functions and Variables Index, Layer Composition Checks, Top
+@unnumbered Concept Index
+@printindex cp

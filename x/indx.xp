@@ -1,0 +1,247 @@
+// $Id: indx.xp,v 45.0 1997/09/19 05:46:29 jthomas Exp $
+
+layer ds indx[ ds, ds ] annotations retrieval_sometimes
+
+!#include "qopt.h"
+!#include "indx.h"
+
+// indx has two annotations xfield (for attribute),
+// and xfield_type (for attribute type)
+
+xform(element, container, cursor)
+{
+IDENT *e;
+IDENT *element2, *container2, *cursor2;
+
+   e = new_element();
+   add e : %a.xfield_type %a.xfield;
+   add e : struct element *ptr;
+
+   new_container2 e mapped_via_parameter 1;
+
+   // now modify dominant cursor
+   add cursor : struct cursor2 k;
+   add cursor : struct cursor2 m;
+
+   // xform inputs
+
+   xform(element, container, cursor);
+   xform(element2, container2, cursor2);
+
+}
+
+define cursor3 of container2 mapped_via_parameter 1 as k,
+       cursor4 of container2 mapped_via_parameter 1 as m;
+
+optimize(cursor)
+{
+BOUNDS b;
+  
+   optimize(cursor); 
+   split_predicate(predicate, %a.xfield, &field_pred, &residual);
+   strcpy(predicate3, &field_predicate);
+   optimize(cursor3);
+   cost3 = cost3*PTR_FOLLOWING_QOPT_FACTOR;
+   if (cost3 < cost) {
+      // this layer is the cheapest to use so far - note it and exit
+      // otherwise, this layer is too expensive - ignore it
+      cost  = cost3;
+      layer = %ln;
+   }
+}
+
+init_curs(cursor)
+{
+  init_curs(cursor);
+  init_curs(cursor3);
+}
+
+// The annotations for indx layer are: 
+// indx field is <fieldname> of_type <fieldtype> (DSB)
+
+ddlhint(argc, argv)
+{
+   sprint_ptree(%a.xfield, argv[1]);
+   sprint_ptree(%a.xfield_type, argv[2]);
+   remove_char(%a.xfield,' ');
+   remove_char(%a.xfield,'"');
+   remove_char(%a.xfield_type,' ');
+   remove_char(%a.xfield_type,'"');
+   t = &type_tab[0];
+   while (t->typename[0] != 0 &&
+          strcmp(t->typename,%a.xfield_type) != 0)
+      t++;
+   if (t->typename[0] == 0)
+      error("unrecognizable type name %s in indx annotation", %a.xfield_type);
+   %a.bi = t->bounds_impact;
+   %a.typeptr = t;
+}
+
+init_cont(container)
+%{
+   init_cont (container);
+   init_cont (container3);
+%}
+
+query(cursor)
+{
+char field_pred[100];
+char residual[100];
+
+   split_predicate(predicate, %a.xfield, &field_pred, &residual);
+   // field_pred is satisfied by index; report only the residual
+   %{
+      %v.residual
+   %}
+%}
+
+insert(cursor, record)
+%{
+   {
+     struct element3 r;
+     insert(cursor, record);
+     r.ptr = cursor.obj;
+     r.%a.attr = cursor.%a.attr;
+     insert(cursor3, r);
+   }
+%}
+
+overflow(container)
+%{
+   overflow(container) || overflow(container3)
+%}
+
+end_adv(cursor)
+%{
+   end_adv(cursor3)
+%}
+
+end_rev(cursor)
+%{
+   end_rev(cursor3)
+%}
+
+adv(cursor)
+%{
+   adv(cursor3);
+   cursor.obj = cursor3.ptr;
+%}
+
+rev(cursor)
+%{
+   rev(cursor3) ;
+   cursor.obj = cursor3.ptr;
+%}
+
+delete(cursor)
+{
+   if (layer == %ln)
+   %{ // both the index cursor and primary cursor
+      // are positioned for a deletion
+      delete(cursor3);
+      delete(cursor);
+   %}
+   else 
+   %{ // only the primary cursor is positioned for a deletion
+      // we need to position the index cursor and delete
+      // its record
+
+      reset_start(cursor4);
+!#if DEBUG
+      if (end_adv(cursor4))
+         P2_runtime_error("missing index record");
+!#endif
+      delete(cursor4);
+      delete(cursor);
+   %}
+}
+
+reset_start(cursor)
+%{
+   reset_start(cursor3);
+   if (!end_adv(cursor3))
+      cursor.obj = cursor3.ptr;
+%}      
+
+reset_end(cursor)
+%{
+   reset_end(cursor3);
+   if (!end_rev(cursor3))
+      cursor.obj = cursor3.ptr;
+%}
+
+swap(cursor0, cursor1)
+%{ 
+   reset_start(cursor4);
+   reset_start(cursor5);
+
+!#if DEBUG
+   if (end_adv(cursor4) || end_adv(cursor5))
+      P2_runtime_error("missing index record(s)");
+!#endif
+
+   swap(cursor0, cursor1);
+
+   cursor4.ptr = cursor.obj;
+   cursor5.ptr = cursor1.obj;
+%}
+
+upd(cursor, field, expr)
+{
+   if (strcmp(field, %a.xfield) != 0)
+   %{ 
+      upd(cursor, field, expr);
+   %}
+   else {
+      if (layer == %ln) {
+         warning(3, "halloween: in indx layer");
+         %{ { struct obj_type3 r;
+   
+              // we are already positioned on the index record
+              // delete it and create a new index record
+              // pass the update on down and after it returns,
+              // use the given address as the ptr value of the
+              // index record
+              // note that we have to use a second cursor over
+              // the index container since an insertion will
+              // screw up the positioning of cursor3.
+     
+              delete(cursor3);
+              upd(cursor, field, expr);
+              r.ptr       = cursor.obj;
+              r.%a.xfield = cursor.%a.xfield;
+              insert(cursor4, r);
+            }
+         %}
+      }
+      else {
+         // we are updating the index field, but we are
+         // not the retrieval layer
+         %{ { struct obj_type3 r;
+              %a.xfield_type   v;
+              
+              // we must first find the old index record
+              // and delete it. Then, we do the same as the
+              // above.
+
+              reset_start(cursor4);
+!#if DEBUG
+              if (end_adv(cursor4))
+                 P2_runtime_error("missing index record");
+!#endif
+              delete(cursor4);
+!#if DEBUG
+              adv(cursor4);
+              if (!end_adv(cursor4))
+                 P2_runtime_error("duplicate index records");
+!#endif
+              upd(cursor, field, expr);
+              r.ptr       = cursor.obj;
+              r.%a.xfield = cursor.%a.xfield;
+              insert(cursor4, r);
+            }
+         %}
+      }
+   }
+}
+

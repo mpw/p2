@@ -1,0 +1,338 @@
+%{
+/* Generated automatically from xp-lex.l.in by Makefile. */
+%}
+%p10000
+%o5000
+%n5000
+%k1000
+%e5000
+%a5000
+%{
+
+/* $Id: xp-lex.l.in,v 45.1 1997/09/29 03:51:25 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* xp lexicographic analyzer (flex source file). */
+/* layer.xf to layer.c (XF2C) lexicographic analyzer
+   (flex source file) (DSB) */
+
+/* Derived from a source file by James A. Roskind (1990) */
+
+/************************************************************************/
+/*              Includes.                                               */
+/************************************************************************/
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "error.h"          /* line_number */
+#include "lex.h"            /* string_token() */
+#include "string-util.h"    /* replace_string_inplace() */
+#include "util.h"           /* MAX_IDENT_LEN */
+#include "xp-string-util.h" /* append_digit(), escape_quotes() */
+
+#include "adhoc-arg.h"   /* ADHOC_ARG */
+#include "rlist.h"       /* RLIST */
+#include "type.h"        /* NODE */
+#include "xp-gram.tab.h" /* BISON-YACC generated defs based on C++ grammar */
+
+/************************************************************************/
+/*              Portability.                                            */
+/************************************************************************/
+
+/* Necessary for AT&T lex. */
+#undef YYLMAX
+#define YYLMAX MAX_IDENT_LEN
+
+/* Necessary for flex. */
+#undef yywrap
+
+/************************************************************************/
+/*              "Return" macros.                                        */
+/************************************************************************/
+
+/* String terminated by a digit. */
+
+#define RETURN_STRING_DIGIT_TOKEN(x) \
+  string_token(yylval.str, (char *) yytext, yyleng); \
+  append_digit(yylval.str); \
+  return(x);
+
+/* String containing single or double quotes. */
+
+#define RETURN_STRING_QUOTE_TOKEN(x) \
+  string_token(yylval.str, (char *) yytext, yyleng); \
+  escape_quotes(yylval.str); \
+  return(x);
+
+%}
+
+/************************************************************************/
+/*              Definitions.                                            */
+/************************************************************************/
+
+decimal [0-9]?
+
+/* The following definitions are common to all P2 lex files. (JAT) */
+
+identifier [a-zA-Z_][0-9a-zA-Z_]*
+
+exponent_part [eE][-+]?[0-9]+
+fractional_constant ([0-9]*"."[0-9]+)|([0-9]+".")
+floating_constant (({fractional_constant}{exponent_part}?)|([0-9]+{exponent_part}))[FfLl]?
+
+integer_suffix_opt ([uU]?[lL]?)|([lL][uU])
+decimal_constant [1-9][0-9]*{integer_suffix_opt}
+octal_constant "0"[0-7]*{integer_suffix_opt}
+hex_constant "0"[xX][0-9a-fA-F]+{integer_suffix_opt}
+integer_constant ({decimal_constant}|{octal_constant}|{hex_constant})
+
+simple_escape [abfnrtv'"?\\]
+octal_escape  [0-7]{1,3}
+hex_escape "x"[0-9a-fA-F]+
+
+escape_sequence [\\]({simple_escape}|{octal_escape}|{hex_escape})
+c_char [^'\\\n]|{escape_sequence}
+s_char [^"\\\n]|{escape_sequence}
+
+h_tab [\011]
+form_feed [\014]
+v_tab [\013]
+c_return [\015]
+
+horizontal_white [ ]|{h_tab}
+whitespace {horizontal_white}|{v_tab}|{form_feed}
+
+char_constant (L?\'([^\n'\\]|(\\.)|(\\\n))*\')
+string_constant (L?\"([^\n"\\]|(\\.)|(\\\n))*\")
+
+/************************************************************************/
+/*              Commands.                                               */
+/************************************************************************/
+
+%%
+
+%{
+/* Some versions of flex define yywrap() as a macro.
+   We define yywrap() as a function.
+   Thus we must undefine yywrap(). (JAT) */
+
+#undef yywrap
+%}
+
+\n                  { line_number++;
+                      RETURN_WHITESPACE_TOKEN((char *) yytext);
+                    }
+"//".*              { RETURN_WHITESPACE_TOKEN(""); }
+{whitespace}+       { RETURN_WHITESPACE_TOKEN(""); }
+
+{integer_constant}   { RETURN_STRING_TOKEN(LITERAL); }
+{floating_constant}  { RETURN_STRING_TOKEN(LITERAL); }
+
+{char_constant}      { RETURN_STRING_QUOTE_TOKEN(LITERAL); }
+{string_constant}    { RETURN_STRING_QUOTE_TOKEN(LITERAL); }
+
+"("                  { RETURN_STRING_TOKEN('('); }
+")"                  { RETURN_STRING_TOKEN(')'); }
+","                  { RETURN_STRING_TOKEN(','); }
+
+"{"                  { RETURN_STRING_TOKEN('{'); }
+"}"                  { RETURN_STRING_TOKEN('}'); }
+"["                  { RETURN_STRING_TOKEN('['); }
+"]"                  { RETURN_STRING_TOKEN(']'); }
+"."                  { RETURN_STRING_TOKEN('.'); }
+"&"                  { RETURN_STRING_TOKEN(LITERAL); }
+"*"                  { RETURN_STRING_TOKEN('*'); }
+"+"                  { RETURN_STRING_TOKEN(LITERAL); }
+"-"                  { RETURN_STRING_TOKEN(LITERAL); }
+"~"                  { RETURN_STRING_TOKEN(LITERAL); }
+"!"                  { RETURN_STRING_TOKEN(LITERAL); }
+"/"                  { RETURN_STRING_TOKEN(LITERAL); }
+"<"                  { RETURN_STRING_TOKEN(LITERAL); }
+">"                  { RETURN_STRING_TOKEN(LITERAL); }
+"^"                  { RETURN_STRING_TOKEN(LITERAL); }
+"|"                  { RETURN_STRING_TOKEN(LITERAL); }
+"?"                  { RETURN_STRING_TOKEN(LITERAL); }
+":"                  { RETURN_STRING_TOKEN(':'); }
+";"                  { RETURN_STRING_TOKEN(';'); }
+"="                  { RETURN_STRING_TOKEN('='); }
+
+"++"                 { RETURN_STRING_TOKEN(LITERAL); }
+"--"                 { RETURN_STRING_TOKEN(LITERAL); }
+"<<"                 { RETURN_STRING_TOKEN(LITERAL); }
+">>"                 { RETURN_STRING_TOKEN(LITERAL); }
+"<="                 { RETURN_STRING_TOKEN(LITERAL); }
+">="                 { RETURN_STRING_TOKEN(LITERAL); }
+"=="                 { RETURN_STRING_TOKEN(LITERAL); }
+"!="                 { RETURN_STRING_TOKEN(LITERAL); }
+"&&"                 { RETURN_STRING_TOKEN(LITERAL); }
+"||"                 { RETURN_STRING_TOKEN(LITERAL); }
+"*="                 { RETURN_STRING_TOKEN(LITERAL); }
+"/="                 { RETURN_STRING_TOKEN(LITERAL); }
+"%="                 { RETURN_STRING_TOKEN(LITERAL); }
+"+="                 { RETURN_STRING_TOKEN(LITERAL); }
+"-="                 { RETURN_STRING_TOKEN(LITERAL); }
+"<<="                { RETURN_STRING_TOKEN(LITERAL); }
+">>="                { RETURN_STRING_TOKEN(LITERAL); }
+"&="                 { RETURN_STRING_TOKEN(LITERAL); }
+"^="                 { RETURN_STRING_TOKEN(LITERAL); }
+"|="                 { RETURN_STRING_TOKEN(LITERAL); }
+"..."                { RETURN_STRING_TOKEN(LITERAL); }
+
+^!.*$                        { RETURN_STRING_TOKEN(BANG_LINE); }
+"->"                         { RETURN_STRING_TOKEN(ARROW); }
+\${identifier}               { RETURN_STRING_TOKEN(DOLLAR_WORD); } 
+
+"%{"                         { RETURN_NUMERIC_TOKEN(XSTART); }
+"%}"                         { RETURN_NUMERIC_TOKEN(XEND); }
+"%a."                        { RETURN_NUMERIC_TOKEN(PADOT); }
+"%a"                         { RETURN_NUMERIC_TOKEN(PANN); }
+"%ln"                        { RETURN_NUMERIC_TOKEN(LAYERNO); }
+"%v."                        { RETURN_NUMERIC_TOKEN(VALUE); }
+"%c."                        { RETURN_NUMERIC_TOKEN(CRSTATE); }
+"%k."                        { RETURN_NUMERIC_TOKEN(CNSTATE); }
+"%%"                         { RETURN_STRING_TOKEN(LITERAL); }
+"%"                          { RETURN_STRING_TOKEN(LITERAL); }
+
+add                          { RETURN_STRING_TOKEN(ADD); }
+adhoc                        { RETURN_STRING_TOKEN(ADHOC); }
+adv#?                        { RETURN_STRING_TOKEN(ADV); }
+advc#?                       { RETURN_STRING_TOKEN(ADVC); }
+advp#?                       { RETURN_STRING_TOKEN(ADVP); }
+alloc#?                      { RETURN_STRING_TOKEN(ALLOC); }
+varalloc#?                   { RETURN_STRING_TOKEN(VARALLOC); }
+annotations?                 { RETURN_NUMERIC_TOKEN(P2_ANNOTATION); }
+apply{decimal}               { RETURN_STRING_DIGIT_TOKEN(APPLY); }
+arguments?                   { RETURN_NUMERIC_TOKEN(ARGUMENT); }
+as_cursor{decimal}           { RETURN_STRING_TOKEN(AS_CURSOR); }
+bound{decimal}               { RETURN_STRING_DIGIT_TOKEN(BOUND); };
+call                         { RETURN_NUMERIC_TOKEN(CALL); }
+ccard{decimal}               { RETURN_STRING_DIGIT_TOKEN(CCARD); }
+c_put_op_vec                 { RETURN_NUMERIC_TOKEN(C_PUT_OP_VEC); }
+c_verbatim                   { RETURN_NUMERIC_TOKEN(C_VERBATIM); }
+checkpoint_cont#?            { RETURN_STRING_TOKEN(CHECKPOINT_CONT); }
+close_cont#?                 { RETURN_STRING_TOKEN(CLOSE_CONT); }
+companion{decimal}           { RETURN_STRING_DIGIT_TOKEN(COMPANION); }
+connect                      { RETURN_NUMERIC_TOKEN(CONNECT); }
+cont_state                   { RETURN_NUMERIC_TOKEN(CONT_STATE); }
+container_type{decimal}      { RETURN_STRING_DIGIT_TOKEN(CONTAINER_TYPE); }
+container{decimal}           { RETURN_STRING_DIGIT_TOKEN(CONTAINER); }
+container_func               { RETURN_NUMERIC_TOKEN(CONTAINER_FUNC); }
+container_id{decimal}        { RETURN_STRING_DIGIT_TOKEN(CONTAINER_ID); }
+cost{decimal}                { RETURN_STRING_DIGIT_TOKEN(COST); }
+cresidual{decimal}           { RETURN_STRING_DIGIT_TOKEN(CRESIDUAL); }
+curs_state                   { RETURN_NUMERIC_TOKEN(CURS_STATE); }
+cursor_type{decimal}         { RETURN_STRING_DIGIT_TOKEN(CURSOR_TYPE); }
+cursor{decimal}              { RETURN_STRING_DIGIT_TOKEN(CURSOR); }
+cursor_func                  { RETURN_NUMERIC_TOKEN(CURSOR_FUNC); }
+cursor_id{decimal}           { RETURN_STRING_DIGIT_TOKEN(CURSOR_ID); }
+ddlhint                      { RETURN_NUMERIC_TOKEN(DDLHINT); }
+def_cursor_func              { RETURN_NUMERIC_TOKEN(DEF_CURSOR_FUNC); }
+def_container_func           { RETURN_NUMERIC_TOKEN(DEF_CONTAINER_FUNC); }
+delete#?                     { RETURN_STRING_TOKEN(DELETE); }
+delete_curs#?                { RETURN_STRING_TOKEN(DELETE_CURS); }
+disconnect                   { RETURN_NUMERIC_TOKEN(DISCONNECT); }
+ds                           { RETURN_NUMERIC_TOKEN(DS_TOKEN); }
+d2u                          { RETURN_NUMERIC_TOKEN(D2U); }
+element{decimal}             { RETURN_STRING_DIGIT_TOKEN(ELEMENT); }
+end_adv#?                    { RETURN_STRING_TOKEN(END_ADV); }
+end_foreach                  { RETURN_NUMERIC_TOKEN(END_FOREACH); }
+end_rev#?                    { RETURN_STRING_TOKEN(END_REV); }
+end_rofeach                  { RETURN_NUMERIC_TOKEN(END_ROFEACH); }
+endc#?                       { RETURN_STRING_TOKEN(ENDC); }
+endp#?                       { RETURN_STRING_TOKEN(ENDP); }
+expr{decimal}                { RETURN_STRING_DIGIT_TOKEN(EXPR); }
+field                        { RETURN_STRING_TOKEN(FIELD); }
+foreach#?                    { RETURN_STRING_TOKEN(FOREACH); }
+foreachc#?                   { RETURN_STRING_TOKEN(FOREACHC); }
+foreachp#?                   { RETURN_STRING_TOKEN(FOREACHP); }
+foreachl#?                   { RETURN_STRING_TOKEN(FOREACHL); }
+funbody{decimal}             { RETURN_STRING_DIGIT_TOKEN(FUNBODY); }
+getrec#?                     { RETURN_STRING_TOKEN(GETREC); }
+indirect_only                { RETURN_NUMERIC_TOKEN(INDIRECT_ONLY); }
+init_cont#?                  { RETURN_STRING_TOKEN(INIT_CONT); }
+init_curs#?                  { RETURN_STRING_TOKEN(INIT_CURS); }
+insert#?                     { RETURN_STRING_TOKEN(INSERT); }
+varinsert#?                  { RETURN_STRING_TOKEN(VARINSERT); }
+iref#?                       { RETURN_STRING_TOKEN(IREF); }
+k_put_op_vec                 { RETURN_NUMERIC_TOKEN(K_PUT_OP_VEC); }
+k_verbatim                   { RETURN_NUMERIC_TOKEN(K_VERBATIM); }
+l_verbatim                   { RETURN_NUMERIC_TOKEN(L_VERBATIM); }
+layer{decimal}               { RETURN_STRING_TOKEN(LAYER); }
+limit                        { RETURN_NUMERIC_TOKEN(LIMIT); }
+linkannote{decimal}          { RETURN_STRING_DIGIT_TOKEN(LINKANNOTE); }
+linkcost{decimal}            { RETURN_STRING_DIGIT_TOKEN(LINKCOST); }
+linklayer{decimal}           { RETURN_STRING_DIGIT_TOKEN(LINKLAYER); }
+linkname{decimal}            { RETURN_STRING_DIGIT_TOKEN(LINKNAME); }
+linkpredicate{decimal}       { RETURN_STRING_DIGIT_TOKEN(LINKPREDICATE); }
+lnk                          { RETURN_NUMERIC_TOKEN(LINK_TOKEN); }
+loptimize                    { RETURN_NUMERIC_TOKEN(LOPTIMIZE); }
+lstate{decimal}              { RETURN_STRING_DIGIT_TOKEN(LSTATE); }
+mapped_via_param             { RETURN_NUMERIC_TOKEN(MAPPED_VIA_PARAM); }
+mcurs                        { RETURN_NUMERIC_TOKEN(MCURS); }
+mem                          { RETURN_NUMERIC_TOKEN(MEM_TOKEN); }
+multiple                     { RETURN_STRING_TOKEN(MULTIPLE); }
+new_container_type{decimal}  { RETURN_STRING_TOKEN(NEW_CONTAINER_TYPE); }
+no                           { RETURN_NUMERIC_TOKEN(NO); }
+obj_type{decimal}            { RETURN_STRING_DIGIT_TOKEN(OBJ_TYPE); }
+orderby_direction{decimal}   { RETURN_STRING_DIGIT_TOKEN(ORDERBY_DIRECTION); }
+orderby_field{decimal}       { RETURN_STRING_DIGIT_TOKEN(ORDERBY_FIELD); }
+op_list{decimal}             { RETURN_STRING_DIGIT_TOKEN(OPLIST); }
+open_cont#?                  { RETURN_STRING_TOKEN(OPEN_CONT); }
+open_cont_number#?           { RETURN_STRING_TOKEN(OPEN_CONT_NUMBER); }
+optimize#?                   { RETURN_STRING_TOKEN(OPTIMIZE); }
+optional                     { RETURN_STRING_TOKEN(OPTIONAL); }
+orig_type{decimal}           { RETURN_STRING_DIGIT_TOKEN(ORIG_TYPE); }
+overflow#?                   { RETURN_STRING_TOKEN(OVERFLOW); }
+varoverflow#?                { RETURN_STRING_TOKEN(VAROVERFLOW); }
+pcard{decimal}               { RETURN_STRING_DIGIT_TOKEN(PCARD); }
+pos#?                        { RETURN_STRING_TOKEN(POSITION); }
+predicate{decimal}           { RETURN_STRING_DIGIT_TOKEN(PREDICATE); }
+presidual{decimal}           { RETURN_STRING_DIGIT_TOKEN(PRESIDUAL); }
+proceduralize_ref{decimal}   { RETURN_NUMERIC_TOKEN(PROCEDURALIZE_REF); }
+query#?                      { RETURN_STRING_TOKEN(QUERY); }
+record                       { RETURN_STRING_TOKEN(RECORD); }
+related                      { RETURN_STRING_TOKEN(RELATED); }
+replicate_cursor{decimal}    { RETURN_STRING_TOKEN(REPLICATE); }
+retrieval_always             { RETURN_STRING_TOKEN(P2_RETRIEVAL_ALWAYS); }
+retrieval_sometimes          { RETURN_STRING_TOKEN(P2_RETRIEVAL_SOMETIMES); }
+retrieval_never              { RETURN_STRING_TOKEN(P2_RETRIEVAL_NEVER); }
+retrieval_direction{decimal} { RETURN_STRING_DIGIT_TOKEN(P2_RETRIEVAL_DIRECTION); }
+ref#?                        { RETURN_STRING_TOKEN(REF); }
+rofeach#?                    { RETURN_STRING_TOKEN(ROFEACH); }
+resetc#?                     { RETURN_STRING_TOKEN(RESETC); }
+resetp#?                     { RETURN_STRING_TOKEN(RESETP); }
+reset_end#?                  { RETURN_STRING_TOKEN(RESET_END); }
+reset_start#?                { RETURN_STRING_TOKEN(RESET_START); }
+rev#?                        { RETURN_STRING_TOKEN(REV); }
+s_put_op_vec                 { RETURN_NUMERIC_TOKEN(S_PUT_OP_VEC); }
+s_verbatim                   { RETURN_NUMERIC_TOKEN(S_VERBATIM); }
+special_foreachl{decimal}    { RETURN_STRING_DIGIT_TOKEN(SPECIAL); }
+stable                       { RETURN_NUMERIC_TOKEN(STABLE); }
+struct                       { RETURN_STRING_TOKEN(STRUCT); }
+swap#?                       { RETURN_STRING_TOKEN(SWAP); }
+sync_cont#?                  { RETURN_STRING_TOKEN(SYNC_CONT); }
+top                          { RETURN_NUMERIC_TOKEN(TOP_TOKEN); }
+toplnk                       { RETURN_NUMERIC_TOKEN(TOPLINK_TOKEN); }
+upd#?                        { RETURN_STRING_TOKEN(UPD); }
+unstable                     { RETURN_NUMERIC_TOKEN(UNSTABLE); }
+vp{decimal}                  { RETURN_STRING_DIGIT_TOKEN(VPTOK); }
+with_type                    { RETURN_NUMERIC_TOKEN(WITH_TYPE); }
+xform                        { RETURN_NUMERIC_TOKEN(XFORM); };
+
+schema{decimal}              { RETURN_STRING_DIGIT_TOKEN(SCHEMA); }
+
+open_schema#?                { RETURN_STRING_TOKEN(OPEN_SCHEMA); }
+init_schema#?                { RETURN_STRING_TOKEN(INIT_SCHEMA); }
+close_schema#?               { RETURN_STRING_TOKEN(CLOSE_SCHEMA); }
+checkpoint_schema#?          { RETURN_STRING_TOKEN(CHECKPOINT_SCHEMA); }
+
+abort_xact#?                 { RETURN_STRING_TOKEN(ABORT_XACT); }
+begin_xact#?                 { RETURN_STRING_TOKEN(BEGIN_XACT); }
+commit_xact#?                { RETURN_STRING_TOKEN(COMMIT_XACT); }
+
+{identifier}#                { RETURN_STRING_TOKEN(HASH_IDENTIFIER); }
+{identifier}                 { RETURN_STRING_TOKEN(IDENTIFIER); }
+
+%%

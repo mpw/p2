@@ -1,0 +1,38 @@
+/* $Id: upd-comment-bug.p2,v 45.0 1997/09/19 05:44:40 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* Here's a program that exposes a bug in P2.  Apparently, a comment
+   is generated for each P2 operation to indicate what is being
+   generated.  The comment for update generates an extra close comment
+   which causes havoc. (DSB) */
+
+/* I fixed this bug by removing the open and close comment from the
+   call_string that we generated and enclose in between an open and
+   close comment. (JAT) */
+
+#include "P2_paces.h"
+
+typex {
+  leaps_x = top2ds[dlist[P2_DELFLAG_LAYER[malloc[transient]]]];
+}
+
+typedef struct {
+   int     foo;
+   int     _ts;
+} marker;
+
+container < marker > stored_as leaps_x with { } cont_marker;
+cursor <cont_marker> c,b;
+
+int main()
+{
+   open_cont(cont_marker);
+   init_curs(c);
+   init_curs(b);
+
+   if (!end_adv(c) && !end_adv(b))
+     upd(c, foo, b.foo + 1);
+
+   close_cont(cont_marker);
+   return 0;
+} 

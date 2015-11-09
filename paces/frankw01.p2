@@ -1,0 +1,5 @@
+// $Id: frankw01.p2,v 45.0 1997/09/19 05:43:19 jthomas Exp $
+
+// Hand-coded version.
+
+#include "frankw01.p2h"

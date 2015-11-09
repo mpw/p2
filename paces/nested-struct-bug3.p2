@@ -1,0 +1,24 @@
+/* $Id: nested-struct-bug3.p2,v 45.0 1997/09/19 05:43:52 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Doubly nested struct regression test. */
+/* Analogous to paces/nested-struct-bug[123].p2 */
+
+struct a {
+  /* Doubly nested struct. */
+  struct {
+    struct {
+      int x;
+      char *y;
+    } s;
+  } t;
+  int z;
+} u;
+
+main ()
+{
+  u.t.s.y = "Hello";
+  u.t.s.x = 0;
+
+  return u.t.s.x;
+}

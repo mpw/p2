@@ -1,0 +1,70 @@
+// $Id: qualify.xp,v 45.0 1997/09/19 05:46:48 jthomas Exp $
+// Copyright (C) 1995, The University of Texas at Austin.
+
+layer ds qualify[ ds ] stable curs_state no annotation retrieval_always
+
+// Add qualification.
+
+!#include "qopt.h"
+!#include "qualify.h"
+
+#define QUALIFY( NAME, ADV, END_ADV ) \
+{ \
+  layer = %c.retrieval_layer; \
+  %{ \
+     NAME( cursor ); \
+     while (!(END_ADV( cursor )) && !(query(cursor))) { \
+       ADV( cursor ); \
+     } \
+  %} \
+  layer = %ln; \
+}
+
+optimize( cursor )
+{
+  optimize( cursor );
+  %c.retrieval_layer = layer;
+  layer = %ln;
+}
+
+adv( cursor )
+{
+  QUALIFY( adv, adv, end_adv )
+}
+
+rev( cursor )
+{
+  QUALIFY( rev, rev, end_rev )
+}
+
+reset_start( cursor )
+{
+  QUALIFY( reset_start, adv, end_adv )
+}
+
+reset_end( cursor )
+{
+  QUALIFY( reset_end, rev, end_rev )
+}
+
+c_verbatim( cursor ) 
+%{ 
+    c_verbatim( cursor);
+%}
+
+def_cursor_func : 
+$HEADER
+{ 
+    layer = %c.retrieval_layer; 
+    $CALLDOWN ; 
+    layer = %ln;
+}
+
+def_container_func : 
+$HEADER
+{ 
+    $CALLDOWN ; 
+}
+
+
+

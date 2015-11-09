@@ -1,0 +1,12 @@
+// $Id: adhoc.xph,v 45.0 1997/09/19 05:46:15 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// Default implementations of adhoc operations.
+// Included by various layers.
+
+adhoc cardinality (container) %{ (0) %}
+adhoc deleted (cursor)        %{ (0) %}
+adhoc refcount (cursor)       %{ (0) %}
+adhoc serial_number (cursor)  %{ (0) %}
+adhoc tid (cursor)            %{ (0) %}
+adhoc timestamp (cursor)      %{ (0) %}

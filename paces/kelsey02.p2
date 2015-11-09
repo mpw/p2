@@ -1,0 +1,247 @@
+/* $Id: kelsey02.p2,v 45.0 1997/09/19 05:43:33 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+#define ITERATOR                foreach
+#define DELETE_QUALIFIED        1
+#define PRINT_ALL               0
+#define CONCEPTUAL              0
+
+#define STRING_SIZE             32
+#define EMP_FILE_SIZE           1000
+#define EMP_FILE_NAME           "emp.data"
+
+#define ORDERBY_KEY             empno
+#define ORDERBY_DIRECTION       descending
+
+/*****************************************************************************/
+/*                  Typedefs.                                                */
+/*****************************************************************************/
+
+typedef struct {
+   int   empno;
+   int   age;
+   char  dept_name[STRING_SIZE];
+   char  name[STRING_SIZE];
+} EMP_TYPE;
+
+typedef generic_cursor <EMP_TYPE> GC;
+
+/*****************************************************************************/
+/*                  Type Expression.                                         */
+/*****************************************************************************/
+
+typex {
+#if CONCEPTUAL
+  t = conceptual[bintree[P2_DELFLAG_LAYER[array1[transient]]]];
+#else
+  t = top2ds_qualify[init_generic[generic[orderby_smart[
+        inbetween[bintree[delflag[array1[transient]]]],
+        top2ds[inbetween[dlist[delflag[array2[transient]]]]]]]]];
+#endif
+}
+
+/*****************************************************************************/
+/*                  Container.                                               */
+/*****************************************************************************/
+
+container <EMP_TYPE> stored_as t with {
+  bintree key is empno;
+  array1 size is EMP_FILE_SIZE;
+#if !CONCEPTUAL
+  array2 size is EMP_FILE_SIZE;
+#endif
+} emp_cont;
+
+/*****************************************************************************/
+/*                  Cursors.                                                 */
+/*****************************************************************************/
+
+cursor <emp_cont> where "$.empno > 15000"
+#ifdef ORDERBY_KEY
+        orderby ORDERBY_DIRECTION ORDERBY_KEY
+#endif
+recent_emp;
+
+cursor <emp_cont> where "$.name > 'S' && $.name < 'T'"
+#ifdef ORDERBY_KEY
+        orderby ORDERBY_DIRECTION ORDERBY_KEY
+#endif
+s_emp;
+
+typedef cursor <emp_cont> where "$.age >= 50"
+#ifdef ORDERBY_KEY
+        orderby ORDERBY_DIRECTION ORDERBY_KEY
+#endif
+OLD_EMP_TYPE;
+OLD_EMP_TYPE old_emp;
+
+cursor <emp_cont> where "$.age < 30"
+#ifdef ORDERBY_KEY
+        orderby ORDERBY_DIRECTION ORDERBY_KEY
+#endif
+young_emp;
+
+cursor <emp_cont> where "$.age >= 30 && $.age < 50"
+#ifdef ORDERBY_KEY
+        orderby ORDERBY_DIRECTION ORDERBY_KEY
+#endif
+middle_age_emp;
+
+typedef cursor <emp_cont>
+#ifdef ORDERBY_KEY
+        orderby ORDERBY_DIRECTION ORDERBY_KEY
+#endif
+ALL_EMP_TYPE;
+ALL_EMP_TYPE all_emp;
+
+/*****************************************************************************/
+/*                  Read Data.                                               */
+/*****************************************************************************/
+
+void read_data ( void )
+{
+  FILE     *emp_file;
+  int      emp_count = 0;
+  EMP_TYPE e;
+  char     s[1000];
+  char     *p;
+
+  emp_file = fopen( EMP_FILE_NAME, "r" );
+  if (emp_file == NULL)
+  {
+     fprintf( stderr, "Could not open employee file %s.\n", EMP_FILE_NAME );
+     exit( 1 );
+  }
+
+  if (fscanf( emp_file, "%s %s %s %s %s", &s, &s, &s, &s, &s ) != 5) {
+    if (!feof(emp_file)) {
+      fprintf( stderr, "Illegal employee file header format.\n" );
+      exit( 1 );
+    }
+  }
+  while (!feof(emp_file)) {
+    emp_count++;
+    if (emp_count > EMP_FILE_SIZE) {
+      fprintf( stderr, "Employee file too large.\n" );
+      exit( 1 );
+    }
+    if ((fscanf( emp_file, "%d,%d", &e.empno, &e.age ) != 2)
+        || (fgetc( emp_file ) != ',')
+        || (fgetc( emp_file ) != '"')) {
+      if (feof(emp_file))
+        break;
+      else {
+        fprintf( stderr, "Illegal employee file record format.\n" );
+        exit( 1 );
+      }
+    }
+    p = e.dept_name;
+    while (1) {
+      *p = fgetc( emp_file );
+      if (*p == '"') {
+        *p = '\0';
+        break;
+      }
+      *p++;
+    }
+    if ((fgetc( emp_file ) != ',')
+        || (fgetc( emp_file ) != '"')) {
+      if (feof(emp_file))
+        break;
+      else {
+        fprintf( stderr, "Illegal employee file record format.\n" );
+        exit( 1 );
+      }
+    }
+    p = e.name;
+    while (1) {
+      *p = fgetc(emp_file);
+      if (*p == '"') {
+        *p = '\0';
+        break;
+      }
+      *p++;
+    }
+    insert( all_emp, e );
+  }
+  fclose( emp_file );
+  printf( "Employee records in data file: %d\n", emp_count );
+}
+
+/*****************************************************************************/
+/*                  Print Data.                                              */
+/*****************************************************************************/
+
+void print_data ( GC gc, int d )
+{
+  ITERATOR( gc )
+  {
+    printf( "%d,%d,\"%s\",\"%s\"\n", gc.empno, gc.age, gc.dept_name, gc.name);
+    if (DELETE_QUALIFIED && d)
+      delete( gc );
+  }
+}
+
+/*****************************************************************************/
+/*                  Test.                                                    */
+/*****************************************************************************/
+
+void test ( void )
+{
+#if PRINT_ALL
+  printf("\nall emp are:\n"); 
+  print_data( (GC) &all_emp, 0 );
+#endif
+
+  printf("\ns emp are:\n");
+  print_data( (GC) &s_emp, 1 );
+
+  printf( "\nrecent emp are:\n");
+  print_data( (GC) &recent_emp, 1 );
+
+  printf( "\nold emp are:\n"); 
+  print_data( (GC) &old_emp, 1 );
+
+  printf( "\nyoung emp are:\n"); 
+  print_data( (GC) &young_emp, 1 );
+
+  printf( "\nmiddle age emp are:\n"); 
+  print_data( (GC) &middle_age_emp, 1 );
+
+#if PRINT_ALL || DELETE_QUALIFIED
+  printf( "\nremaining emp are:\n"); 
+  print_data( (GC) &all_emp, 0 );
+#endif
+}
+
+/*****************************************************************************/
+/*                  Main.                                                    */
+/*****************************************************************************/
+
+int main ( void ) 
+{
+  open_cont( emp_cont );
+  init_curs( all_emp );
+  init_curs( s_emp );
+  init_curs( recent_emp );
+  init_curs( old_emp );
+  init_curs( young_emp );
+  init_curs( middle_age_emp );
+
+  read_data();
+  test();
+
+  close_cont( emp_cont );
+  exit( 0 );
+}

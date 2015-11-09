@@ -1,0 +1,172 @@
+/* $Id: hash03.p2,v 45.0 1997/09/19 05:43:28 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Test P2_str_hash with numeric strings. */
+
+/************************************************************************/
+/*              Includes.                                               */
+/************************************************************************/
+
+#include <assert.h> /* assert() */
+#include <stdio.h>  /* sprintf() */
+#include <limits.h> /* INT_MAX */
+
+/************************************************************************/
+/*              Defines.                                                */
+/************************************************************************/
+
+#define N 100       /* Number of buckets. */
+#define M 1000      /* Multiplier aka Average aka Mean. */
+
+/* Print debugging output. */
+#if 0
+#ifndef DEBUG
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/************************************************************************/
+/*              Globals.                                                */
+/************************************************************************/
+
+int r = 0;          /* Return value. */
+int b[N];           /* Number of keys in each bucket. */
+int k;              /* Total number of keys. */
+
+/************************************************************************/
+/*              Check.                                                  */
+/************************************************************************/
+
+void
+check(char *label)
+{
+  int i;              /* Index. */
+  int min_b, max_b;   /* Minimum and maximum number of keys in buckets. */
+  int min_i, max_i;   /* Buckets with Minimum and Maximum number of keys. */
+  int m;              /* Number of keys in ALL buckets. */
+
+  /* Minimun and maximum number of keys in buckets for
+     values to be considered (reasonably) uniformly distributed. */
+  int legal_min_b;
+  int legal_max_b;
+
+#ifdef DEBUG
+  /* Print label */
+  printf("*** %s ***\n", label);
+#endif /* DEBUG */
+
+  /* Make sure values are (resonably) uniformly distributed. */
+  min_b = k+1;
+  min_i = -1;
+  max_b = -1;
+  max_i = -1;
+  m = -1;
+  for (i = 0; i < N; i++)
+  {
+    assert(b[i] >= 0 && b[i] <= k);
+#ifdef DEBUG
+    printf("b[%d] = %d\n", i, b[i]);
+#endif /* DEBUG */
+    if (b[i] < min_b)
+    {
+      min_b = b[i];
+      min_i = i;
+    }
+    if (b[i] > max_b)
+    {
+      max_b = b[i];
+      max_i = i;
+    }
+    assert(m == -2 || m == -1 || m > 0);
+    if (m != -2)
+    {
+      if (m == -1)
+	m = b[i];
+      else if (m != b[i])
+	m = -2;
+    }
+  }
+
+  /* {min,max}_b must be within 10 of the mean {divided,multipled} by 2. */
+  legal_min_b = (k/2)/N - 10;
+  if (legal_min_b < 0)
+    legal_min_b = 0;
+  legal_max_b = (k*2)/N + 10;
+  if (legal_max_b > k)
+    legal_max_b = k;
+
+#ifdef DEBUG
+  /* Print debugging output. */
+  printf("N = %d\n", N);
+  printf("M = %d\n", M);
+  printf("k = %d\n", k);
+  printf("legal_min_b = %d\n", legal_min_b);
+  printf("legal_max_b = %d\n", legal_max_b);
+  printf("min_b = %d\n", min_b);
+  printf("max_b = %d\n", max_b);
+  if (m < 0)
+  {
+    assert(m == -2);
+    printf("bucket %d contains the fewest keys %d\n", min_i, min_b);
+    printf("bucket %d contains the most keys %d\n", max_i, max_b);
+  }
+  else
+  {
+    assert(m == k/N);
+    printf("All buckets contain exactly %d keys!\n", m);
+  }
+#endif /* DEBUG */
+
+  /* On average, there should be M keys in each bucket. */
+  if (min_b < legal_min_b)
+  {
+    fprintf(stderr, "bucket %d contains too few keys %d < %d\n",
+	    min_i, min_b, legal_min_b);
+    r = 1;
+  }
+  if (max_b > legal_max_b)
+  {
+    fprintf(stderr, "bucket %d contains too many keys %d > %d\n",
+	    max_i, max_b, legal_max_b);
+    r = 1;
+  }
+}
+
+/************************************************************************/
+/*              Main.                                                   */
+/************************************************************************/
+
+main()
+{
+  int i; /* Index */
+  int x; /* Hash of i or w */
+
+  char s[100];
+
+  /*** str ***/
+
+  /* Initialize array. */
+  for (i = 0; i < N; i++)
+    b[i] = 0;
+  /* Fill array with numberic strings. */
+  k = N*M;
+  assert(INT_MAX >= k);
+  for (i = 0; i < k; i++)
+  {
+    sprintf(s, "foo-%08d", i);
+#if 0
+    /* Print string. */
+    printf("%s\n", s);
+#endif
+    x = P2_str_hash(s, N);
+    assert(x >= 0 && x < N);
+    b[x]++;
+  }
+  /* Check array. */
+  check("P2_str_hash");
+
+  /*** Return 0 for success, 0 for error. ***/
+
+EXIT:
+   exit(r);
+}

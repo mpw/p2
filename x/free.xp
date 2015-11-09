@@ -1,0 +1,81 @@
+// $Id: free.xp,v 45.0 1997/09/19 05:46:22 jthomas Exp $
+// Copyright (C) 1997 The University of Texas at Austin.
+
+// Use:
+//   ...[free[...[delflag[...[malloc[...]]]]]]...
+
+// This layer calls free() to deallocate all elements meeting the
+// following conditions:
+//   (1) have refcount = 0, and
+//   (2) are deleted().
+
+layer ds free[ ds ] stable retrieval_always no annotation
+
+#if 1
+
+// *** Update refcount BEFORE calling down. ***
+// This seems to work okay. (JAT)
+
+// This action is performed before the cursor is moved off of the
+// (old) current element.
+
+#define REFCOUNT_PRE_ACTION \
+  if (cursor.obj) \
+  { \
+    (cursor.refcount)--; \
+    if (cursor.refcount == 0 && (adhoc deleted(cursor))) \
+    { \
+      memset(cursor.obj, -1, sizeof(cursor.obj)); \
+      free(cursor.obj); \
+    } \
+  }
+
+#else
+
+// *** Update refcount AFTER calling down. ***
+// This seems to be over-kill. (JAT)
+
+#define REFCOUNT_XFORM \
+  add cursor : struct element *old; \
+  add cursor : struct element *new; 
+
+// This action is performed before the cursor is moved off of the
+// (old) current element.
+
+#define REFCOUNT_PRE_ACTION \
+  cursor.old = cursor.obj; \
+  if (cursor.obj) \
+  { \
+    (cursor.refcount)--; \
+  }
+
+// This action is performed after the cursor is moved onto the
+// (new) current element).
+
+// We'd like to have xp temporarily replace "cursor.obj" with
+// "cursor.temp", but xp provides no way to do this, so we have to use
+// the two temporary variables: cursor.old and cursor.new
+
+// Note that this will not work if cursor contains state (in addition
+// to cursor.obj) that is needed to perform adhoc deleted().
+
+#define REFCOUNT_POST_ACTION \
+  if (cursor.obj) \
+  { \
+    (cursor.refcount)++; \
+  } \
+  if (cursor.old) \
+  { \
+    cursor.new = cursor.obj; \
+    cursor.obj = cursor.old; \
+    if (cursor.obj && cursor.refcount == 0 && (adhoc deleted(cursor))) \
+    { \
+      memset(cursor.obj, -1, sizeof(*(cursor.obj))); \
+      free(cursor.obj); \
+     } \
+    cursor.obj = cursor.new; \
+  }
+
+#endif
+
+#include "refcount.xph"

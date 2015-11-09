@@ -1,0 +1,42 @@
+/* $Id: schema08.p2,v 45.0 1997/09/19 05:44:14 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* Demonstrate schema member container shared typex annotation bug. */
+
+/* Schema Regression Test. */
+/* Schema with containers and cursors. */
+
+#include <stdio.h> /* printf() */
+#include "P2_paces.h"
+
+typedef struct {
+  int  e;
+} EMPLOYEE;
+
+typedef struct {
+  int  d;
+} DEPARTMENT;
+
+typex {
+  t = top2ds[odlist[array[transient]]];
+}
+
+/* Schema with containers. */
+
+schema {
+  container <EMPLOYEE> employee;
+  container <DEPARTMENT> department;
+}
+stored_as t with {
+  /* NOTE: department does not have field e */
+  odlist key of employee is e;
+  array size of employee is 10;
+  odlist key of department is d;
+  array size of department is 10;
+} s;
+
+int
+main ()
+{
+  return(0);
+}

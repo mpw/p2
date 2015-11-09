@@ -1,0 +1,45 @@
+all emp are:
+10000 60 Akers, Mark
+10010 40 Akin, Monica
+10020 21 Alexander, Joe
+10030 23 Akerson, Gwyn
+10040 53 Akerson, Mary
+10050 42 Akerson, Suzanne
+10060 61 Andrews, John
+10070 22 Andrews, Kay
+
+ak emp are:
+10000 60 Akers, Mark
+10030 23 Akerson, Gwyn
+10040 53 Akerson, Mary
+10050 42 Akerson, Suzanne
+10010 40 Akin, Monica
+
+recent (empno > 10020) emp are:
+10030 23 Akerson, Gwyn
+10040 53 Akerson, Mary
+10050 42 Akerson, Suzanne
+10060 61 Andrews, John
+10070 22 Andrews, Kay
+
+old emp are:
+10050 42 Akerson, Suzanne
+10040 53 Akerson, Mary
+10000 60 Akers, Mark
+10060 61 Andrews, John
+
+old emp are:
+10050 42 Akerson, Suzanne
+10040 53 Akerson, Mary
+10000 60 Akers, Mark
+10060 61 Andrews, John
+
+remaining emp are:
+10000 60 Akers, Mark
+10010 40 Akin, Monica
+10020 21 Alexander, Joe
+10030 23 Akerson, Gwyn
+10040 53 Akerson, Mary
+10050 42 Akerson, Suzanne
+10060 61 Andrews, John
+10070 22 Andrews, Kay

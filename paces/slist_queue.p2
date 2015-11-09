@@ -1,0 +1,51 @@
+/* $Id: slist_queue.p2,v 45.0 1997/09/19 05:44:18 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Make sure the layer slist_queue.xp provides queue semantics. */
+/* Analogous to paces/slist_stack.xp */
+
+#include <stdio.h>      /* fprintf() */
+#include "P2_paces.h"
+
+#define N 100
+
+typedef struct {
+  int i;
+} E;
+
+typex {
+  t = conceptual[slist_queue[P2_BOTTOM_LAYER]];
+}
+
+container <E> stored_as t with {
+  P2_BOTTOM_ANNOTE(i, N);
+} queue_cont;
+
+cursor <queue_cont> queue_curs;
+
+int i;
+E e;
+
+main()
+{
+  open_cont(queue_cont);
+  init_curs(queue_curs);
+  for (i = 0; i < N; i++)
+  {
+    e.i = i;
+    insert(queue_curs, e);
+  }
+  /* First in, first out: 0, 1, 2, ..., N-1 */
+  i = 0;
+  foreach(queue_curs)
+  {
+    if (i != queue_curs.i)
+    {
+      fprintf(stderr, "Mismatch: queue_curs.i = %d, i = %d\n", queue_curs.i, i);
+      exit(1);
+    }
+    i++;
+  }
+  close_cont(queue_cont);
+  exit(0);
+}

@@ -1,0 +1,47 @@
+insert after abort:
+
+insert after commit:
+10070 22 Andrews, Kay
+10060 61 Andrews, John
+10050 42 Akerson, Suzanne
+10040 53 Akerson, Mary
+10030 23 Akerson, Gwyn
+10020 21 Alexander, Joe
+10010 40 Akin, Monica
+10000 60 Akers, Mark
+
+update after abort:
+10070 22 Andrews, Kay
+10060 61 Andrews, John
+10050 42 Akerson, Suzanne
+10040 53 Akerson, Mary
+10030 23 Akerson, Gwyn
+10020 21 Alexander, Joe
+10010 40 Akin, Monica
+10000 60 Akers, Mark
+
+update after commit:
+99995 42 Akerson, Suzanne
+99994 53 Akerson, Mary
+99993 60 Akers, Mark
+99992 61 Andrews, John
+10070 22 Andrews, Kay
+10030 23 Akerson, Gwyn
+10020 21 Alexander, Joe
+10010 40 Akin, Monica
+
+delete after abort:
+99995 42 Akerson, Suzanne
+99994 53 Akerson, Mary
+99993 60 Akers, Mark
+99992 61 Andrews, John
+10070 22 Andrews, Kay
+10030 23 Akerson, Gwyn
+10020 21 Alexander, Joe
+10010 40 Akin, Monica
+
+delete after commit:
+10070 22 Andrews, Kay
+10030 23 Akerson, Gwyn
+10020 21 Alexander, Joe
+10010 40 Akin, Monica

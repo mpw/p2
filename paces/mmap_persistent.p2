@@ -1,0 +1,99 @@
+/* $Id: mmap_persistent.p2,v 45.0 1997/09/19 05:43:47 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+#include <stdio.h>    /* printf() */
+#include "P2_paces.h"
+
+#define PERSISTENT 1
+
+/* Can't use named_funcall with persistent, since
+   (1) name_funcall chages the name of persistent variables
+   (formal parameters alias actual parameters), and
+   (2) the persistence routines depend on each persistent variable
+   having a unique name. (JAT) */
+
+#define NAMED_FUNCALL 0
+
+typedef struct 
+{
+   int   empno;
+   int   age;
+   char  dept_name[20];
+   char  name[22];
+} EMP_TYPE;
+
+
+EMP_TYPE rawdata[] = {
+   { 10000,60,"Biology","Akers, Mark" },
+   { 10070,22,"Biology","Andrews, Kay" },
+   { 10020,21,"Biology","Alexander, Joe" },
+   { 10010,40,"Biology","Akin, Monica" },
+   { 10050,42,"Biology","Akerson, Suzanne" },
+   { 10040,53,"Biology","Akerson, Mary" },
+   { 10060,61,"Biology","Andrews, John" },
+   { 10030,23,"Biology","Akerson, Gwyn" },
+   { -1 }
+};
+
+typex {
+#if NAMED_FUNCALL
+
+#if PERSISTENT
+  t = top2ds[named_funcall[array[mmap_persistent]]];
+#else
+  t = top2ds[named_funcall[array[transient]]];
+#endif
+
+#else
+
+#if PERSISTENT
+  t = top2ds[array[mmap_persistent]];
+#else
+  t = top2ds[array[transient]];
+#endif
+
+#endif
+}
+
+container <EMP_TYPE> stored_as t with {
+#if PERSISTENT
+  mmap_persistent file is "/tmp/P2_mmap-persistent-data" with size 2000;
+#endif
+  array size is 10;
+} emp_cont;
+
+cursor <emp_cont> all_emp;
+
+int main (void) 
+{
+  int                  loop;
+  EMP_TYPE             *p;
+
+  open_cont(emp_cont);
+  init_curs(all_emp);
+
+  /* If emp_cont is empty, add some data to it.
+     Otherwise, use the data already in it. */
+
+  reset_start(all_emp);
+  if (end_adv(all_emp)) {
+    for (p = rawdata; p->empno != -1; p++) 
+    {
+      insert(all_emp, *p);
+    }
+  }
+
+  printf("all emp are:\n"); 
+  foreach(all_emp)
+  {
+    EMP_TYPE r;
+    getrec(all_emp, r);
+    printf("%d %d %s\n",
+	   r.empno,
+	   r.age,
+	   r.name); 
+  }
+
+  close_cont(emp_cont);
+  exit(0);
+}

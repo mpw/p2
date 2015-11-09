@@ -1,0 +1,51 @@
+/* $Id: schema04.p2,v 45.0 1997/09/19 05:44:12 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* Schema Regression Test. */
+/* Schema with containers. */
+
+#include "P2_paces.h"
+
+typedef struct {
+  int  empno;
+  int  age;
+  int  deptno;
+  int  jobno;
+  char *dept_name;
+  char *name;
+} EMPLOYEE;
+
+typedef struct {
+  int  deptno;
+  char *name;
+} DEPARTMENT;
+
+typedef struct {
+  int  jobno;
+  char *name;
+} JOB;
+
+typex {
+  t = top2ds[P2_DELFLAG_LAYER[array[transient]]];
+}
+
+/* Schema with containers. */
+
+schema {
+  container <EMPLOYEE> employee;
+  container <DEPARTMENT> department;
+  container <JOB> job;
+  int i;
+  int j;
+}
+stored_as t with {
+  array size of employee is 1000;
+  array size of department is 100;
+  array size of job is 10;
+} s;
+
+int main()
+{
+  s.i = s.j = 0;
+  return(s.i);
+}

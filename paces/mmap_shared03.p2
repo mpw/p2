@@ -1,0 +1,172 @@
+/* $Id: mmap_shared03.p2,v 45.0 1997/09/19 05:43:48 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Demonstrate that the mmap_shared MEM layer works.  Spawn 10 child
+   processes, each of which adds a single tuple to a container stored
+   in mmap_shared and prints the cardinality of the container. */
+
+/* Like mmap_shared02.p2, but without tracing. (JAT) */
+
+#include <assert.h>      /* assert() */
+#include <stdarg.h>      /* va_list, va_start(), va_end() */
+#include <stdio.h>       /* fprintf(), vfprintf() */
+#include <unistd.h>      /* getpid() */
+
+#include "P2_paces.h"
+
+/*****************************************************************************/
+/*                  Declarations                                             */
+/*****************************************************************************/
+
+typedef struct {
+   int f;
+} TUPLE;
+
+#define CARDINALITY
+#define ORDERBY
+#undef REOPEN
+
+typex {
+#ifdef ORDERBY
+  t = top2ds[orderby_fast[cardinality[array1[mmap_shared]],
+			 top2ds[array2[transient]]]];
+#else
+  t = top2ds[cardinality[array1[mmap_shared]]];
+#endif /* ORDERBY */
+}
+
+container <TUPLE> stored_as t with {
+#if 0
+  mmap_persistent file is "/tmp/P2_mmap_shared03-data" with size 2000;
+#else
+  mmap_shared file is "/tmp/P2_mmap_shared03-data" with size 2000;
+#endif
+  array1 size is 10;
+#ifdef ORDERBY
+  array2 size is 10;
+#endif /* ORDERBY */
+} cont;
+
+cursor <cont> curs;
+
+#ifdef ORDERBY
+cursor <cont> orderby ascending f ordered_curs;
+#else
+cursor <cont> ordered_curs;
+#endif /* ORDERBY */
+
+/*****************************************************************************/
+/*                  Tracing Routines                                         */
+/*****************************************************************************/
+
+void
+print_error(char *format, ...)
+{
+  va_list args;
+
+  fprintf(stderr, "pid=%d error: ", getpid());
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  perror(" ");
+  fflush(stderr);
+  exit(1);
+}
+
+/*****************************************************************************/
+/*                  Main                                                     */
+/*****************************************************************************/
+
+int
+main(void) 
+{
+  P2_PROCESS_ID child_pid;
+  P2_SEMAPHORE_ID child_mutex;
+  P2_SEMAPHORE_ID barrier;
+  int i;
+  
+  /* Initialize process manager. */
+  P2_init_process();
+
+  if (P2_init_semaphore(&child_mutex, 1) < 0)
+    print_error("Can't initialize child_mutex semaphore");
+  if (P2_init_semaphore(&barrier, 0) < 0)
+    print_error("Can't initialize barrier semaphore");
+
+#ifndef REOPEN
+  open_cont(cont);
+  init_curs(curs);
+#ifdef CARDINALITY
+  assert(cardinality(cont) == 0);
+#endif /* CARDINALITY */
+#endif /* REOPEN */
+
+  for (i = 0; i < 10; i++)
+  {
+    TUPLE tuple;
+    int child_pid;
+
+    child_pid = P2_fork_process();
+    if (child_pid == -1)
+      print_error("Can't fork child %d", i);
+    else if (child_pid == 0)
+    {
+      /* Child process */
+      int j;
+      /* Lock child mutex semaphore. */
+      if (P2_lock_semaphore(&child_mutex) < 0)
+	print_error("Can't lock child_mutex semaphore");
+#ifdef REOPEN
+      open_cont(cont);
+      init_curs(curs);
+#endif /* REOPEN */
+      /* Insert a new tuple. */
+      tuple.f = i;
+      insert(curs, tuple);
+      /* Make sure cardinality is valid. */
+#ifdef CARDINALITY
+      j = cardinality(cont);
+#else
+      j = 0;
+      foreach(curs)
+      {
+	j++;
+      }
+#endif /* CARDINALITY */
+      assert(j > 0 && j <= 10);
+      /* Print cardinality */
+      printf("%d\n", j);
+      fflush(stdout);
+      /* If this is the last tuple, unlock the barrier. */
+      if (j == 10)
+      {
+	if (P2_unlock_semaphore(&barrier) < 0)
+	  print_error("Can't unlock barrier semaphore");
+      }
+#ifdef REOPEN
+      close_cont(cont);
+#endif /* REOPEN */
+      /* Unlock child mutex semaphore. */
+      if (P2_unlock_semaphore(&child_mutex) < 0)
+	print_error("Can't unlock child_mutex semaphore");
+      exit(0);
+    }
+  }
+
+  if (P2_lock_semaphore(&barrier) < 0)
+    print_error("Can't lock barrier semaphore");
+  if (P2_lock_semaphore(&child_mutex) < 0)
+    print_error("Can't lock child_mutex semaphore");
+
+  if (P2_delete_semaphore(&barrier) < 0)
+    print_error("Can't initialize barrier semaphore");
+  if (P2_delete_semaphore(&child_mutex) < 0)
+    print_error("Can't initialize child_mutex semaphore");
+
+#ifndef REOPEN
+  close_cont(cont);
+#endif /* REOPEN */
+  /* Delete process manager. */
+  P2_delete_process();
+  exit(0);
+}

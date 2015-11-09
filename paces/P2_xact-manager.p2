@@ -1,0 +1,595 @@
+/* $Id: P2_xact-manager.p2,v 45.2 1997/09/19 22:14:06 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Transaction manager. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>   /* assert() */
+#include "P2_paces.h" /* BOOLEAN */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+/* Transaction manager mutex semaphore. */
+#if 1
+#if !defined(XACT_MANAGER_SEMAPHORE)
+#define XACT_MANAGER_SEMAPHORE
+#endif /* XACT_MANAGER_SEMAPHORE */
+#endif
+
+/*****************************************************************************/
+/*                  Constants.                                               */
+/*****************************************************************************/
+
+const P2_LSN P2_NULL_LSN = { 0, 0 };
+
+/*****************************************************************************/
+/*                  Type Expressions.                                        */
+/*****************************************************************************/
+
+/* Necessarily shared, NOT necessarily persistent (can be
+   reconstructed from the log). */
+
+typex {
+  xact_cb_typex = top2ds_qualify[init_cont_function[container_structure[
+		    dlist[avail[array[mmap_shared]]]]]];
+}
+
+/*****************************************************************************/
+/*                  Global variables.                                        */
+/*****************************************************************************/
+
+/* Maximum number of concurrent transactions. */
+#define MAX_XACT 100
+
+/* Size of transformed xact_cb_cont element,
+   i.e., sizeof(element<xact_cb_cont>)) */
+#define SIZEOF_ELEMENT_XACT_CB_CONT \
+  (sizeof(P2_XACT_CB) + (3*sizeof(void *)))
+/* Size of shared memory mapped segment */
+#define XACT_MANAGER_DATA_SIZE \
+  (sizeof(P2_XACT_ANCHOR) + (MAX_XACT * SIZEOF_ELEMENT_XACT_CB_CONT))
+
+/* Transaction manager anchor. */
+
+/* If you change this struct, be sure to change
+   paces/P2_xact-manager.p2:P2_xact_manager_checkpoint_schema() and
+   paces/P2_log_manager.h:P2_XACT_MANAGER_ANCHOR_LOG_STRUCT */
+typedef struct {
+  P2_XACT_ID next_xact_id;
+} P2_XACT_ANCHOR;
+
+/* Should the transaction anchor be in a separate container??? (JAT) */
+container <P2_XACT_CB> stored_as xact_cb_typex with {
+  init_cont_function "P2_init_xact_cb_cont"
+  container_structure "P2_XACT_ANCHOR";
+  array size is MAX_XACT;
+  mmap_shared file is "/tmp/P2_xact-manager-data"
+    with size XACT_MANAGER_DATA_SIZE;
+} xact_cb_cont;
+
+#if 1
+/* Transaction identifier cache. */
+/* Gray & Reuter call this WorksFor, p. 316 */
+/* A process works for (at most) one transaction
+   but a transaction may have more than one process working for it. */
+P2_XACT_ID P2_my_xact_id = 0;
+#endif
+
+/* Transaction status cache. */
+/* Even if a transaction has more than one process working for it,
+   only one process calls the commit_xact() or abort_xact() operation. */
+/* Should this be P2_XACT_DO instead of P2_XACT_NONE??? (JAT) */
+P2_XACT_STATUS P2_my_xact_status = P2_XACT_NONE;
+
+/* Low water mark. */
+P2_LSN P2_low_water;
+
+/* Transaction control block cursor. */
+cursor <xact_cb_cont> where "$.xact_id == P2_my_xact_id" xact_cb_curs;
+
+/* Semaphore */
+P2_SEMAPHORE_ID xact_manager_semaphore;
+
+/*****************************************************************************/
+/*                  Null LSN.                                                */
+/*****************************************************************************/
+
+/* Return TRUE iff lsn is P2_NULL_LSN */
+
+int
+P2_null_lsn (P2_LSN lsn)
+{
+  return(lsn.index == 0 && lsn.rba == 0);
+}
+
+/*****************************************************************************/
+/*                  Status valid.                                            */
+/*****************************************************************************/
+
+int
+P2_status_valid (P2_XACT_STATUS status)
+{
+  return(status >= P2_MIN_XACT_STATUS && status <= P2_MAX_XACT_STATUS);
+}
+
+/*****************************************************************************/
+/*                  Transaction identifier valid.                            */
+/*****************************************************************************/
+
+int
+P2_xact_id_valid (P2_XACT_ID xact_id)
+{
+  /* 0 is not a valid transaction identifier. */
+  if (xact_id <= 0)
+    return(FALSE);
+
+  /* If P2_my_xact_id != 0 (i.e. if we are not using process
+     identifiers as transaction identfiers), then transaction
+     identifier must be less than xact_cb_cont.next_xact_id (the
+     highest numbered transaction identifier allocated so far). */
+  if (P2_my_xact_id != 0 && xact_id >= xact_cb_cont.next_xact_id)
+    return(FALSE);
+
+  /* Return TRUE */
+  return(TRUE);
+}
+
+/*****************************************************************************/
+/*                  Log transaction.                                         */
+/*****************************************************************************/
+
+/* Tell the TM about a new log record. */
+/* Gray & Reuter, p. 506 */
+/* Called from paces/P2_log-manager.p2:P2_log_insert(), i.e., called
+   from the log manager each time it is about to insert a log record. */
+
+P2_LSN
+P2_log_transaction (P2_LSN new_lsn)
+{
+  P2_LSN prev;
+
+#if defined(XACT_MANAGER_SEMAPHORE)
+  /* Lock the transaction manager semaphore. */
+  if (P2_lock_semaphore(&(xact_manager_semaphore)) < 0)
+    P2_runtime_perror("Could not lock transaction manager semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+
+  /* Make sure the transaction control block cursor references the
+     correct control block. */
+  assert(xact_cb_curs.xact_id == P2_my_xact_id);
+
+  prev = xact_cb_curs.max_lsn;           /* Make a copy of the record's LSN. */
+  xact_cb_curs.max_lsn = new_lsn;        /* xact max LSN is this record now */
+  if (P2_null_lsn(xact_cb_curs.min_lsn)) /* If this is the 1st log record of */
+    xact_cb_curs.min_lsn = new_lsn;      /*   this xact, then update min_lsn */
+
+#if defined(XACT_MANAGER_SEMAPHORE)
+  /* Lock the transaction manager semaphore. */
+  if (P2_unlock_semaphore(&(xact_manager_semaphore)) < 0)
+    P2_runtime_perror("Could not unlock transaction manager semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+
+  return(prev);
+}
+
+/*****************************************************************************/
+/*                  Initialize transaction control block.                   */
+/*****************************************************************************/
+
+/* This procedure is called only from
+   paces/P2_xact-manager:P2_xact_manager_begin_xact(),
+   from within a transaction manager semaphore mutex.
+   Thus, it is unnecessary to lock the transaction manager semaphore
+   within this procedure. */
+   
+void
+#if 0
+P2_init_xact_cb (P2_XACT_STATUS status)
+#else
+P2_init_xact_cb (void)
+#endif
+{
+  P2_XACT_CB xact_cb;
+
+  /* Only place we increment next transaction id. */
+  P2_my_xact_id = xact_cb_cont.next_xact_id++;
+  xact_cb.xact_id = P2_my_xact_id;
+#if 0
+  assert(P2_status_valid(status));
+  xact_cb.status = status;
+#endif
+  xact_cb.min_lsn = P2_NULL_LSN;
+  xact_cb.max_lsn = P2_NULL_LSN;
+
+#ifndef NDEBUG
+  if (overflow(xact_cb_cont))
+    P2_runtime_error("Transaction control block container full:"
+		     " too many simultaneous transactions");
+#endif /* NDEBUG */
+
+  /* Insert a new transaction control block. */
+  /* Only place we insert a new transaction control block. */
+  insert(xact_cb_curs, xact_cb);
+
+  /* Make sure the transaction control block cursor references the
+     correct control block. */
+  assert(xact_cb_curs.xact_id == P2_my_xact_id);
+}
+
+/*****************************************************************************/
+/*                  Get and set transaction status.                          */
+/*****************************************************************************/
+
+/* Make this very FAST, because it is called before all cursor operations.
+   See x/log.xp:{insert(),delete(),swap(),upd()} (JAT) */
+
+P2_XACT_STATUS
+P2_get_xact_status (void)
+{
+#if 1
+  /* If we're in a transaction, make sure the transaction control
+     block cursor references the correct control block. */
+  assert(P2_my_xact_id == 0 || xact_cb_curs.xact_id == P2_my_xact_id);
+#endif
+
+#if 0
+  /* This if statement is an example of overhead added by generality.
+     Try to get rid of it. (JAT) */
+  if (P2_my_xact_id == 0)
+    return(P2_XACT_NONE);
+  else
+    return(xact_cb_curs.status);
+#else
+  return(P2_my_xact_status);
+#endif
+}
+
+void
+P2_set_xact_status (P2_XACT_STATUS status)
+{
+#if 1
+  /* If we're in a transaction, make sure the transaction control
+     block cursor references the correct control block. */
+  assert(P2_my_xact_id == 0 || xact_cb_curs.xact_id == P2_my_xact_id);
+#endif
+
+  assert(P2_status_valid(status));
+
+#if 0
+  /* This if statement is an example of overhead added by generality.
+     Try to get rid of it. (JAT) */
+  if (P2_my_xact_id != 0)
+  {
+    P2_my_xact_status = status;
+    xact_cb_curs.status = status;
+  }
+#else
+  P2_my_xact_status = status;
+#endif
+}
+
+/*****************************************************************************/
+/*                  Get maximum LSN.                                         */
+/*****************************************************************************/
+
+/* This routine is called ONLY from
+   paces/P2_log-manager.p2:P2_undo_or_redo_xact(). But, this code
+   must be here, rather than (inlined) in paces/P2_log-manager.p2,
+   because this code uses the transaction control block cursor, which
+   is local to this file. */
+
+P2_LSN
+P2_get_max_lsn (void)
+{
+#if 1
+  /* Make sure the transaction control block cursor references the
+     correct control block. */
+  assert(xact_cb_curs.xact_id == P2_my_xact_id);
+#endif
+
+  return(xact_cb_curs.max_lsn);
+}
+
+/*****************************************************************************/
+/*                  Get transaction id.                                      */
+/*****************************************************************************/
+
+/* Only P2_xact_manager_begin_xact() sets the transaction id to a
+   non-zero value, but the lock manager needs a transaction id, even
+   if we haven't called begin_xact (that is, the lock manager needs a
+   transaction id, even if it is being used without the xact_manager).
+   This routine always provides a transaction id: If P2_my_xact_id is
+   non-zero, return it.  Otherwise return P2_my_process_id. */
+/* BUG!!! Transaction id and process id might clash.
+   Can't use them together. */
+/* This is (1) ugly: some other layer should worry about providing
+   dummy transaction ids and (2) inefficient: getting the transaction
+   id should be a simple variable access not a procedure call. */
+/* Note: P2_my_xact_id == 0 is (or should be) redundant with
+   status == P2_XACT_NONE */
+
+P2_XACT_ID
+P2_get_xact_id (void)
+{
+  if (P2_my_xact_id != 0)
+    /* Use the transaction id. */
+    return(P2_my_xact_id);
+  else
+    /* Use the process id as the transaction id. */
+    return(P2_my_process_id);
+}
+
+/*****************************************************************************/
+/*                  Transaction operations.                                  */
+/*****************************************************************************/
+
+/* Gray & Reuter, Rollback_Work(), pp. 601-602. */
+
+void
+P2_xact_manager_abort_xact (void)
+{
+#if defined(XACT_MANAGER_SEMAPHORE)
+  /* Lock the transaction manager semaphore. */
+  if (P2_lock_semaphore(&(xact_manager_semaphore)) < 0)
+    P2_runtime_perror("Could not lock transaction manager semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+
+#ifndef NDEBUG
+  /* Make sure we ARE in a transaction. */
+  if (P2_my_xact_id == 0)
+    P2_runtime_error("Not in a transaction, can not abort_xact()");
+
+  /* Make sure the transaction control block cursor references the
+     correct control block. */
+  assert(xact_cb_curs.xact_id == P2_my_xact_id);
+  /* Make sure the transaction status == UNDO. */
+#if 0
+  assert(xact_cb_curs.status == P2_XACT_UNDO);
+#else
+  assert(P2_my_xact_status == P2_XACT_UNDO);
+#endif
+#endif /* NDEBUG */
+
+#if 1
+  /* Delete the old transaction control block. */
+  delete(xact_cb_curs);
+#endif
+
+  P2_my_xact_id = 0;
+
+#if 0
+  P2_init_xact_cb(P2_XACT_NONE);
+#endif
+
+#if defined(XACT_MANAGER_SEMAPHORE)
+  /* Lock the transaction manager semaphore. */
+  if (P2_unlock_semaphore(&(xact_manager_semaphore)) < 0)
+    P2_runtime_perror("Could not unlock transaction manager semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+}
+
+/* Gray & Reuter, Begin_Work(), pp. 592-593. */
+
+void
+P2_xact_manager_begin_xact (void)
+{
+#if defined(XACT_MANAGER_SEMAPHORE)
+  /* Lock the transaction manager semaphore. */
+  if (P2_lock_semaphore(&(xact_manager_semaphore)) < 0)
+    P2_runtime_perror("Could not lock transaction manager semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+
+#ifndef NDEBUG
+  /* Make sure we are NOT already in a transaction */
+  if (P2_my_xact_id != 0)
+    P2_runtime_error("Already in transaction %d, can not begin_xact()",
+		     P2_my_xact_id);
+#endif /* NDEBUG */
+
+#if 0
+  /* Delete the old transaction control block. */
+  delete(xact_cb_curs);
+#endif
+
+#if 0
+  /* Only place we increment next transaction id. */
+  xact_cb_cont.next_xact_id++;
+
+  P2_my_xact_id = xact_cb_cont.next_xact_id;
+#endif
+
+#if 0
+  P2_init_xact_cb(P2_XACT_DO);
+#else
+  P2_init_xact_cb();
+  P2_set_xact_status(P2_XACT_DO);
+#endif
+
+#if defined(XACT_MANAGER_SEMAPHORE)
+  /* Lock the transaction manager semaphore. */
+  if (P2_unlock_semaphore(&(xact_manager_semaphore)) < 0)
+    P2_runtime_perror("Could not unlock transaction manager semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+}
+
+/* Gray & Reuter, Commit_Work(), pp. 593-595. */
+
+void
+P2_xact_manager_commit_xact (void)
+{
+#if defined(XACT_MANAGER_SEMAPHORE)
+  /* Lock the transaction manager semaphore. */
+  if (P2_lock_semaphore(&(xact_manager_semaphore)) < 0)
+    P2_runtime_perror("Could not lock transaction manager semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+
+#ifndef NDEBUG
+  /* Make sure we ARE in a transaction. */
+  if (P2_my_xact_id == 0)
+    P2_runtime_error("Not in a transaction, can not commit_xact()");
+
+  /* Make sure the transaction control block cursor references the
+     correct control block. */
+  assert(xact_cb_curs.xact_id == P2_my_xact_id);
+  /* Make sure the transaction status == DO or REDO. */
+#if 0
+  assert(xact_cb_curs.status == P2_XACT_DO);
+#else
+  assert(P2_my_xact_status == P2_XACT_DO || P2_my_xact_status == P2_XACT_REDO);
+#endif
+#endif /* NDEBUG */
+
+#if 1
+  /* Delete the old transaction control block. */
+  delete(xact_cb_curs);
+#endif
+
+  P2_my_xact_id = 0;
+
+#if 0
+  P2_init_xact_cb(P2_XACT_NONE);
+#endif
+
+#if defined(XACT_MANAGER_SEMAPHORE)
+  /* Lock the transaction manager semaphore. */
+  if (P2_unlock_semaphore(&(xact_manager_semaphore)) < 0)
+    P2_runtime_perror("Could not unlock transaction manager semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+}
+
+/* Gray & Reuter, call this "TM_Checkpoint()", p. 608 */
+
+void
+P2_xact_manager_checkpoint_schema (void)
+{
+  if (P2_log_manager_initialized)
+  {
+    P2_LSN lsn;
+    P2_XACT_MANAGER_ANCHOR_LOG_STRUCT x;
+    int variable_size = sizeof(P2_XACT_MANAGER_ANCHOR_LOG_STRUCT)
+                          - sizeof(P2_XACT_LOG_STRUCT)
+                          - P2_LOG_STRUCT_VARCHAR_SIZE;
+    /* Initialize x. */
+    /* Is there a more efficient way of doing this, for example,
+       make x static, and use an initializer??? (JAT) */
+    /* Is this necessary???  Doesn't P2_log_insert() initialize x??? (JAT) */
+    /* See analogous code in paces/P2_log-manager.p2:init_rba() */
+#if 1
+    memset(&x, 0, sizeof(P2_XACT_LOG_STRUCT));
+#else
+    x.lsn = P2_NULL_LSN;
+    x.prev_lsn = P2_NULL_LSN;
+    x.xact_prev_lsn = P2_NULL_LSN;
+    x.xact_id = 0;
+#endif
+    x.op_code = P2_LOG_XACT_MANAGER_ANCHOR_OP | P2_LOG_OTHER_OP;
+    x.low_water = P2_low_water;
+    /* If you change P2_XACT_ANCHOR, be sure to change this code. */
+    x.next_xact_id = xact_cb_cont.next_xact_id;
+    /* Insert x. */
+    lsn = P2_log_insert((P2_LOG_STRUCT *) &x, variable_size);
+    /* Save LSN in log anchor. */
+    P2_log_write_anchor(lsn);
+  }
+}
+
+/*****************************************************************************/
+/*                  Print xact anchor.                                       */
+/*****************************************************************************/
+
+#if defined(P2_PRINT_XACT)
+
+#include <stdio.h> /* printf() */
+
+void
+P2_print_xact_anchor (void)
+{
+  printf("Transaction anchor:\n");
+  printf("  next_xact_id = %u\n", xact_cb_cont.next_xact_id);
+}
+
+#endif /* P2_PRINT_XACT */
+
+/*****************************************************************************/
+/*                  Init and delete transaction manager.                     */
+/*****************************************************************************/
+
+/* Why is this called _cont??? (JAT) */
+
+void
+P2_init_xact_cb_cont (void)
+{
+  /* Get LSN of the transaction manager anchor stored in the log. */
+  P2_LSN lsn = (P2_log_manager_initialized)? P2_log_read_anchor() : P2_NULL_LSN;
+  /* If no transaction manager anchor is stored in the log,
+     initialize the transaction identifier. */
+  /* A more exact test for no transaction manager anchor stored in the
+     log would be lsncmp(lsn, P2_NULL_LSN), but this test would be
+     more expensive. (JAT) */
+#ifndef NDEBUG
+  /* Assert that the two tests are equivalent. */
+  assert((lsn.rba == 0) == (P2_lsncmp(lsn, P2_NULL_LSN) == 0));
+#endif /* NDEBUG */
+  if (lsn.rba == 0)
+  {
+    /* 0 is NOT a valid xact_id. */
+    xact_cb_cont.next_xact_id = 1;
+  }
+  else
+  {
+    /* Get next_xact_id from logs.  See Gray & Reuter, p. 586 */
+    P2_XACT_MANAGER_ANCHOR_LOG_STRUCT *x;
+    x = (P2_XACT_MANAGER_ANCHOR_LOG_STRUCT *) P2_log_read_lsn(lsn);
+    xact_cb_cont.next_xact_id = x->next_xact_id;
+  }
+}
+
+void
+P2_init_xact_manager (void)
+{
+  /* Make sure SIZEOF_ELEMENT_XACT_CB_CONT is correct. */
+  assert(SIZEOF_ELEMENT_XACT_CB_CONT == sizeof(element<xact_cb_cont>));
+
+#if defined(XACT_MANAGER_SEMAPHORE)
+  if (P2_init_semaphore(&xact_manager_semaphore, 1) < 0)
+    P2_runtime_perror("Can not initialize transaction manager mutex semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+
+  /* Open container. */
+  open_cont(xact_cb_cont);
+
+#if 0
+  /* Once per process initialization. */
+  P2_my_xact_id = 0;
+#endif
+
+  /* Initialize cursor. */
+  init_curs(xact_cb_curs);
+
+#if 0
+  /* Initialize transaction control block. */
+  /* Called in P2_log_manager_init_xact_cb() from paces/P2_log-manager.p2 */
+  P2_init_xact_cb(P2_XACT_NONE);
+#endif
+}
+
+void
+P2_delete_xact_manager (void)
+{
+#if defined(XACT_MANAGER_SEMAPHORE)
+  if (P2_delete_semaphore(&xact_manager_semaphore) < 0)
+    P2_runtime_perror("Can not delete transaction manager mutex semaphore");
+#endif /* XACT_MANAGER_SEMAPHORE */
+
+  /* Close container. */
+  close_cont(xact_cb_cont);
+}

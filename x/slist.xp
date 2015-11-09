@@ -1,0 +1,15 @@
+// $Id: slist.xp,v 45.0 1997/09/19 05:46:49 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds slist [ ds ] unstable no annotation retrieval_sometimes
+
+// The default slist layer--UNSTABLE.
+
+// The default dlist layer is STABLE and the default slist layer is
+// UNSTABLE, because before we started thinking of creating multiple
+// dlist and slist versions, x/dlist.xp happened to be stable, x/slist
+// unstable, and all the paces files were written to expect this
+// behavior--the stable and unstable layers are NOT
+// interchangeable. (JAT)
+
+#include "slist.xph"

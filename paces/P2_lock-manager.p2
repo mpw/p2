@@ -1,0 +1,1247 @@
+/* $Id: P2_lock-manager.p2,v 45.1 1997/09/19 07:46:46 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Lock manager from Gray & Reuter, 1993. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
+
+#include <assert.h>               /* assert() */
+#include "P2_lock-manager.h"      /* P2_LOCK_NAME */
+#include "P2_paces.h"             /* BOOLEAN */
+
+/* DEBUG */
+#if 1
+#if !defined(DEBUG)
+#define DEBUG
+#endif /* DEBUG */
+#endif
+
+/* TRACE */
+#if 0
+#if !defined(TRACE)
+#define TRACE
+#endif /* TRACE */
+#endif
+
+/* VERBOSE */
+#if 0
+#if !defined(VERBOSE)
+#define VERBOSE
+#endif /* VERBOSE */
+#endif
+
+/*****************************************************************************/
+/*                  Typedefs.                                                */
+/*****************************************************************************/
+
+typedef unsigned int RMID;        /* locally unique id for resource manager */
+
+typedef struct {
+  P2_PROCESS_ID  pid;
+  /* other things */
+} PCB;
+
+typedef struct {
+  P2_LOCK_NAME   name;            /* the name of this lock */
+  P2_LOCK_STATUS status;          /* granted, waiting, converting, denied */
+  P2_LOCK_MODE   mode;            /* mode requested (and granted) */
+  P2_LOCK_MODE   convert_mode;    /* if in convert wait, mode desired */
+  int            count;           /* the number of times lock was locked */
+  P2_LOCK_CLASS  class;           /* lock class (aka duration) */
+  P2_PROCESS_ID  pid;             /* process to wakeup when lock is granted */
+  P2_XACT_ID     xact_id;         /* transaction identifier */
+} LOCK_REQUEST;
+
+typedef struct {
+  P2_LOCK_NAME   name;            /* the name of this lock */
+  P2_LOCK_MODE   granted_mode;    /* the mode of the granted group */
+  BOOLEAN        waiting;         /* flag indicates nonempty wait group */
+} LOCK_HEAD;
+
+/*****************************************************************************/
+/*                  Type Expressions.                                        */
+/*****************************************************************************/
+
+#if 1
+
+/* Use hash_array. */
+/* hash_array assumes perfect hashing.  To guarantee this, we will
+   have to hash the name BEFORE P2 sees it. (JAT) */
+#if !defined(HASH_ARRAY)
+#define HASH_ARRAY
+#endif /* HASH_ARRAY */
+
+#elif 1
+
+/* Use hash, avail, and array. */
+#if !defined(HASH)
+#define HASH
+#endif /* HASH */
+
+/* Otherwise, use delflag and malloc. */
+/* Note that certain paces files, e.g. paces/xact15.p2, run out of
+   mmap memory using delflag, since delflag, unlike avail, does not
+   re-use deleted elements. (JAT) */
+
+#endif
+
+typex {
+#if defined(HASH_ARRAY)
+  lock_request_typex = top2ds_qualify[slist_queue[avail[array[mmap_shared]]]];
+  lock_head_typex = top2ds[hash_array[mmap_shared]];
+#elif defined(HASH)
+  lock_request_typex = top2ds_qualify[slist_queue[avail[array[mmap_shared]]]];
+  lock_head_typex = top2ds_qualify[hash[avail[array[mmap_shared]]]];
+#else
+  lock_request_typex = top2ds_qualify[delflag[slist_queue[malloc[mmap_shared]]]];
+  lock_head_typex = top2ds_qualify[delflag[slist[malloc[mmap_shared]]]];
+#endif
+}
+
+/*****************************************************************************/
+/*                  Global Variables.                                        */
+/*****************************************************************************/
+
+/* Maximum number of concurrent lock requests. */
+#define MAX_LOCK_REQUEST 2000
+
+/* Maximum number of concurrent lock headers. */
+#define MAX_LOCK_HEAD 1000
+
+/* sizeof(element<request_cont>):
+     Size of (transformed) lock request container element. */
+/* avail adds 1 pointer to element, slist adds 1 pointer to element. */
+#define SIZEOF_ELEMENT_REQUEST_CONT \
+  (sizeof(LOCK_REQUEST) + (2*sizeof(void *)))
+
+/* sizeof(element<head_cont>):
+      Size of (transformed) lock header container element. */
+#if defined(HASH_ARRAY)
+/* hash_array adds 1 integer (valid flag) to element. */
+#define SIZEOF_ELEMENT_HEAD_CONT \
+  (sizeof(LOCK_HEAD) + sizeof(int))
+#elif defined(HASH)
+/* avail adds 1 pointer to element, hash adds 1 pointer to element. */
+#define SIZEOF_ELEMENT_HEAD_CONT \
+  (sizeof(LOCK_HEAD) + (2*sizeof(void *)))
+#else
+/* delflag adds 1 integer (delete flag) to element,
+   slist adds 1 pointer (next) to element. */
+#define SIZEOF_ELEMENT_HEAD_CONT \
+  (sizeof(LOCK_HEAD) + sizeof(int) + sizeof(void *))
+#endif
+
+/* Size of shared memory mapped segment. */
+#if 1
+#define MMAP_SHARED_SIZE \
+  (MAX_LOCK_REQUEST * SIZEOF_ELEMENT_REQUEST_CONT \
+    + MAX_LOCK_HEAD * SIZEOF_ELEMENT_HEAD_CONT)
+#else
+#define MMAP_SHARED_SIZE 1000000
+#endif
+
+/* Lock request container. */
+/* Lock requests contain a description of the request (name, owner,
+   mode, duration, etc.)  Gray & Reuter, p. 470. */
+container <LOCK_REQUEST> stored_as lock_request_typex with {
+#if defined(HASH_ARRAY) || defined(HASH)
+  array size is MAX_LOCK_REQUEST;
+#endif /* HASH_ARRAY || HASH */
+  mmap_shared file is "/tmp/P2_lock-manager-data" with size MMAP_SHARED_SIZE;
+} request_cont;
+
+/* Lock header container. */
+/* Busy locks have a lock header block that contains the lock name, etc.
+   Free locks have no header or other data structures allocated to them.
+   Gray & Reuter, p. 470. */
+container <LOCK_HEAD> stored_as lock_head_typex with {
+#if defined(HASH_ARRAY)
+  hash_array key is name with size MAX_LOCK_HEAD;
+#elif defined(HASH)
+  hash key is name with size MAX_LOCK_HEAD;
+  array size is MAX_LOCK_HEAD;
+#endif
+  mmap_shared file is "/tmp/P2_lock-manager-data" with size MMAP_SHARED_SIZE;
+} head_cont;
+
+/* Matrices used to lookup lock compatibility and conversion requests. */
+BOOLEAN lock_compat_matrix[P2_MAX_LOCK_MODE][P2_MAX_LOCK_MODE];
+P2_LOCK_MODE lock_max_matrix[P2_MAX_LOCK_MODE][P2_MAX_LOCK_MODE];
+
+/* Semaphore */
+P2_SEMAPHORE_ID lock_manager_semaphore;
+
+/*****************************************************************************/
+/*                  Compatibility and maximum.                               */
+/*****************************************************************************/
+
+/* Return the maximum of the given lock classes (aka durations). */
+
+#define class_max(a,b) (((a) >= (b))? (a) : (b))
+
+/* Initialize lock compatibility matrix. Gray & Reuter, p. 408 */
+
+/* Note that the compatibility matrix for update mode locks is
+   interesting. It is chosen to be asymmetric; update is compatible
+   with share, but share is not compatibile with update.  This allows
+   the updater to read but delays other ransaction readers and
+   updaters, since this transaction is about to update the
+   record. (Gray & Reuter, pp. 409-410. */
+
+static void
+init_lock_compat_matrix (void)
+{
+                    /* request */ /* granted */ /* compatible? */
+
+  lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_FREE] = TRUE;
+  lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_S]    = TRUE;
+  lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_X]    = TRUE;
+  lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_U]    = TRUE;
+  lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_IS]   = TRUE;
+  lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_IX]   = TRUE;
+  lock_compat_matrix [P2_LOCK_FREE] [P2_LOCK_SIX]  = TRUE;
+
+  lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_FREE] = TRUE;
+  lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_S]    = TRUE;
+  lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_X]    = FALSE;
+  lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_U]    = FALSE; /* Asymmetry. */
+  lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_IS]   = TRUE;
+  lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_IX]   = FALSE;
+  lock_compat_matrix [P2_LOCK_S]    [P2_LOCK_SIX]  = FALSE;
+
+  lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_FREE] = TRUE;
+  lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_S]    = FALSE;
+  lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_X]    = FALSE;
+  lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_U]    = FALSE;
+  lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_IS]   = FALSE;
+  lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_IX]   = FALSE;
+  lock_compat_matrix [P2_LOCK_X]    [P2_LOCK_SIX]  = FALSE;
+
+  lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_FREE] = TRUE;
+  lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_S]    = TRUE; /* Asymmetry. */
+  lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_X]    = FALSE;
+  lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_U]    = FALSE;
+  lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_IS]   = FALSE;
+  lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_IX]   = FALSE;
+  lock_compat_matrix [P2_LOCK_U]    [P2_LOCK_SIX]  = FALSE;
+
+  lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_FREE] = TRUE;
+  lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_S]    = TRUE;
+  lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_X]    = FALSE;
+  lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_U]    = FALSE;
+  lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_IS]   = TRUE;
+  lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_IX]   = TRUE;
+  lock_compat_matrix [P2_LOCK_IS]   [P2_LOCK_SIX]  = TRUE;
+
+  lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_FREE] = TRUE;
+  lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_S]    = FALSE;
+  lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_X]    = FALSE;
+  lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_U]    = FALSE;
+  lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_IS]   = TRUE;
+  lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_IX]   = TRUE;
+  lock_compat_matrix [P2_LOCK_IX]   [P2_LOCK_SIX]  = FALSE;
+
+  lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_FREE] = TRUE;
+  lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_S]    = FALSE;
+  lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_X]    = FALSE;
+  lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_U]    = FALSE;
+  lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_IS]   = TRUE;
+  lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_IX]   = FALSE;
+  lock_compat_matrix [P2_LOCK_SIX]  [P2_LOCK_SIX]  = FALSE;
+
+#ifndef NDEBUG
+  {
+    /* Make sure matrix is symmetric, except for update/share (see above). */
+    /* This is not a very strong test, but it's better than nothing. */
+    P2_LOCK_MODE i, j;
+    for (i = P2_LOCK_FREE; i <= P2_LOCK_SIX; i++)
+      for (j = P2_LOCK_FREE; j <= P2_LOCK_SIX; j++)
+	assert((i == P2_LOCK_U && j == P2_LOCK_S)
+	       || (i == P2_LOCK_S && j == P2_LOCK_U)
+	       || (lock_compat_matrix[i][j] == lock_compat_matrix[j][i]));
+  }
+#endif /* NDEBUG */
+}
+
+/* Initialize lock conversion (aka maximum) matrix.  Gray & Reuter, p. 467.
+   Lock conversion lattice (aka directed acyclic graph) from Gray & Reuter,
+   p. 419 and (incorrectly) p. 465:
+
+           X
+         / |
+       U  SIX
+       | /   \
+       S     IX
+         \   /
+          IS
+
+*/
+
+static void
+init_lock_max_matrix (void)
+{
+                /* request */ /* granted */ /* max */
+
+  lock_max_matrix [P2_LOCK_FREE] [P2_LOCK_FREE] = P2_LOCK_FREE;
+  lock_max_matrix [P2_LOCK_FREE] [P2_LOCK_S]    = P2_LOCK_S;
+  lock_max_matrix [P2_LOCK_FREE] [P2_LOCK_X]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_FREE] [P2_LOCK_U]    = P2_LOCK_U;
+  lock_max_matrix [P2_LOCK_FREE] [P2_LOCK_IS]   = P2_LOCK_IS;
+  lock_max_matrix [P2_LOCK_FREE] [P2_LOCK_IX]   = P2_LOCK_IX;
+  lock_max_matrix [P2_LOCK_FREE] [P2_LOCK_SIX]  = P2_LOCK_SIX;
+
+  lock_max_matrix [P2_LOCK_S]    [P2_LOCK_FREE] = P2_LOCK_S;
+  lock_max_matrix [P2_LOCK_S]    [P2_LOCK_S]    = P2_LOCK_S;
+  lock_max_matrix [P2_LOCK_S]    [P2_LOCK_X]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_S]    [P2_LOCK_U]    = P2_LOCK_U;
+  lock_max_matrix [P2_LOCK_S]    [P2_LOCK_IS]   = P2_LOCK_S;
+  lock_max_matrix [P2_LOCK_S]    [P2_LOCK_IX]   = P2_LOCK_SIX;
+  lock_max_matrix [P2_LOCK_S]    [P2_LOCK_SIX]  = P2_LOCK_SIX;
+
+  lock_max_matrix [P2_LOCK_X]    [P2_LOCK_FREE] = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_X]    [P2_LOCK_S]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_X]    [P2_LOCK_X]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_X]    [P2_LOCK_U]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_X]    [P2_LOCK_IS]   = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_X]    [P2_LOCK_IX]   = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_X]    [P2_LOCK_SIX]  = P2_LOCK_X;
+
+  lock_max_matrix [P2_LOCK_U]    [P2_LOCK_FREE] = P2_LOCK_U;
+  lock_max_matrix [P2_LOCK_U]    [P2_LOCK_S]    = P2_LOCK_U;
+  lock_max_matrix [P2_LOCK_U]    [P2_LOCK_X]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_U]    [P2_LOCK_U]    = P2_LOCK_U;
+  lock_max_matrix [P2_LOCK_U]    [P2_LOCK_IS]   = P2_LOCK_U;
+  lock_max_matrix [P2_LOCK_U]    [P2_LOCK_IX]   = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_U]    [P2_LOCK_SIX]  = P2_LOCK_X;
+
+  lock_max_matrix [P2_LOCK_IS]   [P2_LOCK_FREE] = P2_LOCK_IS;
+  lock_max_matrix [P2_LOCK_IS]   [P2_LOCK_S]    = P2_LOCK_S;
+  lock_max_matrix [P2_LOCK_IS]   [P2_LOCK_X]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_IS]   [P2_LOCK_U]    = P2_LOCK_U;
+  lock_max_matrix [P2_LOCK_IS]   [P2_LOCK_IS]   = P2_LOCK_IS;
+  lock_max_matrix [P2_LOCK_IS]   [P2_LOCK_IX]   = P2_LOCK_IX;
+  lock_max_matrix [P2_LOCK_IS]   [P2_LOCK_SIX]  = P2_LOCK_SIX;
+
+  lock_max_matrix [P2_LOCK_IX]   [P2_LOCK_FREE] = P2_LOCK_IX;
+  lock_max_matrix [P2_LOCK_IX]   [P2_LOCK_S]    = P2_LOCK_SIX;
+  lock_max_matrix [P2_LOCK_IX]   [P2_LOCK_X]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_IX]   [P2_LOCK_U]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_IX]   [P2_LOCK_IS]   = P2_LOCK_IX;
+  lock_max_matrix [P2_LOCK_IX]   [P2_LOCK_IX]   = P2_LOCK_IX;
+  lock_max_matrix [P2_LOCK_IX]   [P2_LOCK_SIX]  = P2_LOCK_SIX;
+
+  lock_max_matrix [P2_LOCK_SIX]  [P2_LOCK_FREE] = P2_LOCK_SIX;
+  lock_max_matrix [P2_LOCK_SIX]  [P2_LOCK_S]    = P2_LOCK_SIX;
+  lock_max_matrix [P2_LOCK_SIX]  [P2_LOCK_X]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_SIX]  [P2_LOCK_U]    = P2_LOCK_X;
+  lock_max_matrix [P2_LOCK_SIX]  [P2_LOCK_IS]   = P2_LOCK_SIX;
+  lock_max_matrix [P2_LOCK_SIX]  [P2_LOCK_IX]   = P2_LOCK_SIX;
+  lock_max_matrix [P2_LOCK_SIX]  [P2_LOCK_SIX]  = P2_LOCK_SIX;
+
+#ifndef NDEBUG
+  {
+    /* Make sure matrix is symmetric. */
+    /* This is not a very strong test, but it's better than nothing. */
+    P2_LOCK_MODE i, j;
+    for (i = P2_LOCK_FREE; i <= P2_LOCK_SIX; i++)
+      for (j = P2_LOCK_FREE; j <= P2_LOCK_SIX; j++)
+      {
+	assert(lock_max_matrix[i][j] == lock_max_matrix[j][i]);
+	assert(lock_max_matrix[i][j] >= P2_MIN_LOCK_MODE
+	       && lock_max_matrix[i][j] <= P2_MAX_LOCK_MODE);
+      }
+  }
+#endif /* NDEBUG */
+}
+
+/* Return the compatibility of the given lock modes. */
+
+static BOOLEAN
+lock_compat (P2_LOCK_MODE a, P2_LOCK_MODE b)
+{
+  assert(a >= P2_MIN_LOCK_MODE && a <= P2_MAX_LOCK_MODE);
+  assert(b >= P2_MIN_LOCK_MODE && b <= P2_MAX_LOCK_MODE);
+  return(lock_compat_matrix[a][b]);
+}
+
+/* Return the conversion (aka maximum) of the given lock modes. */
+
+static P2_LOCK_MODE
+lock_max (P2_LOCK_MODE a, P2_LOCK_MODE b)
+{
+  assert(a >= P2_MIN_LOCK_MODE && a <= P2_MAX_LOCK_MODE);
+  assert(b >= P2_MIN_LOCK_MODE && b <= P2_MAX_LOCK_MODE);
+  return(lock_max_matrix[a][b]);
+}
+
+/*****************************************************************************/
+/*                  Sleep and Wakeup.                                        */
+/*****************************************************************************/
+
+/* Sleep until the given timeout (in seconds) expires, or some other
+   process calls wakeup_process to wake-up this process. */
+
+static int
+sleep_process (unsigned timeout)
+{
+  unsigned unslept;
+
+#if defined(TRACE)
+  P2_trace("sleep_process(%d)", timeout);
+#endif /* TRACE */
+  unslept = P2_sleep_process(timeout);
+  assert(unslept <= timeout);
+#if defined(TRACE)
+  P2_trace("sleep_process(%d) returns %u (wait: %s)", timeout, unslept,
+	   (unslept) ? "granted" : "denied");
+#endif /* TRACE */
+  return(unslept);
+}
+
+/* Wake-up the given process. */
+
+static void
+wakeup_process (P2_PROCESS_ID pid)
+{
+  assert(P2_PROCESS_ID_VALID(pid));
+  assert(P2_my_process_id == P2_get_process_id());
+  assert(pid != P2_my_process_id);
+
+#if defined(TRACE)
+  P2_trace("wakeup_process(%d (%s))", pid, P2_process_id_label(pid));
+#endif /* TRACE */
+  if (P2_wakeup_process(pid) < 0)
+    P2_runtime_perror("wakeup_process() failed");
+#if defined(TRACE)
+  P2_trace("wakeup_process(%d (%s)) returns", pid, P2_process_id_label(pid));
+#endif /* TRACE */
+}
+
+/* Disable wake-up of this process. */
+static void
+disable_wakeup_process (void)
+{
+#if defined(TRACE)
+  P2_trace("disable_wakeup_process()");
+#endif /* TRACE */
+  if (P2_disable_wakeup_process() < 0)
+    P2_runtime_perror("disable_wakeup_process() failed");
+#if defined(TRACE)
+  P2_trace("disable_wakeup_process() returns");
+#endif /* TRACE */
+}
+
+
+/*****************************************************************************/
+/*                  Initializers.                                            */
+/*****************************************************************************/
+
+/* lock_request initializer. */
+
+#define new_lock_request(request, name, mode, class) \
+  assert(mode >= P2_MIN_LOCK_MODE && mode <= P2_MAX_LOCK_MODE); \
+  assert(class >= P2_MIN_LOCK_CLASS && class <= P2_MAX_LOCK_CLASS); \
+  request.name = name; \
+  request.mode = mode; \
+  request.count = 1; \
+  request.class = class; \
+  request.pid = P2_my_process_id; \
+  request.xact_id = my_xact_id;
+
+/* lock_head initializer. */
+
+#define new_lock_head(head, name, mode) \
+  assert(mode >= P2_MIN_LOCK_MODE && mode <= P2_MAX_LOCK_MODE); \
+  head.name = name; \
+  head.granted_mode = mode; \
+  head.waiting = FALSE;
+
+/*****************************************************************************/
+/*                  Unlock.                                                  */
+/*****************************************************************************/
+
+/* Unlock requests specify the name of the resource to be unlocked.
+   Returns P2_LOCK_OK. */
+
+/* See Gray & Reuter, pp. 475-476. */
+
+#if defined(HASH_ARRAY)
+/* hash_array assumes perfect hashing.  To guarantee this, we will
+   have to hash the name BEFORE P2 sees it. (JAT) */
+/* Declare function P2_unlock() which hashes name, and then calls
+   P2_unlock1() */
+/* See analogous code for P2_lock() */
+#define P2_UNLOCK "P2_unlock1"
+static P2_LOCK_REPLY P2_unlock1(P2_LOCK_NAME name);
+P2_LOCK_REPLY
+P2_unlock (P2_LOCK_NAME name)
+{
+#if defined(TRACE)
+  P2_trace("P2_unlock(%d)", name);
+#endif /* TRACE */
+  return(P2_unlock1(P2_int_hash(name, MAX_LOCK_HEAD)));
+}
+static P2_LOCK_REPLY
+P2_unlock1 (P2_LOCK_NAME name)
+#else /* HASH_ARRAY */
+/* Call P2_lock() directly. */
+#define P2_UNLOCK "P2_unlock"
+P2_LOCK_REPLY
+P2_unlock (P2_LOCK_NAME name)
+#endif /* HASH_ARRAY */
+
+{
+  cursor <head_cont> where "$.name == name" head_curs;
+  cursor <request_cont> where "$.name == name && $.xact_id == my_xact_id"
+    my_request_curs;
+  P2_XACT_ID my_xact_id;
+  
+  assert(P2_my_process_id == P2_get_process_id());
+
+  if (P2_lock_semaphore(&lock_manager_semaphore) < 0)
+    P2_runtime_perror("Could not lock lock manager mutex semaphore");
+
+#if defined(TRACE)
+  P2_trace("%s(%d)",
+	   P2_UNLOCK, name);
+#if defined(P2_PRINT_LOCK)
+  P2_print_lock_manager_state();
+#endif
+#endif /* TRACE */
+
+  /* Find lock header with the given name. */
+  init_curs(head_curs);
+  reset_start(head_curs);
+  if (end_adv(head_curs))
+  {
+    /*** Case 1: lock header not found: lock is free. ***/
+
+#if defined(TRACE)
+    P2_trace("%s(%d) could not find lock header (lock is free)",
+	     P2_UNLOCK, name);
+#endif /* TRACE */
+    goto A;
+  }
+  /* Make sure head curs references the correct lock header. */
+  assert(head_curs.name == name);
+
+  /*** Found lock header: lock not free. ***/
+
+  /* Find lock request with the given name and xact_id. */
+  my_xact_id = P2_get_xact_id();
+  init_curs(my_request_curs);
+  reset_start(my_request_curs);
+  if (end_adv(my_request_curs))
+  {
+    /*** Case 2: lock request not found: lock is free. */
+
+#if defined(TRACE)
+    P2_trace("%s(%d) could not find lock request (lock is free)",
+	     P2_UNLOCK, name);
+#endif /* TRACE */
+    goto A; 
+  }
+
+  /*** Found lock request. ***/
+
+  /* If class >= P2_LOCK_LONG or count > 1, then P2_unlock() is a null
+     operation.  Because long locks are held to transaction commit,
+     and very long locks are held across transaction boundaries. */
+  if (my_request_curs.class >= P2_LOCK_LONG || my_request_curs.count > 1)
+  {
+    /*** Case 3: unlock is null operation. ***/
+
+#if defined(TRACE)
+    P2_trace("%s(%d, %s, %s) decrement lock request count (unlock is no-op)",
+	     P2_UNLOCK, name, P2_lock_mode_string(my_request_curs.mode),
+	     P2_lock_class_string(my_request_curs.class));
+#endif /* TRACE */
+
+    /* Decrement count of number of times lock is locked. */
+    my_request_curs.count--;
+    assert(my_request_curs.count >= 0);
+    goto A;
+  }
+
+  /*** End of no op cases where nothing changed. ***/
+
+  /* Delete my lock request. */
+#if defined(TRACE)
+  P2_trace("%s(%d) delete my lock request",
+	   P2_UNLOCK, name);
+#endif /* TRACE */
+  delete(my_request_curs);
+
+  /* Find another lock request with the given name.  The granted group
+     is null when my request leaves iff no such lock request is found. */
+  {
+    cursor <request_cont> where "$.name == name" request_curs;
+    init_curs(request_curs);
+  
+    reset_start(request_curs);
+    if (end_adv(request_curs)) /* mine was only request */
+    {
+      /*** Case 4: granted group is null when my request leaves:
+         delete lock header. */
+
+#if defined(TRACE)
+      P2_trace("%s(%d) mine was only request, delete lock header",
+	       P2_UNLOCK, name);
+#endif /* TRACE */
+
+      delete(head_curs); /* delete lock header */
+      goto A;
+    }
+  }
+
+  /*** Case 5: granted group is not null when my request leaves. ***/
+
+  /* Reset lock header. */
+  head_curs.waiting = FALSE;
+  head_curs.granted_mode = P2_LOCK_FREE;
+  
+  /* Traverse lock queue to compute granted group. */
+  {
+    cursor <request_cont> 
+      where "$.name == name && $.status == P2_LOCK_GRANTED"
+    granted_request_curs;
+
+    init_curs(granted_request_curs);
+
+    foreach(granted_request_curs)
+    {
+      head_curs.granted_mode
+	= lock_max(granted_request_curs.mode, head_curs.granted_mode);
+    }
+  }
+
+  /* When conversions are waiting, no new members are admitted to the
+     granted group until all conversions have been granted.  After a
+     conversion is granted, the transaction holds the lock in the
+     converted mode.  Immediately granting conversion requests and
+     delaying waiting requests is a minor violation of FIFO scheduling. */
+
+  /* Traverse lock queue to wakeup compatible conversion waiters. */
+  {
+    cursor <request_cont>
+      where "$.name == name && $.status == P2_LOCK_CONVERTING"
+    convert_request_curs;
+    init_curs(convert_request_curs);
+
+    foreach(convert_request_curs)
+    {
+      if (lock_compat(convert_request_curs.convert_mode,
+                      head_curs.granted_mode))
+      {
+#if 0
+	P2_trace("*** Before ***");
+	print_state1();
+#endif
+	convert_request_curs.status = P2_LOCK_GRANTED;
+	convert_request_curs.mode = convert_request_curs.convert_mode;
+	head_curs.granted_mode = lock_max(convert_request_curs.convert_mode,
+	                                  head_curs.granted_mode);
+#if 0
+	P2_trace("*** After ***");
+	print_state1();
+#endif
+	wakeup_process(convert_request_curs.pid);
+      }
+      else
+      {
+	/* Conversion request is incompatible: FIFO scheduling discipline
+           dictates that it and all of its successors waiting conversion
+           must wait (as must all non-conversion waiters). */
+	head_curs.waiting = TRUE;
+	goto A;
+      }
+    }
+  }
+
+  /* Traverse lock queue to wake compatible non-conversion waiters. */
+  {
+    cursor <request_cont>
+      where "$.name == name && $.status == P2_LOCK_WAITING"
+    waiting_request_curs;
+    init_curs(waiting_request_curs);
+    
+    foreach(waiting_request_curs)
+    {
+      if (lock_compat(waiting_request_curs.mode, head_curs.granted_mode))
+      {
+	waiting_request_curs.status = P2_LOCK_GRANTED;
+	head_curs.granted_mode
+	  = lock_max(waiting_request_curs.mode, head_curs.granted_mode);
+	wakeup_process(waiting_request_curs.pid);
+      }
+      else
+      {
+	/* If request is incompatible, then FIFO scheduling discipline
+	   dictates that it and all of its successors must wait.
+	   So, exit the wakeup loop and return. */
+	head_curs.waiting = TRUE;
+      }
+    }
+  }
+
+ A:
+#if defined(TRACE)
+   P2_trace("%s(%d) returns %s",
+	     P2_UNLOCK, name, P2_lock_reply_string(P2_LOCK_OK));
+#endif /* TRACE */
+
+  if (P2_unlock_semaphore(&lock_manager_semaphore) < 0)
+    P2_runtime_perror("Could not unlock lock manager mutex semaphore");
+  return(P2_LOCK_OK);
+}
+
+/*****************************************************************************/
+/*                  Maximum mode granted to other transactions.              */
+/*****************************************************************************/
+
+/* Return the maximum P2_LOCK_MODE granted to other transactions
+   on the lock with the given name. */
+
+/* This routine is ripe for optimization.  For instance, we could
+   cache this number, or put granted transactions on a list ordered by
+   P2_LOCK_MODE. */
+
+static P2_LOCK_MODE
+get_max_other_granted_mode (P2_LOCK_NAME name)
+{
+  cursor <request_cont>
+    where "$.name == name && $.xact_id != my_xact_id"
+          " && $.status == P2_LOCK_GRANTED"
+  other_granted_request_curs;
+  P2_LOCK_MODE mode = P2_MIN_LOCK_MODE;
+  P2_XACT_ID my_xact_id = P2_get_xact_id();
+  
+  init_curs(other_granted_request_curs);
+  foreach(other_granted_request_curs)
+  {
+#if defined(TRACE)
+    P2_trace("max_other_granted_mode(%d) other granted request mode=%s",
+	     name, P2_lock_mode_string(other_granted_request_curs.mode));
+#endif /* TRACE */
+
+    mode = lock_max(mode, other_granted_request_curs.mode);
+    assert(mode >= P2_MIN_LOCK_MODE && mode <= P2_MAX_LOCK_MODE);
+  }
+
+#if defined(TRACE)
+  P2_trace("max_other_granted_mode(%d) max other granted request mode=%s",
+	   name, P2_lock_mode_string(mode));
+#endif /* TRACE */
+  
+  return(mode);
+}
+
+/*****************************************************************************/
+/*                  Lock.                                                    */
+/*****************************************************************************/
+
+/* Lock requests must explicitly specify: (1) the name of the resource
+   to be locked, the (2) mode and (3) class (aka duration) to lock it
+   in, and (4) a timeout (in seconds) to wait if the resource is not
+   immediately available.  Lock requests also implicitly specify a (5)
+   xact_id, but since this is the same in many calls, it is not
+   explicitly passed.  Returns P2_LOCK_OK, P2_LOCK_TIMEOUT,
+   P2_LOCK_REQUEST_OVERFLOW, or P2_LOCK_HEAD_OVERFLOW. */
+
+/* See Gray & Reuter, p. 474. */
+
+#if defined(HASH_ARRAY)
+/* hash_array assumes perfect hashing.  To guarantee this, we will
+   have to hash the name BEFORE P2 sees it. (JAT) */
+/* Declare function P2_lock() which hashes name, and then calls
+   P2_lock1() */
+/* See analogous code for P2_unlock() */
+#define P2_LOCK "P2_lock1"
+static P2_LOCK_REPLY P2_lock1(P2_LOCK_NAME name, P2_LOCK_MODE mode,
+			      P2_LOCK_CLASS class, unsigned timeout);
+P2_LOCK_REPLY
+P2_lock (P2_LOCK_NAME name, P2_LOCK_MODE mode, P2_LOCK_CLASS class,
+	  unsigned timeout)
+{
+#if defined(TRACE)
+  P2_trace("P2_lock(%d, %s, %s, %d)",
+	   name, P2_lock_mode_string(mode), P2_lock_class_string(class),
+	   timeout);
+#endif /* TRACE */
+  return(P2_lock1(P2_int_hash(name, MAX_LOCK_HEAD), mode, class, timeout));
+}
+static P2_LOCK_REPLY
+P2_lock1 (P2_LOCK_NAME name, P2_LOCK_MODE mode, P2_LOCK_CLASS class,
+	  unsigned timeout)
+#else /* HASH_ARRAY */
+/* Call P2_lock() directly. */
+#define P2_LOCK "P2_lock"
+P2_LOCK_REPLY
+P2_lock (P2_LOCK_NAME name, P2_LOCK_MODE mode, P2_LOCK_CLASS class,
+	 unsigned timeout)
+#endif /* HASH_ARRAY */
+
+{
+  cursor <head_cont> where "$.name == name" head_curs;
+  cursor <request_cont> where "$.name == name && $.xact_id == my_xact_id"
+    my_request_curs;
+  LOCK_REQUEST request;
+  LOCK_HEAD head;
+  P2_XACT_ID my_xact_id;
+  
+  assert(P2_my_process_id == P2_get_process_id());
+  assert(mode >= P2_MIN_LOCK_MODE && mode <= P2_MAX_LOCK_MODE);
+  assert(class >= P2_MIN_LOCK_CLASS && class <= P2_MAX_LOCK_CLASS);
+
+  if (P2_lock_semaphore(&lock_manager_semaphore) < 0)
+    P2_runtime_perror("Could not lock lock manager mutex semaphore");
+
+#if defined(TRACE)
+  P2_trace("%s(%d, %s, %s, %d)",
+	   P2_LOCK, name, P2_lock_mode_string(mode),
+	   P2_lock_class_string(class), timeout);
+#if defined(P2_PRINT_LOCK)
+  P2_print_lock_manager_state();
+#endif /* P2_PRINT_LOCK */
+#endif /* TRACE */
+
+  init_curs(head_curs);
+  my_xact_id = P2_get_xact_id();
+  init_curs(my_request_curs);
+
+  /* Find lock header with the given name.
+     The lock is free iff the lock header is not found. */
+  /* This is the most common case, so make it fast. */
+
+  reset_start(head_curs);
+  if (end_adv(head_curs))
+  {
+    /*** Case 1: lock free: grant lock immediately. ***/
+
+#if defined(TRACE)
+    P2_trace("%s(%d, %s, %s, %d) insert lock header and request (lock free)",
+	     P2_LOCK, name, P2_lock_mode_string(mode),
+	     P2_lock_class_string(class), timeout);
+#endif /* TRACE */
+
+    /* Insert a new lock header for the given name, with the given class. */
+    if (overflow(head_cont))
+      return(P2_LOCK_HEAD_OVERFLOW);
+    new_lock_head(head, name, mode);
+    insert(head_curs, head);
+
+    /* Insert a new lock request for the given name, mode, and class. */
+    if (overflow(request_cont))
+      return(P2_LOCK_REQUEST_OVERFLOW);
+    new_lock_request(request, name, mode, class);
+    insert(my_request_curs, request);
+
+    goto B;
+  }
+  /* Make sure head curs eferences the correct lock header. */
+  assert(head_curs.name == name);
+
+  /*** Found lock header: lock not free. ***/
+
+  /* Find lock request with the given name and xact_id.
+     This request is a new (non-conversion) request for this lock
+     by this transaction iff the lock request is not found. */
+
+  reset_start(my_request_curs);
+  if (end_adv(my_request_curs))
+  {
+    /*** New request for this lock by this transaction. ***/
+
+#if defined(TRACE)
+    P2_trace("%s(%d, %s, %s, %d) insert lock request (new request)",
+	     P2_LOCK, name, P2_lock_mode_string(mode),
+	     P2_lock_class_string(class), timeout);
+#endif /* TRACE */
+
+    /* Insert a new lock request for the given name, mode, and class. */
+    if (overflow(request_cont))
+      return(P2_LOCK_REQUEST_OVERFLOW);
+    new_lock_request(request, name, mode, class);
+    insert(my_request_curs, request);
+
+    /* FIFO scheduling trades concurrency for fairness.  Could increase
+       concurrency by admitting compatible waiters ahead of incompatible
+       waiters, but then then incompatible waiters might starve. */
+    if (!head_curs.waiting && lock_compat(mode, head_curs.granted_mode))
+    {
+
+      /*** Case 2: lock not free, but no other waiters, and
+        requested mode is compatible with currently granted mode:
+        grant lock immediately. ***/
+
+      /* Granted mode = maximum of requested mode and granted mode. */
+      head_curs.granted_mode = lock_max(mode, head_curs.granted_mode);
+      goto B;
+    }
+
+    /*** Case 3: lock not free and other waiters or lock is not
+      compatible with current granted mode: must wait. ***/
+
+    head_curs.waiting = TRUE;
+    my_request_curs.status = P2_LOCK_WAITING;
+    goto A;
+  }
+
+  {
+    /*** Re-request for this lock by this transaction (lock conversion). ***/
+
+    P2_LOCK_MODE convert_mode; /* maximum of granted and requested modes */
+    P2_LOCK_MODE max_other_granted_mode; /* maximum mode granted to others */
+
+    /* It is impossible for there to be a previous request for this
+       lock by this transaction waiting for conversion.  If there were
+       such a previous request, the transaction would be waiting, not
+       making the current request. Note that a weaker test is:
+       assert(my_request_curs.status != LOCK_CONVERTING); */
+    assert(my_request_curs.status == P2_LOCK_GRANTED);
+
+    /* Note that lock CAN be locked count = 0 times.  For instance,
+       this will be the case if we call P2_lock(LOCK_NAME, ...,
+       P2_LOCK_LONG, ...) to acquire a lock of class (duration)
+       P2_LOCK_LONG and then call P2_unlock(LOCK_NAME) to attempt to
+       release the lock.  Since the lock has class >= P2_LOCK_LONG,
+       P2_unlock() is a null operation, and thus count will be
+       decremented, possibly to count = 0 (if the transaction has not
+       locked the lock any other times). But, the lock will NOT
+       actually be released, and the lock request will remain until we
+       call P2_unlock_class(P2_LOCK_LONG).  (JAT) */
+    /* Increment count of number of times lock is locked.  We need to
+       keep the lock count, because we want this count times locked
+       lock to remain locked until it is released count times.  For
+       example, if two SQL cursors lock a record and one cursor moves,
+       we want the other cursor to still have the record locked. */
+    assert(my_request_curs.count >= 0);
+    my_request_curs.count++;
+
+    /* If a lock is held in one class and requested in a second, then
+       the resulting class (aka duration) is the maximum of the two. */
+    my_request_curs.class = class_max(class, my_request_curs.class);
+
+    /* If a lock is held in one mode and requested in a second, then the
+       resulting (convert) mode is the maximum of the two. */
+    convert_mode = lock_max(mode, my_request_curs.mode);
+    assert(convert_mode > P2_LOCK_FREE && convert_mode <= P2_MAX_LOCK_MODE);
+
+    /* If requested mode is less than or equal to the held mode, then we
+       know that the lock can be granted immediately, so as an
+       optimization, we can skip the bulk of the conversion code. */
+    /* This test is cheap, but is it really an overall win?  
+       How expensive is the computation of the maximum of the modes
+       granted to other transactions: get_max_other_granted_mode()?
+       Currently, very expensive, but it is ripe for optimization.
+       How common is this case?  My suspicion is that this case will be
+       quite common in P2, where we will be generating lock requests
+       automatically, and we will not always able to optimize away
+       duplicate requests. */
+    if (convert_mode == my_request_curs.mode)
+    {
+      /*** Case 4: requested mode <= held mode: skip the bulk of the
+	conversion code and grant lock immediately. ***/
+
+#if defined(TRACE)
+      P2_trace("*** Optimization: requested mode (%s) <= held mode (%s) ***",
+	       P2_lock_mode_string(mode),
+	       P2_lock_mode_string(my_request_curs.mode)); 
+#endif /* TRACE */
+
+      goto C;
+    }
+
+    /* It is assumed that all of a transaction's requests are compatible
+       with one another.  A conversion need only wait until the
+       requested (conversion) mode is compatible with all requests
+       granted to *other* transactions. */
+    max_other_granted_mode = get_max_other_granted_mode(name);
+    if (lock_compat(convert_mode, max_other_granted_mode)) 
+    {
+      /*** Case 5: requested (conversion) mode is compatible with all
+	requests granted to other transactions: grant lock immediately. ***/
+
+      head_curs.granted_mode = lock_max(convert_mode, max_other_granted_mode);
+      my_request_curs.mode = convert_mode;
+      goto C;
+    }
+
+    /*** Case 6: requested (conversion) mode is not compatible with one
+      or more requests granted to other transactions: must wait. ***/
+
+    /* assert(mode >= my_request_curs.mode) */
+    /* That is, the requested mode (mode) cannot be less than the mode
+       currently granted to this transaction (my_request_curs.mode).
+       Because, we know that the requested mode is not compatible with
+       the requests granted to other transactions (we performed this
+       test above), whereas the mode currently granted to this
+       transaction is compatible with the requests granted to other
+       transactions (since this mode has already been granted). */
+    assert(lock_max(mode, my_request_curs.mode) != my_request_curs.mode);
+
+    /* Remember requested (conversion) mode. */
+    my_request_curs.convert_mode = convert_mode;
+
+    /* Mark the request as a conversion request in order to give it
+       higher priority than new (non-conversion) requests. */
+    my_request_curs.status = P2_LOCK_CONVERTING;
+  }
+
+ A: /* Grant lock request if, before the given timeout (in seconds) expires,
+       the granted group mode becomes compatible with the requested mode.
+       Otherwise, deny lock request. */
+
+#if defined(TRACE)
+  P2_trace("%s(%d, %s, %s, %d) must wait",
+	   P2_LOCK, name, P2_lock_mode_string(mode),
+	   P2_lock_class_string(class), timeout);
+#endif /* TRACE */
+  assert(my_request_curs.status == P2_LOCK_WAITING
+	 || my_request_curs.status == P2_LOCK_CONVERTING);
+
+  /* Disable the wake-up of this process in order to avoid the
+     race condition: someone wakes up this process before it goes to sleep. */
+  disable_wakeup_process();
+
+  /* Release semaphore, then wait.  If wait returns a non-zero value
+     (does not timeout), grant lock request.  Otherwise, deny lock request. */
+  if (P2_unlock_semaphore(&lock_manager_semaphore) < 0)
+    P2_runtime_perror("Could not unlock lock manager mutex semaphore");
+
+  /* sleep_process returns the "unslept" amount. */
+  /* If sleep_process returns non-zero, the process was woken-up,
+     Otherwise, the process has timed-out. */
+  /* For debugging. */
+  if (sleep_process(timeout) != 0)
+    goto D;
+
+  /*** Timeout: deny lock request. ***/
+
+#if 0
+  if (P2_lock_semaphore(&lock_manager_semaphore) < 0)
+    P2_runtime_perror("Could not lock lock manager mutex semaphore");
+#endif
+
+  my_request_curs.status = P2_LOCK_DENIED;
+
+  /* Use unlock to release the lock request.  Set the class (duration)
+     of this unlock request to P2_LOCK_INSTANT in order to make sure the
+     unlock will work. */
+  my_request_curs.class = P2_LOCK_INSTANT;
+
+#if 0
+  if (P2_unlock_semaphore(&lock_manager_semaphore) < 0)
+    P2_runtime_perror("Could not unlock lock manager mutex semaphore");
+#endif
+
+  if (P2_unlock(name) != P2_LOCK_OK)
+    P2_runtime_error("Could not unlock denied lock request");
+
+#if defined(TRACE)
+  P2_trace("%s(%d, %s, %s, %d) returns failure: %s (new request: wait: denied)",
+	   P2_LOCK, name, P2_lock_mode_string(mode),
+	   P2_lock_class_string(class), timeout,
+	   P2_lock_reply_string(P2_LOCK_TIMEOUT));
+#endif /* TRACE */
+
+  return(P2_LOCK_TIMEOUT); /* Return failure. */
+
+ /*** Grant lock request. ***/
+
+ B: my_request_curs.status = P2_LOCK_GRANTED;
+
+ C: if (P2_unlock_semaphore(&lock_manager_semaphore) < 0)
+      P2_runtime_perror("Could not unlock lock manager mutex semaphore");
+
+ D:
+#if defined(TRACE)
+  P2_trace("%s(%d, %s, %s, %d) returns success: %s",
+           P2_LOCK, name, P2_lock_mode_string(mode),
+	   P2_lock_class_string(class), timeout,
+	   P2_lock_reply_string(P2_LOCK_OK));
+#endif /* TRACE */
+
+  return(P2_LOCK_OK); /* Return success. */
+}
+
+/*****************************************************************************/
+/*                  Unlock Class.                                            */
+/*****************************************************************************/
+
+/* Generic unlock.  Release all locks in a class less than or equal to
+   the specified class.  Useful e.g., at the end of a transaction.
+   Gray & Reuter, p. 478. */
+
+P2_LOCK_REPLY
+P2_unlock_class (P2_LOCK_CLASS class)
+{
+  cursor <request_cont> where "$.class <= class && $.xact_id == my_xact_id"
+    unlock_request_curs;
+  P2_XACT_ID my_xact_id = P2_get_xact_id();
+
+  if (P2_lock_semaphore(&lock_manager_semaphore) < 0)
+    P2_runtime_perror("Could not lock lock manager mutex semaphore");
+#if defined(TRACE)
+  P2_trace("P2_unlock_class(%s)", P2_lock_class_string(class));
+#endif /* TRACE */
+
+  assert(class >= P2_MIN_LOCK_CLASS && class <= P2_MAX_LOCK_CLASS);
+  foreach(unlock_request_curs)
+  {
+    unlock_request_curs.class = P2_LOCK_INSTANT; /* Force unlock */
+    unlock_request_curs.count = 1;
+    /* Avoid deadlock */
+    if (P2_unlock_semaphore(&lock_manager_semaphore) < 0)
+      P2_runtime_perror("Could not unlock lock manager mutex semaphore");
+#if defined(HASH_ARRAY)
+    /* Since we got the lock name from looking at the name stored in
+       an element, it is a hashed name, so we don't want the name to
+       be hashed again. */
+    P2_unlock1(unlock_request_curs.name);
+#else
+    P2_unlock(unlock_request_curs.name);
+#endif /* HASH_ARRAY */
+    /* Re-acquire semaphore */
+    if (P2_lock_semaphore(&lock_manager_semaphore) < 0)
+      P2_runtime_perror("Could not lock lock manager mutex semaphore");
+  }
+
+#if defined(TRACE)
+  P2_trace("P2_unlock_class(%s) returns P2_LOCK_OK", P2_lock_class_string(class));
+#endif /* TRACE */
+  if (P2_unlock_semaphore(&lock_manager_semaphore) < 0)
+    P2_runtime_perror("Could not unlock lock manager mutex semaphore");
+  return(P2_LOCK_OK);
+}
+
+/*****************************************************************************/
+/*                  Print state.                                             */
+/*****************************************************************************/
+
+#if defined(P2_PRINT_LOCK)
+
+#include <stdio.h> /* stdout */
+
+#define CONVERT_MODE_STRING_SIZE 50
+
+/* Print the lock manager request queue. */
+/* Q: Can this be moved to P2_trace.p2???
+   A: No, because it uses head_cont and request_cont. (JAT) */
+/* Since this is not CURRENTLY used anywhere else, this could be
+   defined as static, but I don't want to preclude the possibility of
+   using it (for debugging) from some other program, some time in the
+   future. (JAT) */
+
+void
+P2_print_lock_manager_state (void)
+{
+  cursor <head_cont> head_curs;
+  cursor <request_cont> request_curs;
+  
+#if defined(TRACE)
+  if (P2_lock_semaphore(&P2_trace_semaphore) < 0)
+    P2_runtime_perror("Could not lock trace semaphore");
+#endif /* TRACE */
+
+  init_curs(head_curs);
+  init_curs(request_curs);
+
+#if defined(TRACE)
+  P2_trace1("*** print_state() ***");
+#endif /* TRACE */
+
+  /* Nested loops join. */
+  foreach (head_curs)
+  {
+    P2_trace1("name=%d granted_mode=%s waiting=%s",
+	      head_curs.name, P2_lock_mode_string(head_curs.granted_mode),
+	      P2_boolean_string(head_curs.waiting));
+
+    foreach (request_curs)
+    {
+      if (head_curs.name == request_curs.name)
+      {
+        char convert_mode_string[CONVERT_MODE_STRING_SIZE];
+	if (request_curs.status == P2_LOCK_CONVERTING)
+        {
+	  assert(request_curs.convert_mode > P2_LOCK_FREE
+		 && request_curs.convert_mode <= P2_MAX_LOCK_MODE);
+	  sprintf(convert_mode_string, " convert_mode=%-8s",
+		  P2_lock_mode_string(request_curs.convert_mode));
+	}
+	else
+	  sprintf(convert_mode_string, "");
+	assert(strlen(convert_mode_string) < CONVERT_MODE_STRING_SIZE);
+	printf("  status=%s mode=%-8s%s count=%d class=%s pid=%d (%s)\n",
+	       P2_lock_status_string(request_curs.status),
+	       P2_lock_mode_string(request_curs.mode),
+	       convert_mode_string, request_curs.count,
+	       P2_lock_class_string(request_curs.class),
+	       request_curs.pid,
+#if defined(TRACE)
+	       P2_process_id_label(request_curs.pid)
+#else
+	       "???"
+#endif
+	       );
+      }
+    }
+  }
+
+  fflush(stdout);
+
+#if defined(TRACE)
+  if (P2_unlock_semaphore(&P2_trace_semaphore) < 0)
+    P2_runtime_perror("Could not unlock trace semaphore");
+#endif /* TRACE */
+}
+
+#endif /* P2_PRINT_LOCK */
+
+/*****************************************************************************/
+/*                  Init and delete lock manager.                            */
+/*****************************************************************************/
+
+void
+P2_init_lock_manager (void)
+{
+#if 0
+  P2_init_process(); /* Do this first. (JAT) */
+#endif
+  /* Make sure SIZEOF_ELEMENT_REQUEST_CONT is correct. */
+  assert(SIZEOF_ELEMENT_REQUEST_CONT == sizeof(element<request_cont>));
+  /* Make sure SIZEOF_ELEMENT_HEAD_CONT is correct. */
+  assert(SIZEOF_ELEMENT_HEAD_CONT == sizeof(element<head_cont>));
+  
+  assert(P2_PROCESS_ID_VALID(P2_my_process_id));
+
+  init_lock_compat_matrix();
+  init_lock_max_matrix();
+
+  open_cont(head_cont);
+  open_cont(request_cont);
+
+  if (P2_init_semaphore(&lock_manager_semaphore, 1) < 0)
+    P2_runtime_perror("Can not initialize lock manager mutex semaphore");
+}
+
+void
+P2_delete_lock_manager (void)
+{
+  if (P2_delete_semaphore(&lock_manager_semaphore) < 0)
+    P2_runtime_perror("Can not delete lock manager mutex semaphore");
+
+  close_cont(request_cont);
+  close_cont(head_cont);
+
+#if 0
+  P2_delete_process();
+#endif
+}

@@ -1,0 +1,784 @@
+// $Id: log_tid_hack.xp,v 45.1 1997/09/20 03:42:45 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// OBSOLETE log manager.
+
+// Includes: TID_HACK and TID_CHECK
+//   - Does not log commit_xact() and abort_xact().
+//   - Not persistent.
+
+//*****************************************************************************
+//                  ANNOTATION.
+//*****************************************************************************
+
+// ANNOTATION Problem:
+//   Need to store the strings insert_op, delete_op, swap_op, etc.
+//   such that these values are accessible in abort_xact(schema) at
+//   compile time.
+// Solution:
+//   annotation
+//     * This is the solution used when ANNOTATION is defined.
+//     + Works.
+//     + Analogous to layer_state.
+//   ! operator (copy line verbatim to xp generated code output)
+//     * This is the solution used when ANNOTATION is not defined.
+//     + Works.
+//     - Ugly: requires unique prefix to work when multiple log layers
+//         (e.g., log_transient and log_tid_hack are present).
+//   curs_state or cont_state
+//     * This solution is never used.
+//     - Doesn't work: curs_state and cont_state are not available in
+//         abort_xact(schema).  What we really need is a schema_state
+//         or layer_state.
+
+#if 0
+// Use annotation to store insert_op, etc.
+#define ANNOTATION
+#else
+// Use ! operator to define insert_op, etc.
+#undef ANNOTATION
+#endif
+
+#if defined(ANNOTATION)
+layer ds log_tid_hack[ ds ] stable optional annotation retrieval_always
+#else
+layer ds log_tid_hack[ ds ] stable no annotation retrieval_always
+#endif // ANNOTATION
+
+//*****************************************************************************
+//                  TID.
+//*****************************************************************************
+
+// TID_HACK Problem:
+//
+// For some schemas (for example, array), an element will never move,
+// and the element's address can be used as it's TID.
+//
+// For other schemas (for example, qsort), an element may be moved,
+// and the element's address can not be used as it's TID.
+//
+// For these cases, we record a TID, and use the address as a cache.
+// If the recorded TID matches the TID of the element with the cached
+// address, we are okay.  Otherwise, we can either (1) fail or (2)
+// find the element by some other means (for example, scan).
+//
+// DSB points out that P2 should automatically determine if we need to
+// record a TID (this would reduce the size of log records).
+
+#if 1
+// Use the TID hack.
+// If we are going to !#include the file declaring the annotation,
+// then we must also !#define TID_HACK (before we #define TID_HACK).
+#if defined(ANNOTATION)
+!#define TID_HACK
+#endif // ANNOTATION
+#define TID_HACK
+
+#else
+
+// Do not use the TID hack.
+#undef TID_HACK
+
+#if 1
+// Use the TID check.
+!#define TID_CHECK
+#define TID_CHECK
+#else
+// Do not use the TID check.
+#undef TID_CHECK
+#endif
+
+#endif
+
+//*****************************************************************************
+//                   Includes.
+//*****************************************************************************
+
+!#include <assert.h>
+!#include "qopt.h"
+
+//*****************************************************************************
+//                  Miscellaneous defines.
+//*****************************************************************************
+
+// Uniquification prefix.
+#if 1
+// Normal: use "P2_" and layer name as prefix.
+#define VERBATIM(X) P2_log_tid_hack_ ## X
+#else
+// Debugging: shorter prefix.
+#define VERBATIM(X) x ## X
+#endif
+
+#if defined(ANNOTATION)
+
+#define ITOKEN(X) %a. ## X
+#define CTOKEN(X) %a. ## X
+
+!#include "log_tid_hack.h"
+
+#else // ANNOTATION
+
+#define ITOKEN(X) %v. ## VERBATIM(X)
+#define CTOKEN(X) VERBATIM(X)
+
+!char VERBATIM(insert_op)[10]       = "";
+!char VERBATIM(delete_op)[10]       = "";
+!char VERBATIM(swap_op)[10]         = "";
+!char VERBATIM(pos_op)[10]          = "";
+#if defined(TID_HACK) || defined(TID_CHECK)
+!char VERBATIM(tid_op)[10]          = "";
+#endif // TID_HACK || TID_CHECK
+#if defined(TID_HACK)
+!char VERBATIM(adv_op)[10]          = "";
+!char VERBATIM(end_adv_op)[10]      = "";
+!char VERBATIM(reset_start_op)[10]  = "";
+#endif // TID_HACK
+
+!OP_LIST *VERBATIM(default_op_list) = 0;
+
+#endif // ANNOTATION
+
+// RECORD is really a union rather than a struct.  The following
+// define either: (1) the operation-dependent data field, or
+// (2) the first un-used field (if the operation has no data field)
+
+#define INSERT_DATA_FIELD curs1
+#define DELETE_DATA_FIELD obj0
+#define UPD_DATA_FIELD curs1
+
+// For the cursor operation named OP, find new_op_id.
+// If the variable named OP_op has previously had an old_op_id value
+// assigned to it, make sure new_op_id and old_op_id match.
+// Otherwise, assign the value new_op_id to OP_op.
+#define OP_MATCH(OP_LIST, OP) \
+  new_op_id = op_list_match(OP_LIST, #OP, 0); \
+  assert(new_op_id != -1); \
+  if (CTOKEN(OP ## _op)[0] != '\0') \
+  { \
+    sscanf(CTOKEN(OP ## _op ), "%d", &old_op_id); \
+    assert(new_op_id == old_op_id); \
+  } \
+  else \
+    sprintf(CTOKEN(OP ## _op ), "%d", new_op_id);
+
+#if defined(TID_HACK)
+#define OP_LIST_MATCH(OP_LIST) \
+{ \
+  int old_op_id; \
+  int new_op_id; \
+  if (CTOKEN(default_op_list) == 0) \
+  { \
+    if (OP_LIST == 0) \
+      CTOKEN(default_op_list) = new_op_list1(0, 0, CUR, 0); \
+    else \
+      CTOKEN(default_op_list) = OP_LIST; \
+  } \
+  if (OP_LIST->size == 0) \
+    error("%s->size == 0, need init_generic layer?", #OP_LIST); \
+  OP_MATCH(OP_LIST, insert) \
+  OP_MATCH(OP_LIST, delete) \
+  OP_MATCH(OP_LIST, swap) \
+  OP_MATCH(OP_LIST, pos) \
+\
+  OP_MATCH(OP_LIST, tid) \
+\
+  OP_MATCH(OP_LIST, adv) \
+  OP_MATCH(OP_LIST, end_adv) \
+  OP_MATCH(OP_LIST, reset_start) \
+}
+#elif defined(TID_CHECK)
+#define OP_LIST_MATCH(OP_LIST) \
+{ \
+  int old_op_id; \
+  int new_op_id; \
+  if (CTOKEN(default_op_list) == 0) \
+  { \
+    if (OP_LIST == 0) \
+      CTOKEN(default_op_list) = new_op_list1(0, 0, CUR, 0); \
+    else \
+      CTOKEN(default_op_list) = OP_LIST; \
+  } \
+  if (OP_LIST->size == 0) \
+    error("%s->size == 0, need init_generic layer?", #OP_LIST); \
+  OP_MATCH(OP_LIST, insert) \
+  OP_MATCH(OP_LIST, delete) \
+  OP_MATCH(OP_LIST, swap) \
+  OP_MATCH(OP_LIST, pos) \
+\
+  OP_MATCH(OP_LIST, tid) \
+}
+#else
+#define OP_LIST_MATCH(OP_LIST) \
+{ \
+  int old_op_id; \
+  int new_op_id; \
+   if (CTOKEN(default_op_list) == 0) \
+  { \
+    if (OP_LIST == 0) \
+      CTOKEN(default_op_list) = new_op_list1(0, 0, CUR, 0); \
+    else \
+      CTOKEN(default_op_list) = OP_LIST; \
+  } \
+  if (OP_LIST->size == 0) \
+    error("%s->size == 0, need init_generic layer?", #OP_LIST); \
+  OP_MATCH(OP_LIST, insert) \
+  OP_MATCH(OP_LIST, delete) \
+  OP_MATCH(OP_LIST, swap) \
+  OP_MATCH(OP_LIST, pos) \
+}
+#endif
+
+//*****************************************************************************
+//                  ddlhint, xform, optimize.
+//*****************************************************************************
+
+#if defined(ANNOTATION)
+ddlhint(argc, argv)
+{
+  limit 0 arguments;
+  CTOKEN(insert_op)[0]      = '\0';
+  CTOKEN(delete_op)[0]      = '\0';
+  CTOKEN(swap_op)[0]        = '\0';
+  CTOKEN(pos_op)[0]         = '\0';
+#if defined(TID_HACK) || defined(TID_CHECK)
+  CTOKEN(tid_op)[0]         = '\0';
+#endif
+#if defined(TID_HACK)
+  CTOKEN(adv_op)[0]         = '\0';
+  CTOKEN(end_adv_op)[0]     = '\0';
+  CTOKEN(reset_start_op)[0] = '\0';
+#endif
+  CTOKEN(default_op_list)   = 0;
+}
+#endif // ANNOTATION
+
+xform(element, container, cursor)
+{
+#if defined(TID_HACK) || defined(TID_CHECK)
+  add element : int tid;
+#endif
+  xform(element, container, cursor);
+}
+
+optimize(cursor)
+{
+  OP_LIST_MATCH(op_list)
+  optimize(cursor);
+}
+
+//*****************************************************************************
+//                  cursor operations.
+//*****************************************************************************
+
+insert(cursor, record)
+{
+  OP_LIST_MATCH(op_list)
+%{
+    // Perform insert before logging it, so that cursor.obj
+    // will be valid--if we logged it first, then, cursor.obj
+    // cursor.obj could be, e.g. NULL.
+
+    insert(cursor, record);
+#if defined(TID_HACK) || defined(TID_CHECK)
+    cursor.tid = VERBATIM(tid)++;
+#endif
+#if 0
+    if (!VERBATIM(state))
+#else
+    if (P2_my_xact_status == P2_XACT_DO)
+#endif
+    {
+      P2_log_record_size = offsetof(VERBATIM(RECORD), INSERT_DATA_FIELD);
+      VERBATIM(p) = (VERBATIM(RECORD) *) malloc(P2_log_record_size);
+      VERBATIM(p)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(p);
+
+      VERBATIM(p)->op = ITOKEN(insert_op);
+      VERBATIM(p)->curs0 = (P2_BASIC_CURSOR *) &cursor;
+      VERBATIM(p)->obj0 = cursor.obj;
+#if defined(TID_HACK) || defined(TID_CHECK)
+      VERBATIM(p)->tid0 = cursor.tid;
+#endif
+    }
+%}
+}
+
+delete(cursor)
+{
+  OP_LIST_MATCH(op_list)
+%{
+#if 0
+    if (!VERBATIM(state))
+#else
+    if (P2_my_xact_status == P2_XACT_DO)
+#endif
+    {
+      P2_log_record_size = offsetof(VERBATIM(RECORD), DELETE_DATA_FIELD)
+                      + sizeof(struct obj_type);
+      VERBATIM(p) = (VERBATIM(RECORD) *) malloc(P2_log_record_size);
+      VERBATIM(p)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(p);
+
+      VERBATIM(p)->op = ITOKEN(delete_op);
+      VERBATIM(p)->curs0 = (P2_BASIC_CURSOR *) &cursor;
+      memcpy(&(VERBATIM(p)->DELETE_DATA_FIELD),
+             (void *) cursor.obj, sizeof(struct obj_type));
+    }
+    delete(cursor);
+%}
+}
+
+swap(cursor0, cursor1)
+{
+  OP_LIST_MATCH(op_list)
+%{
+#if 0
+    if (!VERBATIM(state))
+#else
+    if (P2_my_xact_status == P2_XACT_DO)
+#endif
+    {
+      P2_log_record_size = sizeof(VERBATIM(RECORD));
+      VERBATIM(p) = (VERBATIM(RECORD) *) malloc(P2_log_record_size);
+      VERBATIM(p)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(p);
+
+      VERBATIM(p)->op = ITOKEN(swap_op);
+      VERBATIM(p)->curs0 = (P2_BASIC_CURSOR *) &cursor0;
+      VERBATIM(p)->obj0 = cursor0.obj;
+#if defined(TID_HACK) || defined(TID_CHECK)
+      VERBATIM(p)->tid0 = cursor0.tid;
+#endif
+      VERBATIM(p)->curs1 = (P2_BASIC_CURSOR *) &cursor1;
+      VERBATIM(p)->obj1 = cursor1.obj;
+#if defined(TID_HACK) || defined(TID_CHECK)
+      VERBATIM(p)->tid1 = cursor1.tid;
+#endif
+    }
+    swap(cursor0, cursor1);
+%}
+}
+
+// If the field we are updating is an int, we can record the
+// current (pre-update) value of the field using a simple
+// assignment.  This is a good optimization to make, since this
+// code will be executed at runtime, for every upd().
+//
+// If the field we are updating is a string, we need to record the
+// current (pre-update) value of the field.
+// Solutions:
+//   Simple assignment
+//     - Doesn't work.
+//   Copy only the string into the log record.
+//     - Complex implmentation: need an extra bit to indicate
+//       whether the data is an int or string, so we know how to
+//       pass the data in abort_xact() (int by value or string by
+//       reference).
+//     + Bit is minimal overhead.
+//   Copy both the string and a pointer to it into the log record.
+//     + Works.
+//     - Address is excessive overhead.
+
+upd(cursor, field, expr)
+{
+  char field_type[MAX_IDENT_LEN];
+  char copy_func[MAX_IDENT_LEN+10];
+  char upd_field_op[MAX_IDENT_LEN];
+  int i = op_list_match(op_list, "upd", field);
+  ENTRY *e = symtab_lookup(symtab[SUE], orig_type);
+
+  // sizeof_func computes the size of the field (in bytes).
+  // Create macros {int,str}_SIZEOF, analogous to the macros
+  // {int,str}_EQ, {int,str}_CPY, etc. in P2.h??? (JAT)
+  char *size_func;
+
+  // extra_data_size accounts for the address (pointer to string) that
+  // we are storing in the log record for string (but not int) fields.
+  char *extra_data_size;
+
+  sprintf(upd_field_op, "%d", i);
+  strcpy(field_type, find_data_type(e->ident, field)->typename);
+  strcpy(copy_func, field_type);
+  strcat(copy_func, "_CPY");
+
+  if (strcmp(field_type, "int") == 0) {
+    size_func = "sizeof";
+    extra_data_size = "0";
+  }
+  else {
+    size_func = "1 + strlen";
+    extra_data_size = "sizeof(char *)";
+  }
+
+  OP_LIST_MATCH(op_list)
+%{
+#if 0
+    if (!VERBATIM(state))
+#else
+    if (P2_my_xact_status == P2_XACT_DO)
+#endif
+    {
+      // Allocate enough space to store the current value of the field.
+      P2_log_record_size = offsetof(VERBATIM(RECORD), UPD_DATA_FIELD)
+                      + %v.size_func(cursor.field) + %v.extra_data_size;
+      VERBATIM(p) = (VERBATIM(RECORD) *) malloc(P2_log_record_size);
+      VERBATIM(p)->next = VERBATIM(header);
+      VERBATIM(header) = VERBATIM(p);
+
+      VERBATIM(p)->op = %v.upd_field_op;
+      VERBATIM(p)->curs0 = (P2_BASIC_CURSOR *) &cursor;
+      VERBATIM(p)->obj0 = cursor.obj;
+#if defined(TID_HACK) || defined(TID_CHECK)
+      VERBATIM(p)->tid0 = cursor.tid;
+#endif
+%}
+
+   // Updating an int.
+   // Use a simple assignment.
+   if (strcmp(field_type, "int") == 0)
+%{
+      (int) VERBATIM(p)->UPD_DATA_FIELD = cursor.field;
+%}
+
+   // Updating a string.
+   // Copy both the string and a pointer to it into the log record.
+   else
+%{
+      VERBATIM(c) = (char *) &(VERBATIM(p)->UPD_DATA_FIELD)
+                      + %v.extra_data_size;
+      (char *) VERBATIM(p)->UPD_DATA_FIELD = VERBATIM(c);
+      %v.copy_func(VERBATIM(c), cursor.field);
+%}
+
+%{
+    }
+    upd(cursor, field, expr)
+%}
+}
+
+//*****************************************************************************
+//                  schema operations.
+//*****************************************************************************
+
+#if 0
+
+open_schema(schema)
+%{
+    // Call down.
+    open_schema(schema);
+%}
+
+init_schema(schema)
+%{
+    // HACK!!!
+    // Must initialize the log anchor so that
+    // paces/P2_log-manger.p2:P2_log_read_anchor works correctly.
+    P2_init_log_manager();
+    // Call down.
+    init_schema(schema);
+%}
+
+close_schema(schema)
+%{
+    // Call down.
+    close_schema(schema);
+    // Delete the log manager LAST, to match init_schema().
+    P2_delete_log_manager();
+%}
+
+#endif
+
+begin_xact(schema)
+%{
+    // Make sure there are no un-committed log records.
+    if (VERBATIM(header) != 0)
+      P2_runtime_error("log_tid_hack:begin_xact: log header != NULL");
+
+#if 0
+    // Indicate that we're in a transaction.
+    VERBATIM(state) = 0;
+#else
+    // Transaction manager will set transaction status to DO.
+#endif
+
+    // Call down.
+    begin_xact(schema);
+%}
+
+commit_xact(schema)
+%{
+#if 0
+    // Indicate that we're not in a transaction.
+    VERBATIM(state) = -1;
+#endif
+
+    // Call down.
+    commit_xact(schema);
+    // Free log records.
+    VERBATIM(p) = VERBATIM(header);
+    while (VERBATIM(p) != 0)
+    {
+      VERBATIM(q) = VERBATIM(p);
+      VERBATIM(p) = VERBATIM(p)->next;
+#if 1
+      free(VERBATIM(q));
+#endif
+    }
+    VERBATIM(header) = 0;
+%}
+
+// The special operation ref_tid() doesn't exist, since we only
+// generate ref_foo if foo is a user visible field (i.e., a field in
+// orig_type, rather than a field added by a layer).  Thus, we have to
+// generate the adhoc special operation tid() to reference tid. (JAT)
+
+#if defined(TID_HACK) || defined(TID_CHECK)
+adhoc tid (cursor)
+%{
+    (cursor.tid)
+%}
+#endif
+
+#if defined(TID_HACK)
+
+// Scan the container using the given CURSOR until we find an
+// element such that TID == tid(CURSOR).  If no such element exists,
+// signal a runtime error.
+
+#define FIND_TUPLE(CURSOR, TID) \
+{ \
+  if (TID != CURSOR->op_vec[ITOKEN(tid_op)](CURSOR)) \
+  { \
+    void *VERBATIM(obj) = 0; \
+    CURSOR->op_vec[ITOKEN(reset_start_op)](CURSOR); \
+    while (!CURSOR->op_vec[ITOKEN(end_adv_op)](CURSOR) && !VERBATIM(obj)) \
+    { \
+      if (TID == CURSOR->op_vec[ITOKEN(tid_op)](CURSOR)) \
+        VERBATIM(obj) = CURSOR->obj; \
+      else \
+        CURSOR->op_vec[ITOKEN(adv_op)](CURSOR); \
+    } \
+    if (!VERBATIM(obj)) \
+      P2_runtime_error("abort_xact: could not locate TID"); \
+  } \
+}
+
+#elif defined(TID_CHECK)
+
+// If TID != tid(CURSOR) signal a runtime error.
+
+#define FIND_TUPLE(CURSOR, TID) \
+{ \
+  if (TID != CURSOR->op_vec[ITOKEN(tid_op)](CURSOR)) \
+    P2_runtime_error("abort_xact: recorded TID does not match addressed TID"); \
+}
+
+#else
+
+// Do nothing.
+
+#define FIND_TUPLE(CURSOR, TID)
+
+#endif
+
+abort_xact(schema)
+{
+  OP_LIST_MATCH(CTOKEN(default_op_list))
+  assert(strcmp(CTOKEN(insert_op),        "") != 0);
+  assert(strcmp(CTOKEN(insert_op),      "-1") != 0);
+  assert(strcmp(CTOKEN(delete_op),        "") != 0);
+  assert(strcmp(CTOKEN(delete_op),      "-1") != 0);
+  assert(strcmp(CTOKEN(swap_op),          "") != 0);
+  assert(strcmp(CTOKEN(swap_op),        "-1") != 0);
+  assert(strcmp(CTOKEN(pos_op),           "") != 0);
+  assert(strcmp(CTOKEN(pos_op),         "-1") != 0);
+#if defined(TID_HACK) || defined(TID_CHECK)
+  assert(strcmp(CTOKEN(tid_op),           "") != 0);
+  assert(strcmp(CTOKEN(tid_op),         "-1") != 0);
+#endif
+#if defined(TID_HACK)
+  assert(strcmp(CTOKEN(adv_op),           "") != 0);
+  assert(strcmp(CTOKEN(adv_op),         "-1") != 0);
+  assert(strcmp(CTOKEN(end_adv_op),       "") != 0);
+  assert(strcmp(CTOKEN(end_adv_op),     "-1") != 0);
+  assert(strcmp(CTOKEN(reset_start_op),   "") != 0);
+  assert(strcmp(CTOKEN(reset_start_op), "-1") != 0);
+#endif
+%{
+    // Indicate that we're aborting a transaction.
+#if 0
+    VERBATIM(state) = 1;
+#else
+    P2_set_xact_status(P2_XACT_UNDO);
+#endif
+    // Undo.
+    VERBATIM(p) = VERBATIM(header);
+    while (VERBATIM(p) != 0)
+    {
+      // Position cursor.
+#if 0
+      // Simple assignment demonstrates the
+      // orderby-log_tid_hack-qsort bug.
+      VERBATIM(p)->curs0->obj = VERBATIM(p)->obj0;
+#else
+      // upd() operation fixes the orderby-log_tid_hack-qsort bug.
+      // See explanation of bug and its solution in xact06.p2 (JAT)
+      VERBATIM(p)->curs0->op_vec[ITOKEN(pos_op)]
+        (VERBATIM(p)->curs0, VERBATIM(p)->obj0);
+#endif
+
+      // Undo insert()
+      if (VERBATIM(p)->op == ITOKEN(insert_op))
+      {
+        FIND_TUPLE(VERBATIM(p)->curs0, VERBATIM(p)->tid0)
+        VERBATIM(p)->curs0->op_vec[ITOKEN(delete_op)](VERBATIM(p)->curs0);
+      }
+
+      // Undo delete()
+      else if (VERBATIM(p)->op == ITOKEN(delete_op))
+      {
+        // Don't need FIND_TUPLE(VERBATIM(p)->curs0, VERBATIM(p)->tid0),
+        // since insert() undoes delete(), and insert() adds a new
+        // element (rather than modifying an existing element). (JAT)
+        VERBATIM(p)->curs0->op_vec[ITOKEN(insert_op)]
+          (VERBATIM(p)->curs0, &(VERBATIM(p)->DELETE_DATA_FIELD));
+      }
+
+      // Undo swap()
+      else if (VERBATIM(p)->op == ITOKEN(swap_op))
+      {
+        VERBATIM(p)->curs1->op_vec[ITOKEN(pos_op)]
+          (VERBATIM(p)->curs1, VERBATIM(p)->obj1);
+        // Possible ways of finding tid0 and tid1:
+        //   Scan twice: once using curs0 and once using curs1
+        //     + Works.
+        //     + Easy to implement: merely call FIND_TUPLE() twice
+        //     - Slow.
+        //   Scan once: using both curs0 and curs1
+        //     * For example:
+        //         reset_start(curs0);
+        //         reset_start(curs1);
+        //         while(!end_adv(curs0) || !end_adv(curs1)) {
+        //           ...
+        //           adv(curs0);
+        //           adv(curs1);
+        //         }
+        //     + Works.
+        //     - Harder to implement than merely calling FIND_TUPLE() twice.
+        //     + Might be faster: if curs0 and curs1 are "in synch".
+        //         Probably no faster: curs0 and curs1 probably have different
+        //         predicates, and thus will not be "in synch"
+        //   Scan once: using an un-qualified cursor.
+        //     + Works.
+        //     - Where does the un-qualified cursor come from?
+        //     + Might be faster: if either curs0 or curs1 is un-qualified.
+        //     - Might be slower: if both curs0 are curs1 are un-qualified.
+        //     + Could check at compile time to see if this is the case,
+        //        and, if so, make this optimization.
+        //   Scan once: using either curs0 or curs1.
+        //     - Doesn't work: unless we choose an unqualified cursor
+        //         (see above).
+        //     + Fast.
+        FIND_TUPLE(VERBATIM(p)->curs0, VERBATIM(p)->tid0)
+        FIND_TUPLE(VERBATIM(p)->curs1, VERBATIM(p)->tid1)
+        VERBATIM(p)->curs0->op_vec[ITOKEN(swap_op)]
+          (VERBATIM(p)->curs0, VERBATIM(p)->curs1);
+      }
+
+      // Undo upd()
+      else
+      {
+        FIND_TUPLE(VERBATIM(p)->curs0, VERBATIM(p)->tid0)
+        VERBATIM(p)->curs0->op_vec[VERBATIM(p)->op]
+          (VERBATIM(p)->curs0, VERBATIM(p)->UPD_DATA_FIELD);
+      }
+
+      VERBATIM(q) = VERBATIM(p);
+      VERBATIM(p) = VERBATIM(p)->next;
+#if 1
+      free(VERBATIM(q));
+#endif
+    }
+
+    VERBATIM(header) = 0;
+    abort_xact(schema);
+
+#if 0
+#if 0
+    VERBATIM(state) = 0;
+#else
+    VERBATIM(state) = -1;
+#endif
+#endif
+%}
+}
+
+checkpoint_schema(schema)
+%{
+  // Call down.
+  checkpoint_schema(schema);
+%}
+
+//*****************************************************************************
+//                  Schema verbatim.
+//*****************************************************************************
+
+s_verbatim(schema)
+{
+  char *ifndef = "#ifndef P2_log_tid_hack_s_verbatim\n";
+  char *define = "#define P2_log_tid_hack_s_verbatim\n";
+  char *endif  = "#endif\n";
+%{
+  %v.ifndef
+  %v.define
+
+#if defined(TID_HACK) || defined(TID_CHECK)
+  int VERBATIM(tid) = 0;
+#endif
+
+#if 0
+  // Log manager state:
+  //   -1: Not in a transaction
+  //    0: In a transaction (do)
+  //    1: Aborting a transaction (undo)
+  int VERBATIM(state) = -1;
+#endif
+
+  typedef struct VERBATIM(record_struct) {
+    struct VERBATIM(record_struct) *next;
+
+    int             op;
+    P2_BASIC_CURSOR *curs0;
+    void            *obj0;
+#if defined(TID_HACK) || defined(TID_CHECK)
+    int             tid0;
+#endif
+    P2_BASIC_CURSOR *curs1;
+    void            *obj1;
+#if defined(TID_HACK) || defined(TID_CHECK)
+    int             tid1;
+#endif
+  } VERBATIM(RECORD);
+
+  // Pointers to records.
+  VERBATIM(RECORD) *VERBATIM(header) = 0;
+  VERBATIM(RECORD) *VERBATIM(p);
+  VERBATIM(RECORD) *VERBATIM(q);
+
+  // These "VERBATIM" global variables have been moved to
+  // paces/P2_log-manager.[ch] (see paces/contaienr04.p2) (JAT)
+#if 0
+  // Size of records.
+  int VERBATIM(size);
+#endif
+
+  // Pointer to char.
+  char *VERBATIM(c);
+
+  %v.endif
+  ;
+  s_verbatim(schema);
+%}
+}
+

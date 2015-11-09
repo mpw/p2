@@ -1,0 +1,1107 @@
+/* $Id: P2_log-manager.p2,v 45.14 1997/09/29 03:49:54 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Recovery log table manager. */
+
+/*****************************************************************************/
+/*                  Includes.                                                */
+/*****************************************************************************/
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>    /* assert() */
+#include "op-id.h"     /* P2_LOG_BEGIN_XACT_OP */
+#include "print-log.h" /* P2_PRINT_LOG */
+#include "P2_paces.h"  /* BOOLEAN */
+
+/*****************************************************************************/
+/*                  Defines.                                                 */
+/*****************************************************************************/
+
+/* Log lock (an exclusive semaphore on the log). */
+#if 1
+#if !defined(LOG_LOCK)
+#define LOG_LOCK
+#endif /* LOG_LOCK */
+#endif
+
+/* To store the log anchor, use a container structure (preferred),
+   rather than a container with a single element (useful for debugging). */
+#if 1
+#if !defined(LOG_ANCHOR_CONTAINER_STRUCTURE)
+#define LOG_ANCHOR_CONTAINER_STRUCTURE
+#endif /* LOG_ANCHOR_CONTAINER_STRUCTURE */
+#endif
+
+/* Trace. */
+#if 0
+#if !defined(TRACE)
+#define TRACE
+#endif /* TRACE */
+#endif
+
+/*****************************************************************************/
+/*                  Type Expressions.                                        */
+/*****************************************************************************/
+
+typex {
+  /* If you change log_typex, make sure
+     paces/P2_log-manager.h:P2_LOG_STRUCT_DUMMY_SIZE represents the
+     total size of fields added by xform. */
+  /* The queue layer guarantees that elements will be ordered from
+     oldest to newest.  This is useful for printing the log, or
+     performing a system restart. */
+  log_typex = top2ds[container_structure[
+                       slist_queue[malloc[mmap_persistent]]]];
+
+#if defined(LOG_ANCHOR_CONTAINER_STRUCTURE)
+  log_anchor_typex = top2ds[init_cont_function[container_structure[
+		       mmap_persistent]]];
+#else
+  log_anchor_typex = top2ds[init_cont_function[array[
+                       mmap_persistent]]];
+#endif /* LOG_ANCHOR_CONTAINER_STRUCTURE */
+}
+
+/*****************************************************************************/
+/*                  Global variables.                                        */
+/*****************************************************************************/
+
+#if 1
+/* Normal case: use large log_size, for efficiency. */
+/* For release/distribution: ~8 MB (1 MB = 1048576) */
+#define LOG_SIZE 8000000
+#else
+/* For debugging: use small log_size, so boundary conditions get exercised. */
+#define LOG_SIZE 10000
+#endif
+
+/* sizeof(element<log_anchor{,_cont})):
+     Size of (transformed) log anchor {,container} element. */
+#define SIZEOF_ELEMENT_LOG_ANCHOR_CONT sizeof(P2_LOG_ANCHOR) + 0
+
+/* Log file index. */
+
+/* This is stored in mmap memory to make sure this process has the
+   most recent log file in mmap memory. */
+typedef struct {
+  P2_LSN_INDEX index;
+} LOG_CONT_INDEX;
+
+container <P2_LOG_STRUCT> stored_as log_typex with {
+  container_structure "LOG_CONT_INDEX";
+  mmap_persistent file is "/tmp/P2_log-data"
+    with size LOG_SIZE;
+} log_cont;
+
+container <P2_LOG_ANCHOR> stored_as log_anchor_typex with {
+  init_cont_function "P2_init_log_anchor";
+#if defined(LOG_ANCHOR_CONTAINER_STRUCTURE)
+  container_structure "P2_LOG_ANCHOR";
+#else
+  array size is 1;
+#endif /* LOG_ANCHOR_CONTAINER_STRUCTURE */
+  mmap_persistent file is "/tmp/P2_log-anchor-data"
+    with size SIZEOF_ELEMENT_LOG_ANCHOR_CONT;
+} log_anchor_cont;
+
+#if defined(LOG_ANCHOR_CONTAINER_STRUCTURE)
+#define log_anchor log_anchor_cont
+#endif /* LOG_ANCHOR_CONTAINER_STRUCTURE */
+
+cursor <log_cont> log_curs;
+#if !defined(LOG_ANCHOR_CONTAINER_STRUCTURE)
+cursor <log_anchor_cont> log_anchor;
+#endif /* LOG_ANCHOR_CONTAINER_STRUCTURE */
+
+/* This declaration is an example of overhead added by generality. */
+int P2_log_manager_initialized = FALSE;
+/* This declaration is an example of overhead added by generality. */
+/* This is initialized in x/log{,_async}.xp:open_schema() */
+int P2_log_manager_async;
+
+/*****************************************************************************/
+/*                  P2_lsncmp.                                               */
+/*****************************************************************************/
+
+#ifndef NDEBUG
+
+/* HACK!!! */
+/* Analogous to intcmp and strcmp (see paces/P2.h). */
+/* Only used in assertions. */
+
+int
+P2_lsncmp (P2_LSN lsn1, P2_LSN lsn2)
+{
+#if 0
+  /* Faster?  gcc won't let us cast a struct to a long. */
+  assert(sizeof(P2_LSN) == sizeof(long));
+  if ((long) lsn1 < (long) lsn2)
+    return(-1);
+  else if ((long) lsn1 > (long) lsn2)
+    return(1);
+  return(0);
+#else
+  /* Slower?  Field-by-field comparison. */
+  if (lsn1.index < lsn2.index
+      || (lsn1.index == lsn2.index && lsn1.rba < lsn2.rba))
+    return(-1);
+  else if (lsn1.index > lsn2.index
+      || (lsn1.index == lsn2.index && lsn1.rba > lsn2.rba))
+    return(1);
+  assert(lsn1.index == lsn2.index && lsn1.rba == lsn2.rba);
+  return(0);
+#endif
+}
+
+#endif
+
+/*****************************************************************************/
+/*                  Miscellaneous (Local) Procedures.                        */
+/*****************************************************************************/
+
+/* Operation identifier validity test. */
+
+static BOOLEAN
+op_id_valid (P2_OP_ID op_id)
+{
+  /* Make sure the operation identifier is in the range 0 ... MAX_OP_ID */
+  if (op_id < 0 || op_id > P2_MAX_OP_ID)
+    return(FALSE);
+  return(TRUE);
+}
+
+#ifndef NDEBUG
+
+/* LSN validity test. */
+
+static BOOLEAN
+lsn_valid (P2_LSN lsn)
+{
+  /* Make sure that the given lsn is less than or equal to the LSN of
+     the next record. That is, (lsn <= log_anchor.prev_lsn) */
+  /* Can we have a stronger test? */
+  return(P2_lsncmp(lsn, log_anchor.lsn) <= 0);
+}
+
+/* Log record validity test. */
+
+BOOLEAN
+P2_log_struct_valid (P2_LOG_STRUCT *x)
+{
+  /* Make sure x looks like a valid pointer. */
+  if (x == NULL || ((unsigned) x) < 8)
+    return(FALSE);
+
+  /*** All operations. ***/
+
+  /* Make sure the LSNs are valid. */
+  if (!lsn_valid(x->lsn)
+      || !lsn_valid(x->prev_lsn)
+      || !lsn_valid(x->xact_prev_lsn))
+    return(FALSE);
+
+  /* If the operation is a cursor operation, then make sure xact_id is valid */
+  if ((x->op_code & P2_LOG_NON_CURS_OP) == 0)
+    if (!P2_xact_id_valid(x->xact_id))
+      return(FALSE);
+  /* Make sure op_id is valid) */
+  if (!op_id_valid(x->op_code & P2_LOG_OP))
+    return(FALSE);
+
+  /*** Update operation. ***/
+
+  /* If the operation is an update operation, then make sure it's also
+     a cursor operation. */
+  if ((x->op_code & P2_LOG_STR_UPD_OP) != 0)
+    if ((x->op_code & P2_LOG_NON_CURS_OP) != 0)
+      return(FALSE);
+
+  /*** Return TRUE. ***/
+
+  return(TRUE);
+}
+
+int
+P2_curs_id_valid (P2_CURS_ID curs_id)
+{
+  return(curs_id > 0 && curs_id < 10000);
+}
+
+int
+P2_cont_id_valid (P2_CONT_ID cont_id)
+{
+  return(cont_id > 0 && cont_id < 10000);
+}
+
+#endif /* NDEBUG */
+
+/*****************************************************************************/
+/*                  Initialize Relative Byte Address.                        */
+/*****************************************************************************/
+
+/* Return the relative byte address of the 1st log record. */
+/* Initialize x and call varinsert() explicitly, rather than have
+   P2_log_insert() do it for us implicitly. */
+
+static P2_LSN_RBA
+init_rba (void)
+{
+  P2_LSN_RBA r;
+  P2_XACT_LOG_STRUCT x;
+  int variable_size = -P2_LOG_STRUCT_VARCHAR_SIZE;
+  int total_size = variable_size + sizeof(element <log_cont>);
+
+  assert(total_size >= 0);
+
+  /* Initialize x. */
+  /* Is there a more efficient way of doing this, for example,
+     make x static, and use an initializer??? (JAT) */
+  /* Is this necessary???  Doesn't P2_log_insert() initialize x??? (JAT) */
+  /* See analogous code in P2_xact_manager_checkpoint_schema() */
+#if 1
+  assert(((int) sizeof(P2_XACT_LOG_STRUCT)) <= total_size);
+  memset(&x, 0, sizeof(P2_XACT_LOG_STRUCT));
+#else
+  x.lsn = P2_NULL_LSN;
+  x.prev_lsn = P2_NULL_LSN;
+  x.xact_prev_lsn = P2_NULL_LSN;
+  x.xact_id = 0;
+#endif
+  x.op_code = P2_LOG_INIT_RBA_OP | P2_LOG_OTHER_OP;
+  /* Insert x. */
+  assert(!varoverflow(log_cont, variable_size));
+  varinsert(log_curs, x, variable_size);
+  /* Compute RBA. */
+  /* Force integer, rather than pointer (aka address), arithmetic. */
+  r = (P2_LSN_RBA) (((unsigned) log_curs.obj) + total_size);
+  return(r);
+}
+
+/*****************************************************************************/
+/*                  Open log file.                                           */
+/*****************************************************************************/
+
+static void
+open_log_cont (P2_LSN_INDEX index)
+{
+#if defined(TRACE)
+  P2_trace("*** open log file ***");
+#endif
+
+  /* Open new log file.  Must do this before we initialize log_curs. */
+  open_cont_number(log_cont, index);
+  /* Set log file index. */
+  log_cont.index = index;
+  /* Initialize log_curs. */
+  init_curs(log_curs);
+}
+
+static void
+close_and_open_log_cont (P2_LSN_INDEX index)
+{
+  /* Close old log file. */
+  close_cont(log_cont);
+  /* Open new log file. */
+  open_log_cont(index);
+}
+
+/*****************************************************************************/
+/*                  Sync Log and Checkpoint.                                 */
+/*****************************************************************************/
+
+/* Synchronize log file. */
+
+void
+P2_log_manager_sync_log (void)
+{
+  /* Sync log file. */
+  sync_cont(log_cont, 0, 0, P2_log_manager_async);
+  /* Sync log anchor. */
+  sync_cont(log_anchor_cont, 0, 0, P2_log_manager_async);
+}
+
+/* Checkpoint. */
+
+void
+P2_log_manager_checkpoint_schema (void)
+{
+#if defined(P2_PERSIST_LSN)
+#ifndef NDEBUG
+  /* Make sure that (log_anchor.persist_lsn <= log_anchor.prev_lsn) */
+  assert(P2_lsncmp(log_anchor.persist_lsn, log_anchor.prev_lsn) <= 0);
+#endif
+  /* Update LSN of max (most recent) log record in persistent store. */
+  log_anchor.persist_lsn = log_anchor.prev_lsn;
+#endif /* P2_PERSIST_LSN */
+
+  /* Start with current durable log as best lsn.  Gray & Reuter, p. 608 */
+  P2_low_water = log_anchor.prev_lsn;
+}
+
+/*****************************************************************************/
+/*                  Log insert.                                              */
+/*****************************************************************************/
+
+/* Gray & Reuter, p. 501 */
+/* Called by paces/P2_xact-manager.p2:P2_init_xact_cb_cont() */
+
+P2_LOG_STRUCT *
+P2_log_read_lsn (P2_LSN lsn)
+{
+  assert(log_cont.index == log_anchor.index);
+  if (log_anchor.index != lsn.index)
+    close_and_open_log_cont(lsn.index);
+#ifndef NDEBUG
+  assert(P2_log_struct_valid((P2_LOG_STRUCT *) lsn.rba));
+#endif /* NDEBUG */
+  return((P2_LOG_STRUCT *) lsn.rba);
+}
+
+/* Allocate a log record struct.  Note: variable_size is the size of
+   the VARIABLE size portion of the element.  Thus, the TOTAL size of
+   the element is expr PLUS the FIXED size of the transformed element.
+   variable_size is often negative.  This is the same as the parameter
+   to the special operation varinsert(). */
+
+/* That is, x/transient.xp:varalloc() allocates an element of size:
+   sizeof(struct obj_type) + ((int) expr) */
+
+/* Gray & Reuter, pp. 506-507 */
+
+P2_LSN
+P2_log_insert (P2_LOG_STRUCT *x, int variable_size)
+{
+  P2_LSN lsn;
+  int total_size = variable_size + sizeof(element <log_cont>);
+
+  /* Assertions. */
+  /* Make sure the log record is not too small. */
+  assert(total_size >= 0);
+  assert(total_size >= (int) sizeof(P2_XACT_LOG_STRUCT));
+  /* Make sure the log record is not too big to fit into ANY log file. */
+  assert(total_size <= LOG_SIZE);
+
+#if defined(LOG_LOCK)
+  /* Aquire the log lock (an exclusive semaphore on the log). */
+  /* Lock the log end in exclusive mode. */
+  if (P2_lock_semaphore(&(log_anchor.lock)) < 0)
+    P2_runtime_perror("Could not lock log lock (log manager semaphore)");
+#endif /* LOG_LOCK */
+
+  /* Make sure this process has the most recent log file in mmap memory. */
+  /* When another process closes an old log file and opens a new log file,
+     this process (sometimes?) retains the mappings from the old log file. */
+  if (log_cont.index != log_anchor.index)
+    close_and_open_log_cont(log_anchor.index);
+
+  /* Make sure the log record is not too big to fit into THIS log
+     file, otherwise, close the old log file and open a new one.
+     Since this might change the record's LSN, we must do it before we
+     copy the LSN. */
+  if (varoverflow(log_cont, variable_size))
+  {
+    /* Increment sequence number of new log file. */
+    log_anchor.index++;
+
+    /* Synchronize log file. */
+    P2_log_manager_sync_log();
+
+    /* Close old log file and open new log file. */
+    close_and_open_log_cont(log_anchor.index);
+
+#if defined(P2_PERSIST_LSN)
+    /* Make sure that (log_anchor.persist_lsn <= log_anchor.lsn) */
+#ifndef NDEBUG
+    assert(P2_lsncmp(log_anchor.persist_lsn, log_anchor.prev_lsn) <= 0);
+#endif /* NDEBUG */
+    /* Update LSN of max (most recent) log record in persistent store. */
+    log_anchor.persist_lsn = log_anchor.prev_lsn;
+#endif /* P2_PERSIST_LSN */
+
+    /* Update LSN of next record. */
+    log_anchor.lsn.index = log_anchor.index;
+    log_anchor.lsn.rba = init_rba();
+  }
+
+  /* Make a copy of the record's LSN. */
+  lsn = log_anchor.lsn;
+  assert(lsn_valid(lsn));
+
+  /* Fill-in log record header. */
+  x->lsn = lsn;
+  x->prev_lsn = log_anchor.prev_lsn;
+  assert(lsn_valid(x->prev_lsn));
+  x->xact_id = P2_my_xact_id;
+  /* Allow logging of special operations which are executed outside of
+     a transaction.  This allows, for example, init_cont() to be
+     executed before begin_xact().  */
+  /* This if statement is an example of overhead added by generality. */
+  /* Q: Is this a good idea?
+     A: No, because it adds un-necessary overhead to the common case.
+     A: Yes, because it allows more flexibility in user programs.
+        And type expressions (log can be used without xact)??? */
+  if (P2_my_xact_id == 0)
+    x->xact_prev_lsn = P2_NULL_LSN;
+  else
+  {
+    x->xact_prev_lsn = P2_log_transaction(lsn);
+    assert(lsn_valid(x->xact_prev_lsn));
+  }
+
+#ifndef NDEBUG
+  /* Make sure that the log record passes the validity test. */
+  assert(P2_log_struct_valid(x));
+#endif /* NDEBUG */
+
+  /* Insert. */
+#if defined(TRACE)
+  P2_trace("pre-insert: log_curs.obj = %x", log_curs.obj);
+  P2_trace("pre-insert: log_anchor.lsn.index = %d", log_anchor.lsn.index);
+  P2_trace("pre-insert: log_anchor.lsn.rba = %x", log_anchor.lsn.rba);
+#endif
+
+  varinsert(log_curs, *x, variable_size);
+  
+#if defined(TRACE)
+  P2_trace("post-insert: log_curs.obj = %x", log_curs.obj);
+  P2_trace("post-insert: log_anchor.lsn.index = %d", log_anchor.lsn.index);
+  P2_trace("post-insert: log_anchor.lsn.rba = %x", log_anchor.lsn.rba);
+#endif
+
+  /* Cursor and log_anchor.lsn should point to the object we just inserted. */
+  /* Make sure the LSN is correct. */
+  assert(log_anchor.lsn.rba == log_curs.obj);
+  /* Make sure the non-variable fields match. */
+  assert(memcmp(log_curs.obj, x, offsetof(P2_LOG_STRUCT, v)) == 0);
+#if 0
+  /* Make sure the varchar field matches??? */
+#endif
+
+  /* Update anchor. */
+  log_anchor.prev_lsn = lsn;
+  log_anchor.lsn.rba += total_size;
+#if defined(TRACE)
+  P2_trace("total_size = %x", total_size);
+  P2_trace("post-update: log_anchor.lsn.rba = %x", log_anchor.lsn.rba);
+#endif
+
+#if defined(LOG_LOCK)
+  /* Release the log lock. */
+  /* Unlock the log end. */
+  if (P2_unlock_semaphore(&(log_anchor.lock)) < 0)
+    P2_runtime_perror("Could not unlock log lock (log manager semaphore)");
+#endif /* LOG_LOCK */
+
+  /* Return LSN of record just inserted. */
+  /* Needed by paces/P2_xact-manager.p2:P2_xact_manager_checkpoint_schema() */
+  return(lsn);
+}
+
+/*****************************************************************************/
+/*                  Print log.                                               */
+/*****************************************************************************/
+
+#if defined(P2_PRINT_LOG)
+
+#include <stdio.h> /* printf() */
+
+void
+P2_print_log_anchor (void)
+{
+#if 0
+  /* The log lock is necessary only to serialize log insert
+     (i.e. write) operations (p. 505) */
+#if defined(LOG_LOCK)
+  /* Aquire the log lock (an exclusive semaphore on the log). */
+  /* Lock the log end in exclusive mode. */
+  if (P2_lock_semaphore(&(log_anchor.lock)) < 0)
+    P2_runtime_perror("Could not lock log lock (log manager semaphore)");
+#endif /* LOG_LOCK */
+#endif
+
+  printf("Log anchor:\n");
+  printf("  lock                    = %d\n", log_anchor.lock);
+  printf("  index                   = %d\n", log_anchor.index);
+  printf("  lsn                     = %u, %x\n",
+	 log_anchor.lsn.index, log_anchor.lsn.rba);
+  printf("  prev_lsn                = %u, %x\n",
+	 log_anchor.prev_lsn.index, log_anchor.prev_lsn.rba);
+  printf("  xact_manager_anchor_lsn = %u, %x\n",
+	 log_anchor.xact_manager_anchor_lsn.index,
+	 log_anchor.xact_manager_anchor_lsn.rba);
+#if defined(P2_PERSIST_LSN)
+  printf("  persist_lsn             = %u, %x\n",
+	 log_anchor.persist_lsn.index, log_anchor.persist_lsn.rba);
+#endif /* P2_PERSIST_LSN */
+
+#if 0
+  /* The log lock is necessary only to serialize log insert
+     (i.e. write) operations (p. 505) */
+#if defined(LOG_LOCK)
+  /* Release the log lock. */
+  /* Unlock the log end. */
+  if (P2_unlock_semaphore(&(log_anchor.lock)) < 0)
+    P2_runtime_perror("Could not unlock log lock (log manager semaphore)");
+#endif /* LOG_LOCK */
+#endif
+}
+
+/* Might want to add validity checks, such as a computation of the
+   logical size of the log record, which we can compare with the
+   actual size. */
+/* This function has type P2_LOG_STRUCT_FUNCTION. */
+
+int
+P2_print_log_struct (P2_LOG_STRUCT *x, unsigned log_struct_number)
+{
+  printf("Record %u:\n", log_struct_number);
+
+  /*** Fields for all operations (including transactions) ***/
+
+  printf("  lsn                     = %u, %x\n",
+  	     x->lsn.index, x->lsn.rba);
+  printf("  prev_lsn                = %u, %x\n",
+  	     x->prev_lsn.index, x->prev_lsn.rba);
+  printf("  xact_prev_lsn           = %u, %x\n",
+  	     x->xact_prev_lsn.index, x->xact_prev_lsn.rba);
+  printf("  xact_id                 = %u\n", x->xact_id);
+  printf("  op_code                 = %x ", x->op_code);
+
+  /*** Operation-specific fields. ***/
+
+  /* Other (e.g., init_rba) operation. */
+  if ((x->op_code & P2_LOG_OTHER_OP) != 0)
+  {
+    P2_OP_ID op_id = (x->op_code & P2_LOG_OP);
+    printf("(other operation)\n");
+    if (op_id == P2_LOG_INIT_RBA_OP)
+      printf("  op_name                 = init_rba\n");
+    else if (op_id == P2_LOG_XACT_MANAGER_ANCHOR_OP)
+      printf("  op_name                 = xact_manager_anchor\n");
+    else
+      printf("  op_name                 = (unknown other operation)");
+  }
+  else
+  {
+    /* Container operation. */
+    if ((x->op_code & P2_LOG_CONT_OP) != 0)
+    {
+      P2_CONT_LOG_STRUCT *k = (P2_CONT_LOG_STRUCT *) x;
+      P2_OP_NAME_VEC *op_name_vec = P2_get_op_name_vec(k->cont_id);
+      printf("(container operation)\n");
+      if ((*op_name_vec) == NULL)
+	printf("  op_name_vec             = NULL\n");
+      else
+      {
+  	P2_OP_ID op_id;
+	char *op_name;
+	op_id = (log_curs.op_code & P2_LOG_OP);
+	if (!op_id_valid(op_id))
+	  P2_runtime_error("P2_log_manager: P2_print_log_struct: container"
+			   " operation identifier invalid: log corrupted?");
+	op_name = (*op_name_vec)[op_id];
+	printf("  op_name_vec             = %x\n", (*op_name_vec));
+	printf("  op_name                 = %s\n", op_name);
+        printf("  cont_id                 = %d\n", k->cont_id);
+        printf("  cont_obj_id             = %x\n", k->cont_obj_id);
+      }
+    }
+    /* Schema (aka transaction) operation. */
+    else if ((x->op_code & P2_LOG_SCHEMA_OP) != 0)
+    {
+      /* The id of schema is currently always zero. */
+      P2_OP_NAME_VEC *op_name_vec = P2_get_op_name_vec(0);
+      printf("(schema operation)\n");
+      if ((*op_name_vec) == NULL)
+	printf("  op_name_vec             = NULL\n");
+      else
+      {
+	P2_OP_ID op_id;
+	char *op_name;
+	op_id = (log_curs.op_code & P2_LOG_OP);
+	if (!op_id_valid(op_id))
+	  P2_runtime_error("P2_log_manager: P2_print_log_struct: schema"
+			   " operation identifier invalid: log corrupted?");
+	op_name = (*op_name_vec)[op_id];
+	printf("  op_name_vec             = %x\n", (*op_name_vec));
+	printf("  op_name                 = %s\n", op_name);
+      }
+    }
+    /* Cursor operation. */
+    else
+    {
+      P2_CURS_LOG_STRUCT *c = (P2_CURS_LOG_STRUCT *) x;
+      P2_OP_NAME_VEC *op_name_vec = P2_get_op_name_vec(c->curs_id);
+      printf("(cursor operation)\n");
+      if ((*op_name_vec) == NULL)
+	printf("  op_name_vec             = NULL\n");
+      else
+      {
+	P2_OP_ID op_id;
+	char *op_name;
+	op_id = log_curs.op_code;
+	if (!op_id_valid(op_id))
+	  P2_runtime_error("P2_log_manager: P2_print_log_struct:"
+			   " cursor operation identifier invalid: log corrupted?");
+	op_name = (*op_name_vec)[op_id];
+	printf("  op_name_vec             = %x\n", (*op_name_vec));
+	if (op_name[0] != '\0')
+	  printf("  op_name                 = %s\n", op_name);
+	else
+	  printf("  op_name                 = upd %s\n",
+		 ((log_curs.op_code & P2_LOG_STR_UPD_OP) != 0)?
+		 "str" : "int");
+      }
+      printf("  curs_id                 = %d\n", c->curs_id);
+      printf("  obj_id                  = %x\n", c->obj_id);
+    }
+  }
+
+  /*** Always return 0. ****/
+
+  return(0);
+}
+
+void
+P2_print_log (void)
+{
+  P2_foreach_log_struct(P2_NULL_LSN,
+    (P2_LOG_STRUCT_FUNCTION *) &P2_print_log_struct);
+}
+
+#endif /* P2_PRINT_LOG */
+
+/*****************************************************************************/
+/*                  Foreach log struct.                                      */
+/*****************************************************************************/
+
+/* For each log record starting with the given lsn, call the given
+   function.  That is, map the function f over the records of the log
+   starting at the given lsn. */
+
+/* This function exists, because this functionality (1) is needed in
+   several places, (2) it is sufficiently complex that proceduralizing
+   it improves understandability and maintainability, and (3) the
+   places where it is used are the uncommon case, so performance is
+   not important enough to justify inlining it. (JAT) */
+
+/* This function is analogous to P2_undo_xact() */
+
+int
+P2_foreach_log_struct (P2_LSN lsn, P2_LOG_STRUCT_FUNCTION *f)
+{
+  P2_LSN_INDEX index = lsn.index;
+  P2_LOG_STRUCT *x;
+  unsigned log_struct_number = 0;
+
+  close_and_open_log_cont(index);
+  if (lsn.rba == 0)
+  {
+    reset_start(log_curs);
+  }
+  else
+  {
+    pos(log_curs, lsn.rba);
+  }
+
+  while (index <= log_anchor.lsn.index)
+  {
+    if (end_adv(log_curs))
+    {
+      index++;
+      close_and_open_log_cont(index);
+      reset_start(log_curs);
+    }
+    else
+    {
+      /* Return value. */
+      int r;
+      /* Get the log record. */
+      P2_LOG_STRUCT *x = (P2_LOG_STRUCT *) log_curs.obj;
+#ifndef NDEBUG
+      /* Check to log record for validity. */
+      if (!P2_log_struct_valid(x))
+	P2_runtime_error("P2_log_manager: log struct invalid: log corrupted?");
+#endif /* NDEBUG */
+      /* Increment the log record number. */
+      log_struct_number++;
+#if 0
+      /* Print log record before we undo it. */
+#if defined(P2_PRINT_LOG)
+      if (P2_my_xact_status == P2_XACT_REDO)
+      {
+	printf("REDO: ");
+	P2_print_log_struct(x, log_struct_number);
+      }
+#endif /* P2_PRINT_LOG */
+#endif
+      assert(f != NULL);
+      /* Call the given function. */
+      r = (*f)(x, log_struct_number);
+      /* If the return value of f is non-0, return the value f returned. */
+      if (r != 0)
+	return(r);
+      /* Advance to next log record. */
+      adv(log_curs);
+    }
+  }
+  /* Return 0. */
+  return(0);
+}
+
+/*****************************************************************************/
+/*                  Transaction operations.                                  */
+/*****************************************************************************/
+
+/* Convert LSN to pointer to log record. */
+
+static P2_LOG_STRUCT *
+lsn_to_log_struct (P2_LSN lsn)
+{
+  P2_LOG_STRUCT *x;
+
+  /* Make sure that lsn is valid. */
+  assert(lsn_valid(lsn));
+  /* Cast LSN as a pointer to P2_LOG_STRUCT. */
+  x = (P2_LOG_STRUCT *) lsn.rba;
+#ifndef NDEBUG
+  /* Make sure that log record is valid. */
+  assert(P2_log_struct_valid(x));
+#endif /* NDEBUG */
+  /* Return log record. */
+  return(x);
+}
+
+/* Undo or redo the most recent transaction. */
+/* This function is analogous to P2_foreach_log_struct() */
+/* It is called by x/log.xp:abort_xact() */
+
+void
+P2_undo_xact (P2_LOG_STRUCT_FUNCTION *f)
+{
+  P2_LSN lsn;
+  P2_LOG_STRUCT *x;
+  P2_LSN_INDEX index = log_anchor.index;
+
+  assert(log_cont.index == log_anchor.index);
+  assert(P2_my_xact_status == P2_XACT_UNDO
+	 || P2_my_xact_status == P2_XACT_REDO);
+
+#if 0
+#if defined(LOG_LOCK)
+  /* Aquire the log lock (an exclusive semaphore on the log). */
+  if (P2_lock_semaphore(&(log_anchor.lock)) < 0)
+    P2_runtime_perror("Could not lock log lock (log manager semaphore)");
+#endif /* LOG_LOCK */
+#endif
+
+  /* Undo transaction. */
+  lsn = P2_get_max_lsn();
+  while (!P2_null_lsn(lsn))
+  {
+    assert(lsn.rba != 0);
+    assert(lsn_valid(lsn));
+    assert(lsn.index <= index);
+
+    /* If this log record is not in the log file currently in memory,
+       then bring in the (old) log file containing the record. */
+    if (lsn.index != index)
+    {
+      index = lsn.index;
+      close_and_open_log_cont(index);
+    }
+
+    x = lsn_to_log_struct(lsn);
+
+    assert(f != NULL);
+#ifndef NDEBUG
+    /* Call the undo or redo function. */
+    assert((*f)(x) == 0);
+#else
+    /* Call the undo or redo function. */
+    (*f)(x);
+#endif /* NDEBUG */
+
+#ifndef NDEBUG
+    /* assert(x->xact_prev_lsn < lsn) */
+    assert(P2_lsncmp(x->xact_prev_lsn, lsn) < 0);
+#endif /* NDEBUG */
+
+    lsn = x->xact_prev_lsn;
+  }
+
+  /* Close the old log file and bring in the current log file. */
+  if (index != log_anchor.index)
+    close_and_open_log_cont(log_anchor.index);
+
+#if 0
+#if defined(LOG_LOCK)
+  /* Release the log lock. */
+  if (P2_unlock_semaphore(&(log_anchor.lock)) < 0)
+    P2_runtime_perror("Could not unlock log lock (log manager semaphore)");
+#endif /* LOG_LOCK */
+#endif
+
+#if 0
+  P2_init_xact_cb(P2_XACT_NONE);
+#endif
+}
+
+#if 0
+/* These procedures were called in x/log.xp:{begin,commit}_xact()
+   before calling down (to x/xact.xp), to do things with the old
+   transaction, but they no longer appear to be necessary. */
+
+void
+P2_log_manager_begin_xact (void)
+{
+#if 0
+  P2_init_xact_cb(P2_XACT_DO);
+#endif
+}
+
+void
+P2_log_manager_commit_xact (void)
+{
+  /* Formerly, commit would free the transaction's log records.
+     Now, I guess commit should sync the mmap_file or something. */
+#if 0
+  P2_init_xact_cb(P2_XACT_NONE);
+#endif
+
+  /* Now, we sync the log. */
+#if 1
+  P2_log_manager_sync_log();
+#endif
+}
+
+#endif
+
+/*****************************************************************************/
+/*                  Read and write transaction manager anchor.               */
+/*****************************************************************************/
+
+/* "Each resource manager can write a checkpoint in the log,
+   consisting of an ordinary log record containing the resource
+   manager's restart information.  The resource manager then registers
+   its anchor LSN and low-water LSN with the transaction manager.  The
+   transaction manager, in turn, records this information in the
+   transaction manager checkpoint record.  Hence, the system only
+   needs to remember the location of the transaction manager's
+   checkpoint record.  As shown in Figure 9.6, it is recorded as a
+   field of the log manager's anchor record." Gray & Reuter, p. 512 */
+
+/* Read LSN of transaction manager anchor from log anchor.
+   Gray and Reuter, call this log_read_anchor(), p. 512 */
+
+P2_LSN
+P2_log_read_anchor (void)
+{
+  assert(lsn_valid(log_anchor.xact_manager_anchor_lsn));
+  return(log_anchor.xact_manager_anchor_lsn);
+}
+
+/* Save LSN of transaction manager anchor in log anchor.
+   Gray & Reuter, call this log_write_anchor(), p. 512 */
+
+void
+P2_log_write_anchor (P2_LSN lsn)
+{
+  assert(lsn_valid(lsn));
+  log_anchor.xact_manager_anchor_lsn = lsn;
+}
+
+/*****************************************************************************/
+/*                  Restart.                                                 */
+/*****************************************************************************/
+
+/* This routine is called from x/log.xp:s_verbatim():P2_warm_restart(). */
+
+/* The warm restart functionality is really part of the transaction
+   manager, and thus should be defined in the file paces/P2_xact-manager.p2.
+   Unfortunately, we need to make reference to the log record
+   structure, which is defined in the log manager, which must be
+   layered on TOP of the transaction manager. (JAT) */
+
+void
+P2_log_manager_warm_restart (P2_LOG_STRUCT_FUNCTION *f)
+{
+  /* P2 warm restart. */
+  P2_LSN lsn;
+  P2_XACT_MANAGER_ANCHOR_LOG_STRUCT *x;
+
+#ifndef NDEBUG
+  P2_runtime_warning("Warm restart: restarting from log");
+#endif /* NDEBUG */
+
+  P2_set_xact_status(P2_XACT_REDO);
+
+#if 1
+  /* Start from low water mark. */
+  /* Get low water mark from the transaction manager anchor. */
+  lsn = P2_log_read_anchor();
+  /* Check for amnesia. Can't do a warm restart if there is no log file. */
+  /* If there is no log file, we know that x will be zero (and not
+     some random, un-initialized value), because when
+     P2_init_log_manager() open the log_anchor container, it will call
+     P2_init_log_anchor() if the container is un-initialized. */
+  if (lsn.rba == 0)
+    P2_runtime_error("Warm restart: no log file found");
+  x = (P2_XACT_MANAGER_ANCHOR_LOG_STRUCT *) P2_log_read_lsn(lsn);
+  P2_foreach_log_struct(x->low_water, f);
+#else
+  /* Start from P2_NULL_LSN */
+  P2_foreach_log_struct(P2_NULL_LSN, f);
+#endif
+}
+
+/*****************************************************************************/
+/*                  Init and delete log manager.                             */
+/*****************************************************************************/
+
+void
+P2_init_log_anchor (void)
+{
+  /* Amnesia. */
+
+#if defined(LOG_LOCK)
+  /* Initialize log lock. */
+  if (P2_init_semaphore(&log_anchor.lock, 1) < 0)
+    P2_runtime_perror("Could not initialize log lock (log manager semaphore)");
+#endif /* LOG_LOCK */
+
+  /* See analogous code in P2_log_insert(). */
+
+  /* Initialize log_anchor.index.  Must do this before we open log_cont??? */
+  log_anchor.index                   = 0;
+  log_anchor.lsn                     = P2_NULL_LSN;
+  log_anchor.prev_lsn                = P2_NULL_LSN;
+  log_anchor.xact_manager_anchor_lsn = P2_NULL_LSN;
+#if defined(P2_PERSIST_LSN)
+  log_anchor.persist_lsn             = P2_NULL_LSN;
+#endif /* P2_PERSIST_LSN */
+}
+
+void
+P2_init_log_manager (void)
+{
+  /* Make sure SIZEOF_ELEMENT_LOG_ANCHOR_CONT is correct. */
+  assert(SIZEOF_ELEMENT_LOG_ANCHOR_CONT == sizeof(element<log_anchor_cont>));
+
+  /* Make sure P2_CURS_LOG_STRUCT is correct. */
+  /* That is, make sure that curs_id--the first field of
+     P2_CURS_LOG_STRUCT after the dummy field (the beginning of the
+     variable part of P2_CURS_LOG_STRUCT)--has the same offset as
+     v--the varchar field of the transformed element (the beginning of
+     the variable part of the transformed element). */
+  assert(offsetof(P2_CURS_LOG_STRUCT, curs_id)
+	 == offsetof(element<log_cont>, v));
+
+  /* Make sure P2_LOG_STRUCT_DUMMY_SIZE is correct. */
+  /* That is, make sure that P2_LOG_STRUCT_SIZE--the size of the dummy
+     field--accurately represents the size of the fields added by
+     xform--the difference between the size of the transformed element
+     (element <log_cont>) and the original element (P2_LOG_STRUCT) */
+  assert(P2_LOG_STRUCT_DUMMY_SIZE
+	 == (sizeof(element <log_cont>) - sizeof(P2_LOG_STRUCT)));
+
+  /* Make sure P2_SIZEOF_ELEMENT_LOG_CONT is correct. */
+  assert(P2_SIZEOF_ELEMENT_LOG_CONT == sizeof(element<log_cont>));
+
+#if defined(LOG_ANCHOR_CONTAINER_STRUCTURE)
+  open_cont(log_anchor);
+#else
+  P2_LOG_ANCHOR a;
+  open_cont(log_anchor_cont);
+  init_curs(log_anchor);
+  /* If we are not using a container structure, then might be better
+     (stylistically) to initialize the struct a before inserting it,
+     but it isn't necessary, and it would require different
+     initialization code when we are using a container structure. */
+  insert(log_anchor, a);
+#endif /* LOG_ANCHOR_CONTAINER_STRUCTURE */
+
+#if 0
+  /* BUG!!! Do NOT want to always initialize the log anchor. */
+  /* Want to initiailize it only if it is un-initialized. */
+  /* When do we initiate recovery??? */
+  P2_init_log_anchor();
+#else
+  /* Open new log file. */
+  open_log_cont(log_anchor.index);
+  /* If log_anchor.lsn is uninitialized, initialize it.
+     We assume it is uninitialized if its rba is zero. */
+  /* A more exact test for log_anchor.lsn uninitialized would be
+     P2_lsncmp(log_anchor.lsn, P2_NULL_LSN), but this test would be
+     more expensive. (JAT) */
+  /* See analogous code in P2_log-manager.p2:P2_log_manager_warm_restart() */
+#ifndef NDEBUG
+  /* Assert that the two tests are equivalent. */
+  assert((log_anchor.lsn.rba == 0)
+	 == (P2_lsncmp(log_anchor.lsn, P2_NULL_LSN) == 0));
+#endif /* NDEBUG */
+  if (log_anchor.lsn.rba == 0)
+  {
+    /* Amnesia!!! */
+#ifndef NDEBUG
+    P2_runtime_warning("Amnesia: no log file found");
+#endif /* NDEBUG */
+    /* Index should be 0 */
+    assert(log_anchor.index == 0);
+    log_anchor.lsn.index = log_anchor.index;
+    /* Relative byte address is address of 1st log record. */
+    log_anchor.lsn.rba = init_rba();
+  }
+#endif
+
+  /* This assignment is an example of overhead added by generality. */
+  P2_log_manager_initialized = TRUE;
+
+#if 0
+  /* Initialize transaction control block. */
+  P2_init_xact_cb(P2_XACT_NONE);
+#endif
+}
+
+void
+P2_delete_log_manager (void)
+{
+#if 0
+  /* Delete xact and lock managers. */
+  P2_delete_xact_manager();
+#endif
+
+#if 0
+  /* Never delete the log lock--it will be stored persistently in the
+     log anchor. */
+#if defined(LOG_LOCK)
+  /* Delete log lock. */
+  if (P2_delete_semaphore(&(log_anchor.lock)) < 0)
+    P2_runtime_perror("Could not delete log lock (log manager semaphore)");
+#endif /* LOG_LOCK */
+#endif
+
+#if 1
+  /* Checkpoint. */
+  P2_log_manager_sync_log();
+#endif
+  /* Close log file. */
+  close_cont(log_cont);
+
+  /* Close log anchor. */
+  close_cont(log_anchor_cont);
+}
+
+/*****************************************************************************/
+/*                  Variables for x/log.xp.                                  */
+/*****************************************************************************/
+
+// Log record.
+P2_LOG_UNION P2_log_record;
+// Log record sizes.
+int P2_log_record_size;
+int P2_log_record_size0;
+int P2_log_record_size1;

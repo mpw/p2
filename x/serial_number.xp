@@ -1,0 +1,34 @@
+// $Id: serial_number.xp,v 45.0 1997/09/19 05:46:49 jthomas Exp $
+// Copyright (C) 1997 The University of Texas at Austin.
+
+layer ds serial_number[ ds ] stable no annotation
+
+// This layer maintains serial_number(container) = the number of
+// elements ever added to container, even if those elements have
+// subsequently deleted.
+
+// This layer is analogous to x/cardinality.xp, but it DOES count
+// deleted elements.
+
+xform(element, container, cursor)
+{
+    add container : int serial_number;
+    xform(element, container, cursor);
+}
+
+insert(cursor, record)
+%{ 
+    (container.serial_number)++;
+    insert(cursor, record);
+%}
+
+init_cont(container) 
+%{ 
+    (container.serial_number) = 0; 
+    init_cont(container); 
+%} 
+
+adhoc serial_number(container)
+%{  
+    (container.serial_number)
+%}

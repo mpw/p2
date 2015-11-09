@@ -1,0 +1,3 @@
+absval(-1) = 1
+maxint(1, 0) = 1
+maxint(absval(-1), 0) = 1

@@ -1,0 +1,11 @@
+// $Id: hash_array_overwrite.xp,v 45.0 1997/09/19 05:46:25 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds hash_array_overwrite[ mem ] stable annotation retrieval_sometimes
+
+!#include "hash_array_overwrite.h"
+
+// Allow over-write.
+#define OVERWRITE
+
+#include "hash_array.xph"

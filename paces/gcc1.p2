@@ -1,0 +1,20 @@
+/* $Id: gcc1.p2,v 45.0 1997/09/19 05:43:22 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* gcc-specific extensions: __ keywords (other than __attribute__)
+   and long long int */
+
+#include "P2_paces.h"
+
+#include <stdio.h>
+
+__const__ int i;
+extern __inline__ void f ();
+
+long long int l;
+
+int
+main ()
+{
+  return 0;
+}

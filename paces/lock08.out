@@ -1,0 +1,3 @@
+Parent: P2_lock(8, P2_LOCK_IS, P2_LOCK_MEDIUM, 1) = P2_LOCK_OK
+Child: P2_lock(8, P2_LOCK_IS, P2_LOCK_MEDIUM, 1) = P2_LOCK_OK
+Parent: Exits

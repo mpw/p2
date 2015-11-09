@@ -1,0 +1,42 @@
+/* $Id: pb-test05.p2,v 45.0 1997/09/19 05:43:59 jthomas Exp $ */
+
+#include <stdio.h>
+
+/* This file tests pb's handling of parentheses in declarations. */
+
+int x0(int y0);    /* prototyped function */
+int (*x1)(int y1); /* prototyped function (second parentheses) */
+int (*x2)(int);    /* prototyped function (second parentheses) */
+
+int (x3);          /* redundant parentheses */
+int x4();          /* non-prototyped function */
+int (*x5)(int y5); /* function pointer (first parentheses) */
+int (*x6)(int);    /* function pointer (first parentheses) */
+int (*x7)();       /* function pointer (first parentheses) */
+int (*x8)();       /* non-prototyped function (second parentheses) */
+
+int (((x9)));      /* redundant parentheses */
+
+int x0(int y0)
+{
+  return( y0 );
+}
+
+int x4()
+{
+  return( 999 );
+}
+
+void main(void)
+{
+  x1 = &x0;
+  x2 = x1;
+  x3 = x4();
+  x5 = x2;
+  x6 = x5;
+  x7 = x6;
+  x8 = x7;
+  x9 = (*x8)( x3 );
+  printf( "%d\n", x9 );
+  exit( 0 );
+}

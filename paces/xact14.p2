@@ -1,0 +1,40 @@
+/* $Id: xact14.p2,v 45.0 1997/09/19 05:45:35 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Toy program to demonstrate "bug": failed assertion `op != -1' in
+   log.xp layers.  Note that this wasn't really a "bug" at all, but
+   rather a design rule error: all of the log layers require the
+   init_generic layer. (JAT) */
+
+#include <stdio.h>
+#include "P2_paces.h"
+
+typedef struct {
+   int i;
+} EMP_TYPE;
+
+typex {
+#if 0
+  /* Bug: no init_generic */
+  t = top2ds[log_tid_hack[array[transient]]];
+#elif 0
+  /* Bug: no init_generic */
+  t = top2ds[log_transient[array[transient]]];
+#else
+  /* No bug: init_generic */
+  t = top2ds[init_generic[log_transient[array[transient]]]];
+#endif
+}
+
+schema {
+  container <EMP_TYPE> emp_cont;
+} stored_as t with {
+  array size of emp_cont is 10;
+} emp_schema;
+cursor <emp_schema.emp_cont>
+all_emp;
+
+int main (void) 
+{
+  return 0;
+}

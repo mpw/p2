@@ -1,0 +1,10 @@
+insert and update before abort:
+10010 40 Akin, Monica
+10020 21 Alexander, Joe
+10030 23 Akerson, Gwyn
+10070 22 Andrews, Kay
+99996 61 Andrews, John
+99997 60 Akers, Mark
+99998 53 Akerson, Mary
+99999 42 Akerson, Suzanne
+insert and update after abort:

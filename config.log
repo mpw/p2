@@ -1,0 +1,86 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:528: checking for gcc
+configure:605: checking whether the C compiler (gcc  ) works
+configure:619: gcc -o conftest    conftest.c  1>&5
+configure:616:1: warning: type specifier missing, defaults to 'int' [-Wimplicit-int]
+main(){return(0);}
+^
+1 warning generated.
+configure:639: checking whether the C compiler (gcc  ) is a cross-compiler
+configure:644: checking whether we are using GNU C
+configure:668: checking whether gcc accepts -g
+configure:698: checking for sane header files
+configure:707: gcc -c -Wall -Werror  conftest.c 1>&5
+configure:726: checking for inline
+configure:770: checking for mawk
+configure:828: checking for a BSD compatible install
+configure:880: checking for flex
+configure:913: checking for yywrap in -lfl
+configure:959: checking for bison
+configure:991: checking for ranlib
+configure:1018: checking how to run the C preprocessor
+configure:1079: checking for definitions of EXIT_SUCCESS and EXIT_FAILURE
+configure:1088: gcc -c -Wall -Wno-uninitialized  conftest.c 1>&5
+configure:1109: checking for indent
+configure:1140: checking for GNU indent version 1.9 or higher
+configure:1159: checking for autoconf-2.4
+configure:1188: checking for autoheader-2.4
+configure:1218: checking for egrep
+configure:1246: checking for yytext declaration
+configure:1280: gcc -o conftest -Wall -Wno-uninitialized   conftest.c   1>&5
+In file included from configure:1274:
+<stdin>:9:22: error: redefinition of 'yytext' with a different type: 'unsigned char []' vs 'char *'
+extern unsigned char yytext[];
+                     ^
+lex.yy.c:447:7: note: previous definition is here
+char *yytext;
+      ^
+1 error generated.
+configure: failed program was:
+#line 1273 "configure"
+#include "confdefs.h"
+#include "lex.yy.c"
+int main() {
+
+; return 0; }
+configure:1280: gcc -o conftest -Wall -Wno-uninitialized   conftest.c   1>&5
+In file included from configure:1274:
+<stdin>:9:13: error: redefinition of 'yytext' with a different type: 'char []' vs 'char *'
+extern char yytext[];
+            ^
+lex.yy.c:447:7: note: previous definition is here
+char *yytext;
+      ^
+1 error generated.
+configure: failed program was:
+#line 1273 "configure"
+#include "confdefs.h"
+#include "lex.yy.c"
+int main() {
+
+; return 0; }
+configure:1280: gcc -o conftest -Wall -Wno-uninitialized   conftest.c   1>&5
+In file included from configure:1274:
+lex.yy.c:1053:17: warning: unused function 'yyunput' [-Wunused-function]
+    static void yyunput (int c, register char * yy_bp )
+                ^
+lex.yy.c:1094:16: warning: 'static' function 'input' declared in header file should be declared 'static inline' [-Wunneeded-internal-declaration]
+    static int input  (void)
+               ^
+2 warnings generated.
+configure:1308: checking for union semun declaration
+configure:1319: gcc -c -Wall -Wno-uninitialized  conftest.c 1>&5
+configure:1315:13: warning: unused variable 'arg' [-Wunused-variable]
+union semun arg;
+            ^
+1 warning generated.
+configure:1339: checking if flex supports table size settings
+configure:1360: checking for getpagesize
+configure:1436: checking sh echo option for no new-line
+configure:1455: checking sh killed process exit status
+configure:1464: checking for system V signals
+configure:1473: gcc -o conftest -Wall -Wno-uninitialized   conftest.c  1>&5
+configure:1493: checking for sys/sysmips.h
+configure:1531: checking which malloc package to use

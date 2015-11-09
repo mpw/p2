@@ -1,0 +1,63 @@
+/* $Id: const07.p2,v 45.0 1997/09/19 05:43:02 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* From Harbison & Steele, "C: A Reference Manual, 3rd Ed.", 1991, p. 74 */
+
+const int ic = 37;
+int * const const_pointer;
+const int *pointer_to_const;
+typedef int *INT_POINTER;
+const INT_POINTER const_int_pointer;
+const int *pc;
+int *p, i;
+
+/* just const */
+
+const c0;
+const int c1;
+const c2 = 2;
+const int c3 = 3;
+
+/* const & struct (JAT) */
+
+struct s {
+  const int ic;
+  const int *pc;
+};
+const struct s cs;
+struct s s;
+
+/* Pointers to constant pointers */
+
+const char *** const aaa[];
+const char ** const *bbb[];
+const char * const **ccc[];
+
+typedef const INT_POINTER *PC_INT_POINTER;
+typedef const PC_INT_POINTER *PCPC_INT_POINTER;
+typedef const PCPC_INT_POINTER *PCPCPC_INT_POINTER;
+
+PC_INT_POINTER pc_int_pointer;
+PCPC_INT_POINTER pcpc_int_pointer;
+PCPCPC_INT_POINTER pcpcpc_int_pointer;
+
+int
+main()
+{
+  /* These are perfectly legal, and should not generate warnings. */
+  pc = p = &i;
+  pc = &ic;
+  *p = 5;
+  pc = &i;
+  pc = p;
+  p = (int *) &ic;
+  p = (int *) pc;
+
+  s.pc = p;
+
+  pc_int_pointer = &p;
+  pcpc_int_pointer = &pc_int_pointer;
+  pcpcpc_int_pointer = &pcpc_int_pointer;
+
+  return(****pcpcpc_int_pointer - 5);
+}

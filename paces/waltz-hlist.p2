@@ -1,0 +1,4620 @@
+/* $Id: waltz-hlist.p2,v 45.0 1997/09/19 05:44:49 jthomas Exp $ */
+
+/************************************
+             waltz.p2
+************************************/
+
+/************************************
+  options selected: malloc string_optimization shadow_optimization 
+************************************/
+
+#define DEBUG                 0
+#define STRING_OPTIMIZATION   1
+#define SHADOW_OPTIMIZATION   1
+#define NEGATION_OPTIMIZATION 0
+
+#include <stdlib.h>
+#include "leaps.h"
+#include "fastmalloc.h"
+
+
+/**************** generated #defines *******************/
+
+#define bind( curstype, kdcurs, active_rule, skiprule, alist) \
+   curstype *c; \
+   if (fresh) { \
+      c = (curstype*) P2_GETSPACE(alist,curstype); \
+      top.curs = (void*) c;\
+      initk(*c); \
+      pos(kdcurs,top.cursor_position); \
+   } else {  \
+      c = (curstype *) top.curs; \
+      goto cnt; \
+   } \
+   foreachk(*c) {
+
+#define next_rule( nextrule, alist ) \
+      return; \
+cnt: ; \
+   } \
+   P2_PUTSPACE(alist, c); \
+   fresh = TRUE; top.current_rule = nextrule; \
+   nextrule(); return;
+
+
+
+/*****************  valid defines ****************/
+
+#define ta " $a._ts <= dom_timestamp "
+#define tb " $b._ts <= dom_timestamp "
+#define tc " $c._ts <= dom_timestamp "
+#define td " $d._ts <= dom_timestamp "
+#define te " $e._ts <= dom_timestamp "
+#define tf " $f._ts <= dom_timestamp "
+
+
+#define va " (!is_deleted($a)) "
+#define vb " (!is_deleted($b)) "
+#define vc " (!is_deleted($c)) "
+#define vd " (!is_deleted($d)) "
+#define ve " (!is_deleted($e)) "
+#define vf " (!is_deleted($f)) "
+
+
+#define and " && "
+
+#define t2_a and tb
+#define t2_b and ta
+#define t3_a and tb and tc
+#define t3_b and ta and tc
+#define t3_c and ta and tb
+#define t4_a and tb and tc and td
+#define t4_b and ta and tc and td
+#define t4_c and ta and tb and td
+#define t4_d and ta and tb and tc
+#define t5_a and tb and tc and td and te
+#define t5_b and ta and tc and td and te
+#define t5_c and ta and tb and td and te
+#define t5_d and ta and tb and tc and te
+#define t5_e and ta and tb and tc and td
+#define t6_a and tb and tc and td and te and tf
+#define t6_b and ta and tc and td and te and tf
+#define t6_c and ta and tb and td and te and tf
+#define t6_d and ta and tb and tc and te and tf
+#define t6_e and ta and tb and tc and td and tf
+#define t6_f and ta and tb and tc and td and te
+
+
+#define v2_a vb
+#define v2_b va
+#define v3_a vb and vc
+#define v3_b va and vc
+#define v3_c va and vb
+#define v4_a vb and vc and vd
+#define v4_b va and vc and vd
+#define v4_c va and vb and vd
+#define v4_d va and vb and vc
+#define v5_a vb and vc and vd and ve
+#define v5_b va and vc and vd and ve
+#define v5_c va and vb and vd and ve
+#define v5_d va and vb and vc and ve
+#define v5_e va and vb and vc and vd
+#define v6_a vb and vc and vd and ve and vf
+#define v6_b va and vc and vd and ve and vf
+#define v6_c va and vb and vd and ve and vf
+#define v6_d va and vb and vc and ve and vf
+#define v6_e va and vb and vc and vd and vf
+#define v6_f va and vb and vc and vd and ve
+
+
+
+/************* generated forward references ***************/
+
+VOID_FUNC    i1_a,
+             i2_a, i2_b,
+             i3_a, i3_b,
+             i4_a, i4_b, i4_c, i4_d,
+             i5_a, i5_b, i5_c, i5_d,
+             i6_a, i6_b,
+             i7_a, i7_b, i7_c, i7_d, i7_e,
+             i8_a, i8_b, i8_c, i8_d, i8_e, i8_f,
+             i9_a, i9_b, i9_c, i9_d, i9_e,
+             i10_a, i10_b, i10_c, i10_d, i10_e, i10_f,
+             i11_a, i11_b, i11_c,
+             i12_a, i12_b, i12_c, i12_d,
+             i13_a, i13_b, i13_c, i13_d,
+             i14_a, i14_b, i14_c, i14_d,
+             i15_a, i15_b, i15_c, i15_d, i15_e,
+             i16_a, i16_b, i16_c, i16_d, i16_e,
+             i17_a, i17_b, i17_c, i17_d, i17_e,
+             i18_a, i18_b, i18_c, i18_d, i18_e,
+             i19_a, i19_b, i19_c, i19_d, i19_e,
+             i20_a, i20_b, i20_c, i20_d, i20_e,
+             i21_a, i21_b, i21_c, i21_d, i21_e,
+             i22_a, i22_b, i22_c, i22_d, i22_e,
+             i23_a, i23_b, i23_c, i23_d, i23_e,
+             i24_a, i24_b, i24_c, i24_d, i24_e,
+             i25_a, i25_b, i25_c, i25_d, i25_e,
+             i26_a, i26_b, i26_c, i26_d, i26_e,
+             i27_a, i27_b, i27_c, i27_d, i27_e,
+             i28_a, i28_b, i28_c, i28_d, i28_e,
+             i29_a,
+             i30_a, i30_b,
+             i31_a, i31_b,
+             i32_a, i32_b,
+             i33_a;
+
+
+
+/************ generated record types ***************/
+
+
+typedef struct {
+   int value;
+   int     _ts;
+} stage;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   int     _ts;
+} line;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   int joined;
+   int label;
+   int plotted;
+   int     _ts;
+} edge;
+
+typedef struct {
+   int     p1;
+   int     p2;
+   int     p3;
+   int     base_point;
+   int type;
+   int     _ts;
+} junction;
+
+
+
+/****************** symbol table ***********/
+
+
+typedef char string[30];
+
+typedef struct {
+   string  name;
+} SYMBOL;
+
+string  *word;
+
+container < SYMBOL > stored_as symbol_x with {
+   bintree key is name;
+} symbol_table;
+
+cursor <symbol_table> where "$.name == *word" sym;
+
+int _nil;
+int _start;
+int _duplicate;
+int _false;
+int _detect_junctions;
+int _make_3_junction;
+int _true;
+int _L;
+int _find_initial_boundary;
+int _B;
+int _find_second_boundary;
+int _arrow;
+int _PL;
+int _labeling;
+int _M;
+int _t;
+int _label;
+int _tee;
+int _fork;
+int _plot_remaining_edges;
+int _done;
+
+
+int add_symbol( char *n )
+{
+SYMBOL s;
+
+   strcpy(s.name,n);
+   insert(sym,s);
+   return (int) sym.name;
+}
+
+int add_unique_symbol( char *n )
+{
+   word = (string *) n;
+   foreach(sym) { return (int) sym.name; };
+   return add_symbol( n );
+}
+
+void init_symbol_table ( void )
+{
+   open_cont( symbol_table );
+   init_curs( sym );
+   _nil = add_symbol("nil");
+   _start = add_symbol("start");
+   _duplicate = add_symbol("duplicate");
+   _false = add_symbol("false");
+   _detect_junctions = add_symbol("detect_junctions");
+   _make_3_junction = add_symbol("make_3_junction");
+   _true = add_symbol("true");
+   _L = add_symbol("L");
+   _find_initial_boundary = add_symbol("find_initial_boundary");
+   _B = add_symbol("B");
+   _find_second_boundary = add_symbol("find_second_boundary");
+   _arrow = add_symbol("arrow");
+   _PL = add_symbol("PL");
+   _labeling = add_symbol("labeling");
+   _M = add_symbol("M");
+   _t = add_symbol("t");
+   _label = add_symbol("label");
+   _tee = add_symbol("tee");
+   _fork = add_symbol("fork");
+   _plot_remaining_edges = add_symbol("plot_remaining_edges");
+   _done = add_symbol("done");
+}
+
+
+
+/************ generated container declarations ***************/
+
+#define nbuckets 10
+
+typex { leaps_x = top2ds_qualify[
+                  hlist[
+                  lpredindx[
+                  llist[
+                  delflag[malloc[transient_fast]]]]]]; }
+
+container < stage > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_stage;
+
+container < line > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  cont_line;
+
+container < line > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  shadow_line;
+
+container < edge > stored_as leaps_x with {
+   hlist timestamp is _ts key is p1 with size nbuckets;
+   hlist timestamp is _ts key is p2 with size nbuckets;
+   llist timestamp is _ts;
+}  cont_edge;
+
+container < edge > stored_as leaps_x with {
+   hlist timestamp is _ts key is p1 with size nbuckets;
+   llist timestamp is _ts;
+   lpredindx timestamp is _ts predicate " $.joined == 'false' " with null with null;
+   lpredindx timestamp is _ts predicate " $.plotted == 'nil' " with null with null;
+}  shadow_edge;
+
+container < junction > stored_as leaps_x with {
+   hlist timestamp is _ts key is base_point with size nbuckets;
+   llist timestamp is _ts;
+}  cont_junction;
+
+container < junction > stored_as leaps_x with {
+   llist timestamp is _ts;
+}  shadow_junction;
+
+/************** generated container numbers *******************/
+
+#define stage_num  1
+#define line_num  2
+#define shadow_line_num  3
+#define edge_num  4
+#define shadow_edge_num  5
+#define junction_num  6
+#define shadow_junction_num  7
+
+/***************** external files *********************/
+
+#include "make_3_j.c"
+
+/************ utility cursor decls ***************/
+
+typedef cursor <cont_stage> stage_cursor;
+typedef cursor <cont_line> line_cursor;
+typedef cursor <shadow_line> shadow_line_cursor;
+typedef cursor <cont_edge> edge_cursor;
+typedef cursor <shadow_edge> shadow_edge_cursor;
+typedef cursor <cont_junction> junction_cursor;
+typedef cursor <shadow_junction> shadow_junction_cursor;
+
+
+stage_cursor   a_stage;
+
+line_cursor   a_line;
+
+shadow_line_cursor   a_shadow_line;
+
+edge_cursor   a_edge;
+
+shadow_edge_cursor   a_shadow_edge;
+
+junction_cursor   a_junction;
+
+shadow_junction_cursor   a_shadow_junction;
+
+
+
+
+/************ insertion and deletion operations ********/
+
+void insert_stage (stage *r)
+{
+   insert(a_stage,*r);
+   push_wl( a_stage.obj, a_stage._ts, stage_num );
+}
+
+void delete_stage (stage_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_line (line *r)
+{
+   insert(a_line,*r);
+   push_wl( a_line.obj, a_line._ts, line_num );
+}
+
+void delete_line (line_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_shadow_line (line *r)
+{
+   insert(a_shadow_line,*r);
+   push_wl_end( a_shadow_line.obj, a_shadow_line._ts, shadow_line_num );
+}
+
+void delete_shadow_line (shadow_line_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_edge (edge *r)
+{
+   insert(a_edge,*r);
+   push_wl( a_edge.obj, a_edge._ts, edge_num );
+}
+
+void delete_edge (edge_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_shadow_edge (edge *r)
+{
+   insert(a_shadow_edge,*r);
+   push_wl_end( a_shadow_edge.obj, a_shadow_edge._ts, shadow_edge_num );
+}
+
+void delete_shadow_edge (shadow_edge_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_junction (junction *r)
+{
+   insert(a_junction,*r);
+   push_wl( a_junction.obj, a_junction._ts, junction_num );
+}
+
+void delete_junction (junction_cursor *c)
+{
+   delete(*c);
+}
+
+void insert_shadow_junction (junction *r)
+{
+   insert(a_shadow_junction,*r);
+   push_wl_end( a_shadow_junction.obj, a_shadow_junction._ts, shadow_junction_num );
+}
+
+void delete_shadow_junction (shadow_junction_cursor *c)
+{
+   delete(*c);
+}
+
+
+/**************************** rule #1: begin :
+   (stage ^value  start  )
+    -->  *******************************/
+
+
+#define query_1 where " $a.value == _start "
+
+#define negated_1 ""
+
+typedef compcurs < a cont_stage >
+   given < a >
+   query_1
+   curs1_a;
+
+/**************************** rule #2: reverse_edges :
+   (stage ^value  duplicate  )
+   (line ^p1  <p1> ^p2  <p2>  )
+    -->  *******************************/
+
+int p2_2;
+int p1_2;
+
+#define query_2 where " $a.value == _duplicate "
+
+#define negated_2 ""
+
+typedef compcurs < a cont_stage, b cont_line >
+   given < a >
+   query_2 t2_a
+   valid v2_a 
+   curs2_a;
+
+typedef compcurs < a cont_stage, b cont_line >
+   given < b >
+   query_2 t2_b
+   valid v2_b 
+   curs2_b;
+
+/**************************** rule #3: done_reversing :
+   (stage ^value  duplicate  )
+   - (line  )
+    -->  *******************************/
+
+
+cursor <cont_line>
+   C3_2;
+cursor <shadow_line> where "$._ts > dom_timestamp"
+   S3_2;
+
+BOOLEAN N3_2( )
+{
+   foreach(C3_2) { return FALSE; }
+   foreach(S3_2) { return FALSE; }
+   return TRUE;
+}
+
+#define query_3 where " $a.value == _duplicate && (N3_2()) "
+
+#define negated_3 " (N3_2()) "
+
+typedef compcurs < a cont_stage >
+   given < a >
+   query_3
+   valid negated_3
+   curs3_a;
+
+#define query_3_b where " $a.value == _duplicate && (N3_2()) "
+
+typedef compcurs < a cont_stage, b shadow_line >
+   given < b >
+   query_3_b t2_b
+   valid v2_b and negated_3
+   curs3_b;
+
+/**************************** rule #4: make-3_junction :
+   (stage ^value  detect_junctions  )
+   (edge ^p1  <base_point> ^p2  <p1> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p2> ^p2 <> <p1> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p3> ^p2 <> <p1> ^p2 <> <p2> ^joined  false  )
+    -->  *******************************/
+
+int p3_4;
+int p2_4;
+int p1_4;
+int base_point_4;
+
+#define query_4 where " $a.value == _detect_junctions && $b.joined == _false \
+        && $c.p1 == $b.p1 && $c.p2 != $b.p2 && $c.joined == _false \
+        && $d.p1 == $b.p1 && $d.p2 != $b.p2 && $d.p2 != $c.p2 && $d.joined == _false "
+
+#define negated_4 ""
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < a >
+   query_4 t4_a
+   valid v4_a 
+   curs4_a;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < b >
+   query_4 t4_b
+   valid v4_b 
+   curs4_b;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < c >
+   query_4 t4_c
+   valid v4_c 
+   curs4_c;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d cont_edge >
+   given < d >
+   query_4 t4_d
+   valid v4_d 
+   curs4_d;
+
+/**************************** rule #5: make_L :
+   (stage ^value  detect_junctions  )
+   (edge ^p1  <base_point> ^p2  <p2> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p3> ^p2 <> <p2> ^joined  false  )
+   - (edge ^p1  <base_point> ^p2 <> <p2> ^p2 <> <p3>  )
+    -->  *******************************/
+
+int p3_5;
+int p2_5;
+int base_point_5;
+
+cursor <cont_edge> where " $.p1 == base_point_5 && $.p2 != p2_5 && $.p2 != p3_5 "
+   C5_4;
+cursor <shadow_edge> where " $.p1 == base_point_5 && $.p2 != p2_5 && $.p2 != p3_5  && $._ts > dom_timestamp"
+   S5_4;
+
+BOOLEAN N5_4(  edge_cursor *b, edge_cursor *c )
+{
+   p3_5 = c->p2;
+   p2_5 = b->p2;
+   base_point_5 = b->p1;
+   foreach(C5_4) { return FALSE; }
+   foreach(S5_4) { return FALSE; }
+   return TRUE;
+}
+
+#define query_5 where " $a.value == _detect_junctions && $b.joined == _false \
+        && $c.p1 == $b.p1 && $c.p2 != $b.p2 && $c.joined == _false && (N5_4(&$b,&$c)) "
+
+#define negated_5 " (N5_4(&$b,&$c)) "
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge >
+   given < a >
+   query_5 t3_a
+   valid v3_a  and negated_5
+   curs5_a;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge >
+   given < b >
+   query_5 t3_b
+   valid v3_b  and negated_5
+   curs5_b;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge >
+   given < c >
+   query_5 t3_c
+   valid v3_c  and negated_5
+   curs5_c;
+
+#define query_5_d where " $a.value == _detect_junctions && $b.joined == _false \
+        && $c.p1 == $b.p1 && $c.p2 != $b.p2 && $c.joined == _false \
+        && $d.p1 == $b.p1 && $d.p2 != $b.p2 && $d.p2 != $c.p2 && (N5_4(&$b,&$c)) "
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge, d shadow_edge >
+   given < d >
+   query_5_d t4_d
+   valid v4_d and negated_5
+   curs5_d;
+
+/**************************** rule #6: done_detecting :
+   (stage ^value  detect_junctions  )
+   - (edge ^joined  false  )
+    -->  *******************************/
+
+
+cursor <cont_edge> where " $.joined == _false "
+   C6_2;
+cursor <shadow_edge> where " $.joined == _false  && $._ts > dom_timestamp"
+   S6_2;
+
+BOOLEAN N6_2( )
+{
+   foreach(C6_2) { return FALSE; }
+   foreach(S6_2) { return FALSE; }
+   return TRUE;
+}
+
+#define query_6 where " $a.value == _detect_junctions && (N6_2()) "
+
+#define negated_6 " (N6_2()) "
+
+typedef compcurs < a cont_stage >
+   given < a >
+   query_6
+   valid negated_6
+   curs6_a;
+
+#define query_6_b where " $a.value == _detect_junctions && $b.joined == _false && (N6_2()) "
+
+typedef compcurs < a cont_stage, b shadow_edge >
+   given < b >
+   query_6_b t2_b
+   valid v2_b and negated_6
+   curs6_b;
+
+/**************************** rule #7: initial_boundary_junction_L :
+   (stage ^value  find_initial_boundary  )
+   (junction ^type  L ^base_point  <base_point> ^p1  <p1> ^p2  <p2>  )
+   (edge ^p1  <base_point> ^p2  <p1>  )
+   (edge ^p1  <base_point> ^p2  <p2>  )
+   - (junction ^base_point > <base_point>  )
+    -->  *******************************/
+
+int p2_7;
+int p1_7;
+int base_point_7;
+
+cursor <cont_junction> where " $.base_point > base_point_7 "
+   C7_5;
+cursor <shadow_junction> where " $.base_point > base_point_7  && $._ts > dom_timestamp"
+   S7_5;
+
+BOOLEAN N7_5(  junction_cursor *b )
+{
+   base_point_7 = b->base_point;
+   foreach(C7_5) { return FALSE; }
+   foreach(S7_5) { return FALSE; }
+   return TRUE;
+}
+
+#define query_7 where " $a.value == _find_initial_boundary && $b.type == _L \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 && (N7_5(&$b)) "
+
+#define negated_7 " (N7_5(&$b)) "
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < a >
+   query_7 t4_a
+   valid v4_a  and negated_7
+   curs7_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < b >
+   query_7 t4_b
+   valid v4_b  and negated_7
+   curs7_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < c >
+   query_7 t4_c
+   valid v4_c  and negated_7
+   curs7_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < d >
+   query_7 t4_d
+   valid v4_d  and negated_7
+   curs7_d;
+
+#define query_7_e where " $a.value == _find_initial_boundary && $b.type == _L \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.base_point > $b.base_point && (N7_5(&$b)) "
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e shadow_junction >
+   given < e >
+   query_7_e t5_e
+   valid v5_e and negated_7
+   curs7_e;
+
+/**************************** rule #8: initial_boundary_junction_arrow :
+   (stage ^value  find_initial_boundary  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+   - (junction ^base_point > <bp>  )
+    -->  *******************************/
+
+int p3_8;
+int p2_8;
+int p1_8;
+int bp_8;
+
+cursor <cont_junction> where " $.base_point > bp_8 "
+   C8_6;
+cursor <shadow_junction> where " $.base_point > bp_8  && $._ts > dom_timestamp"
+   S8_6;
+
+BOOLEAN N8_6(  junction_cursor *b )
+{
+   bp_8 = b->base_point;
+   foreach(C8_6) { return FALSE; }
+   foreach(S8_6) { return FALSE; }
+   return TRUE;
+}
+
+#define query_8 where " $a.value == _find_initial_boundary && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 && (N8_6(&$b)) "
+
+#define negated_8 " (N8_6(&$b)) "
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_8 t5_a
+   valid v5_a  and negated_8
+   curs8_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_8 t5_b
+   valid v5_b  and negated_8
+   curs8_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_8 t5_c
+   valid v5_c  and negated_8
+   curs8_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_8 t5_d
+   valid v5_d  and negated_8
+   curs8_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_8 t5_e
+   valid v5_e  and negated_8
+   curs8_e;
+
+#define query_8_f where " $a.value == _find_initial_boundary && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 \
+        && $f.base_point > $b.base_point && (N8_6(&$b)) "
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge, f shadow_junction >
+   given < f >
+   query_8_f t6_f
+   valid v6_f and negated_8
+   curs8_f;
+
+/**************************** rule #9: second_boundary_junction_L :
+   (stage ^value  find_second_boundary  )
+   (junction ^type  L ^base_point  <base_point> ^p1  <p1> ^p2  <p2>  )
+   (edge ^p1  <base_point> ^p2  <p1>  )
+   (edge ^p1  <base_point> ^p2  <p2>  )
+   - (junction ^base_point < <base_point>  )
+    -->  *******************************/
+
+int p2_9;
+int p1_9;
+int base_point_9;
+
+cursor <cont_junction> where " $.base_point < base_point_9 "
+   C9_5;
+cursor <shadow_junction> where " $.base_point < base_point_9  && $._ts > dom_timestamp"
+   S9_5;
+
+BOOLEAN N9_5(  junction_cursor *b )
+{
+   base_point_9 = b->base_point;
+   foreach(C9_5) { return FALSE; }
+   foreach(S9_5) { return FALSE; }
+   return TRUE;
+}
+
+#define query_9 where " $a.value == _find_second_boundary && $b.type == _L \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 && (N9_5(&$b)) "
+
+#define negated_9 " (N9_5(&$b)) "
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < a >
+   query_9 t4_a
+   valid v4_a  and negated_9
+   curs9_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < b >
+   query_9 t4_b
+   valid v4_b  and negated_9
+   curs9_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < c >
+   query_9 t4_c
+   valid v4_c  and negated_9
+   curs9_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < d >
+   query_9 t4_d
+   valid v4_d  and negated_9
+   curs9_d;
+
+#define query_9_e where " $a.value == _find_second_boundary && $b.type == _L \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.base_point < $b.base_point && (N9_5(&$b)) "
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e shadow_junction >
+   given < e >
+   query_9_e t5_e
+   valid v5_e and negated_9
+   curs9_e;
+
+/**************************** rule #10: second_boundary_junction_arrow :
+   (stage ^value  find_second_boundary  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+   - (junction ^base_point < <bp>  )
+    -->  *******************************/
+
+int p3_10;
+int p2_10;
+int p1_10;
+int bp_10;
+
+cursor <cont_junction> where " $.base_point < bp_10 "
+   C10_6;
+cursor <shadow_junction> where " $.base_point < bp_10  && $._ts > dom_timestamp"
+   S10_6;
+
+BOOLEAN N10_6(  junction_cursor *b )
+{
+   bp_10 = b->base_point;
+   foreach(C10_6) { return FALSE; }
+   foreach(S10_6) { return FALSE; }
+   return TRUE;
+}
+
+#define query_10 where " $a.value == _find_second_boundary && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 && (N10_6(&$b)) "
+
+#define negated_10 " (N10_6(&$b)) "
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_10 t5_a
+   valid v5_a  and negated_10
+   curs10_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_10 t5_b
+   valid v5_b  and negated_10
+   curs10_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_10 t5_c
+   valid v5_c  and negated_10
+   curs10_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_10 t5_d
+   valid v5_d  and negated_10
+   curs10_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_10 t5_e
+   valid v5_e  and negated_10
+   curs10_e;
+
+#define query_10_f where " $a.value == _find_second_boundary && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 \
+        && $f.base_point < $b.base_point && (N10_6(&$b)) "
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge, f shadow_junction >
+   given < f >
+   query_10_f t6_f
+   valid v6_f and negated_10
+   curs10_f;
+
+/**************************** rule #11: match_edge :
+   (stage ^value  labeling  )
+   (edge ^p1  <p1> ^p2  <p2> ^label  <label> ^label << PL  M  B >>  )
+   (edge ^p1  <p2> ^p2  <p1> ^label  nil  )
+    -->  *******************************/
+
+int label_11;
+int p2_11;
+int p1_11;
+
+#define query_11 where " $a.value == _labeling && (($b.label==_PL)||($b.label==_M)||($b.label==_B)) \
+        && $c.p1 == $b.p2 && $c.p2 == $b.p1 && $c.label == _nil "
+
+#define negated_11 ""
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge >
+   given < a >
+   query_11 t3_a
+   valid v3_a 
+   curs11_a;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge >
+   given < b >
+   query_11 t3_b
+   valid v3_b 
+   curs11_b;
+
+typedef compcurs < a cont_stage, b cont_edge, c cont_edge >
+   given < c >
+   query_11 t3_c
+   valid v3_c 
+   curs11_c;
+
+/**************************** rule #12: label_L :
+   (stage ^value  labeling  )
+   (junction ^type  L ^base_point  <p1>  )
+   (edge ^p1  <p1> ^p2  <p2> ^label << PL  M >>  )
+   (edge ^p1  <p1> ^p2 <> <p2> ^label  nil  )
+    -->  *******************************/
+
+int p2_12;
+int p1_12;
+
+#define query_12 where " $a.value == _labeling && $b.type == _L \
+        && $c.p1 == $b.base_point && (($c.label==_PL)||($c.label==_M)) \
+        && $d.p1 == $b.base_point && $d.p2 != $c.p2 && $d.label == _nil "
+
+#define negated_12 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < a >
+   query_12 t4_a
+   valid v4_a 
+   curs12_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < b >
+   query_12 t4_b
+   valid v4_b 
+   curs12_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < c >
+   query_12 t4_c
+   valid v4_c 
+   curs12_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < d >
+   query_12 t4_d
+   valid v4_d 
+   curs12_d;
+
+/**************************** rule #13: label_tee_A :
+   (stage ^value  labeling  )
+   (junction ^type  tee ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+    -->  *******************************/
+
+int p3_13;
+int p2_13;
+int p1_13;
+int bp_13;
+
+#define query_13 where " $a.value == _labeling && $b.type == _tee \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 && $c.label == _nil \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p3 "
+
+#define negated_13 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < a >
+   query_13 t4_a
+   valid v4_a 
+   curs13_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < b >
+   query_13 t4_b
+   valid v4_b 
+   curs13_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < c >
+   query_13 t4_c
+   valid v4_c 
+   curs13_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < d >
+   query_13 t4_d
+   valid v4_d 
+   curs13_d;
+
+/**************************** rule #14: label_tee_B :
+   (stage ^value  labeling  )
+   (junction ^type  tee ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  nil  )
+    -->  *******************************/
+
+int p3_14;
+int p2_14;
+int p1_14;
+int bp_14;
+
+#define query_14 where " $a.value == _labeling && $b.type == _tee \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p3 && $d.label == _nil "
+
+#define negated_14 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < a >
+   query_14 t4_a
+   valid v4_a 
+   curs14_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < b >
+   query_14 t4_b
+   valid v4_b 
+   curs14_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < c >
+   query_14 t4_c
+   valid v4_c 
+   curs14_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge >
+   given < d >
+   query_14 t4_d
+   valid v4_d 
+   curs14_d;
+
+/**************************** rule #15: label_fork-1 :
+   (stage ^value  labeling  )
+   (junction ^type  fork ^base_point  <bp>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2> ^p2 <> <p1> ^label  nil  )
+   (edge ^p1  <bp> ^p2 <> <p2> ^p2 <> <p1>  )
+    -->  *******************************/
+
+int p2_15;
+int p1_15;
+int bp_15;
+
+#define query_15 where " $a.value == _labeling && $b.type == _fork \
+        && $c.p1 == $b.base_point && $c.label == _PL \
+        && $d.p1 == $b.base_point && $d.p2 != $c.p2 && $d.label == _nil \
+        && $e.p1 == $b.base_point && $e.p2 != $d.p2 && $e.p2 != $c.p2 "
+
+#define negated_15 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_15 t5_a
+   valid v5_a 
+   curs15_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_15 t5_b
+   valid v5_b 
+   curs15_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_15 t5_c
+   valid v5_c 
+   curs15_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_15 t5_d
+   valid v5_d 
+   curs15_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_15 t5_e
+   valid v5_e 
+   curs15_e;
+
+/**************************** rule #16: label_fork-2 :
+   (stage ^value  labeling  )
+   (junction ^type  fork ^base_point  <bp>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  B  )
+   (edge ^p1  <bp> ^p2  <p2> ^p2 <> <p1> ^label  M  )
+   (edge ^p1  <bp> ^p2 <> <p2> ^p2 <> <p1> ^label  nil  )
+    -->  *******************************/
+
+int p2_16;
+int p1_16;
+int bp_16;
+
+#define query_16 where " $a.value == _labeling && $b.type == _fork \
+        && $c.p1 == $b.base_point && $c.label == _B \
+        && $d.p1 == $b.base_point && $d.p2 != $c.p2 && $d.label == _M \
+        && $e.p1 == $b.base_point && $e.p2 != $d.p2 && $e.p2 != $c.p2 && $e.label == _nil "
+
+#define negated_16 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_16 t5_a
+   valid v5_a 
+   curs16_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_16 t5_b
+   valid v5_b 
+   curs16_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_16 t5_c
+   valid v5_c 
+   curs16_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_16 t5_d
+   valid v5_d 
+   curs16_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_16 t5_e
+   valid v5_e 
+   curs16_e;
+
+/**************************** rule #17: label_fork-3 :
+   (stage ^value  labeling  )
+   (junction ^type  fork ^base_point  <bp>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  B  )
+   (edge ^p1  <bp> ^p2  <p2> ^p2 <> <p1> ^label  B  )
+   (edge ^p1  <bp> ^p2 <> <p2> ^p2 <> <p1> ^label  nil  )
+    -->  *******************************/
+
+int p2_17;
+int p1_17;
+int bp_17;
+
+#define query_17 where " $a.value == _labeling && $b.type == _fork \
+        && $c.p1 == $b.base_point && $c.label == _B \
+        && $d.p1 == $b.base_point && $d.p2 != $c.p2 && $d.label == _B \
+        && $e.p1 == $b.base_point && $e.p2 != $d.p2 && $e.p2 != $c.p2 && $e.label == _nil "
+
+#define negated_17 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_17 t5_a
+   valid v5_a 
+   curs17_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_17 t5_b
+   valid v5_b 
+   curs17_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_17 t5_c
+   valid v5_c 
+   curs17_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_17 t5_d
+   valid v5_d 
+   curs17_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_17 t5_e
+   valid v5_e 
+   curs17_e;
+
+/**************************** rule #18: label_fork-4 :
+   (stage ^value  labeling  )
+   (junction ^type  fork ^base_point  <bp>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  M  )
+   (edge ^p1  <bp> ^p2  <p2> ^p2 <> <p1> ^label  M  )
+   (edge ^p1  <bp> ^p2 <> <p2> ^p2 <> <p1> ^label  nil  )
+    -->  *******************************/
+
+int p2_18;
+int p1_18;
+int bp_18;
+
+#define query_18 where " $a.value == _labeling && $b.type == _fork \
+        && $c.p1 == $b.base_point && $c.label == _M \
+        && $d.p1 == $b.base_point && $d.p2 != $c.p2 && $d.label == _M \
+        && $e.p1 == $b.base_point && $e.p2 != $d.p2 && $e.p2 != $c.p2 && $e.label == _nil "
+
+#define negated_18 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_18 t5_a
+   valid v5_a 
+   curs18_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_18 t5_b
+   valid v5_b 
+   curs18_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_18 t5_c
+   valid v5_c 
+   curs18_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_18 t5_d
+   valid v5_d 
+   curs18_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_18 t5_e
+   valid v5_e 
+   curs18_e;
+
+/**************************** rule #19: label_arrow-1A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  <label> ^label << B  M >>  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+    -->  *******************************/
+
+int label_19;
+int p3_19;
+int p2_19;
+int p1_19;
+int bp_19;
+
+#define query_19 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 && (($c.label==_B)||($c.label==_M)) \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 && $d.label == _nil \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 "
+
+#define negated_19 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_19 t5_a
+   valid v5_a 
+   curs19_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_19 t5_b
+   valid v5_b 
+   curs19_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_19 t5_c
+   valid v5_c 
+   curs19_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_19 t5_d
+   valid v5_d 
+   curs19_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_19 t5_e
+   valid v5_e 
+   curs19_e;
+
+/**************************** rule #20: label_arrow-1B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  <label> ^label << B  M >>  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  nil  )
+    -->  *******************************/
+
+int label_20;
+int p3_20;
+int p2_20;
+int p1_20;
+int bp_20;
+
+#define query_20 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 && (($c.label==_B)||($c.label==_M)) \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 && $e.label == _nil "
+
+#define negated_20 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_20 t5_a
+   valid v5_a 
+   curs20_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_20 t5_b
+   valid v5_b 
+   curs20_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_20 t5_c
+   valid v5_c 
+   curs20_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_20 t5_d
+   valid v5_d 
+   curs20_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_20 t5_e
+   valid v5_e 
+   curs20_e;
+
+/**************************** rule #21: label_arrow-2A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  <label> ^label << B  M >>  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+    -->  *******************************/
+
+int label_21;
+int p3_21;
+int p2_21;
+int p1_21;
+int bp_21;
+
+#define query_21 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p3 && (($c.label==_B)||($c.label==_M)) \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 && $d.label == _nil \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p1 "
+
+#define negated_21 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_21 t5_a
+   valid v5_a 
+   curs21_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_21 t5_b
+   valid v5_b 
+   curs21_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_21 t5_c
+   valid v5_c 
+   curs21_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_21 t5_d
+   valid v5_d 
+   curs21_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_21 t5_e
+   valid v5_e 
+   curs21_e;
+
+/**************************** rule #22: label_arrow-2B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  <label> ^label << B  M >>  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  nil  )
+    -->  *******************************/
+
+int label_22;
+int p3_22;
+int p2_22;
+int p1_22;
+int bp_22;
+
+#define query_22 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p3 && (($c.label==_B)||($c.label==_M)) \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p1 && $e.label == _nil "
+
+#define negated_22 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_22 t5_a
+   valid v5_a 
+   curs22_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_22 t5_b
+   valid v5_b 
+   curs22_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_22 t5_c
+   valid v5_c 
+   curs22_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_22 t5_d
+   valid v5_d 
+   curs22_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_22 t5_e
+   valid v5_e 
+   curs22_e;
+
+/**************************** rule #23: label_arrow-3A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+    -->  *******************************/
+
+int p3_23;
+int p2_23;
+int p1_23;
+int bp_23;
+
+#define query_23 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 && $c.label == _PL \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 && $d.label == _nil \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 "
+
+#define negated_23 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_23 t5_a
+   valid v5_a 
+   curs23_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_23 t5_b
+   valid v5_b 
+   curs23_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_23 t5_c
+   valid v5_c 
+   curs23_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_23 t5_d
+   valid v5_d 
+   curs23_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_23 t5_e
+   valid v5_e 
+   curs23_e;
+
+/**************************** rule #24: label_arrow-3B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  nil  )
+    -->  *******************************/
+
+int p3_24;
+int p2_24;
+int p1_24;
+int bp_24;
+
+#define query_24 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p1 && $c.label == _PL \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 && $e.label == _nil "
+
+#define negated_24 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_24 t5_a
+   valid v5_a 
+   curs24_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_24 t5_b
+   valid v5_b 
+   curs24_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_24 t5_c
+   valid v5_c 
+   curs24_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_24 t5_d
+   valid v5_d 
+   curs24_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_24 t5_e
+   valid v5_e 
+   curs24_e;
+
+/**************************** rule #25: label_arrow-4A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+    -->  *******************************/
+
+int p3_25;
+int p2_25;
+int p1_25;
+int bp_25;
+
+#define query_25 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p3 && $c.label == _PL \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 && $d.label == _nil \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p1 "
+
+#define negated_25 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_25 t5_a
+   valid v5_a 
+   curs25_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_25 t5_b
+   valid v5_b 
+   curs25_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_25 t5_c
+   valid v5_c 
+   curs25_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_25 t5_d
+   valid v5_d 
+   curs25_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_25 t5_e
+   valid v5_e 
+   curs25_e;
+
+/**************************** rule #26: label_arrow-4B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  nil  )
+    -->  *******************************/
+
+int p3_26;
+int p2_26;
+int p1_26;
+int bp_26;
+
+#define query_26 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p3 && $c.label == _PL \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p2 \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p1 && $e.label == _nil "
+
+#define negated_26 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_26 t5_a
+   valid v5_a 
+   curs26_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_26 t5_b
+   valid v5_b 
+   curs26_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_26 t5_c
+   valid v5_c 
+   curs26_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_26 t5_d
+   valid v5_d 
+   curs26_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_26 t5_e
+   valid v5_e 
+   curs26_e;
+
+/**************************** rule #27: label_arrow-5A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  M  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  nil  )
+    -->  *******************************/
+
+int p3_27;
+int p2_27;
+int p1_27;
+int bp_27;
+
+#define query_27 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p2 && $c.label == _M \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p1 \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 && $e.label == _nil "
+
+#define negated_27 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_27 t5_a
+   valid v5_a 
+   curs27_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_27 t5_b
+   valid v5_b 
+   curs27_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_27 t5_c
+   valid v5_c 
+   curs27_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_27 t5_d
+   valid v5_d 
+   curs27_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_27 t5_e
+   valid v5_e 
+   curs27_e;
+
+/**************************** rule #28: label_arrow-5B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  M  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+    -->  *******************************/
+
+int p3_28;
+int p2_28;
+int p1_28;
+int bp_28;
+
+#define query_28 where " $a.value == _labeling && $b.type == _arrow \
+        && $c.p1 == $b.base_point && $c.p2 == $b.p2 && $c.label == _M \
+        && $d.p1 == $b.base_point && $d.p2 == $b.p1 && $d.label == _nil \
+        && $e.p1 == $b.base_point && $e.p2 == $b.p3 "
+
+#define negated_28 ""
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < a >
+   query_28 t5_a
+   valid v5_a 
+   curs28_a;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < b >
+   query_28 t5_b
+   valid v5_b 
+   curs28_b;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < c >
+   query_28 t5_c
+   valid v5_c 
+   curs28_c;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < d >
+   query_28 t5_d
+   valid v5_d 
+   curs28_d;
+
+typedef compcurs < a cont_stage, b cont_junction, c cont_edge, d cont_edge, e cont_edge >
+   given < e >
+   query_28 t5_e
+   valid v5_e 
+   curs28_e;
+
+/**************************** rule #29: done_labeling :
+   (stage ^value  labeling  )
+    -->  *******************************/
+
+
+#define query_29 where " $a.value == _labeling "
+
+#define negated_29 ""
+
+typedef compcurs < a cont_stage >
+   given < a >
+   query_29
+   curs29_a;
+
+/**************************** rule #30: plot_remaining :
+   (stage ^value  plot_remaining_edges  )
+   (edge ^plotted  nil ^label  <label> ^label <> nil ^p1  <p1> ^p2  <p2>  )
+    -->  *******************************/
+
+int p2_30;
+int p1_30;
+int label_30;
+
+#define query_30 where " $a.value == _plot_remaining_edges && $b.plotted == _nil && $b.label != _nil "
+
+#define negated_30 ""
+
+typedef compcurs < a cont_stage, b cont_edge >
+   given < a >
+   query_30 t2_a
+   valid v2_a 
+   curs30_a;
+
+typedef compcurs < a cont_stage, b cont_edge >
+   given < b >
+   query_30 t2_b
+   valid v2_b 
+   curs30_b;
+
+/**************************** rule #31: plot_boundaries :
+   (stage ^value  plot_remaining_edges  )
+   (edge ^plotted  nil ^label  nil ^p1  <p1> ^p2  <p2>  )
+    -->  *******************************/
+
+int p2_31;
+int p1_31;
+
+#define query_31 where " $a.value == _plot_remaining_edges && $b.plotted == _nil && $b.label == _nil "
+
+#define negated_31 ""
+
+typedef compcurs < a cont_stage, b cont_edge >
+   given < a >
+   query_31 t2_a
+   valid v2_a 
+   curs31_a;
+
+typedef compcurs < a cont_stage, b cont_edge >
+   given < b >
+   query_31 t2_b
+   valid v2_b 
+   curs31_b;
+
+/**************************** rule #32: done_plotting :
+   (stage ^value  plot_remaining_edges  )
+   - (edge ^plotted  nil  )
+    -->  *******************************/
+
+
+cursor <cont_edge> where " $.plotted == _nil "
+   C32_2;
+cursor <shadow_edge> where " $.plotted == _nil  && $._ts > dom_timestamp"
+   S32_2;
+
+BOOLEAN N32_2( )
+{
+   foreach(C32_2) { return FALSE; }
+   foreach(S32_2) { return FALSE; }
+   return TRUE;
+}
+
+#define query_32 where " $a.value == _plot_remaining_edges && (N32_2()) "
+
+#define negated_32 " (N32_2()) "
+
+typedef compcurs < a cont_stage >
+   given < a >
+   query_32
+   valid negated_32
+   curs32_a;
+
+#define query_32_b where " $a.value == _plot_remaining_edges && $b.plotted == _nil && (N32_2()) "
+
+typedef compcurs < a cont_stage, b shadow_edge >
+   given < b >
+   query_32_b t2_b
+   valid v2_b and negated_32
+   curs32_b;
+
+/**************************** rule #33: done :
+   (stage ^value  done  )
+    -->  *******************************/
+
+
+#define query_33 where " $a.value == _done "
+
+#define negated_33 ""
+
+typedef compcurs < a cont_stage >
+   given < a >
+   query_33
+   curs33_a;
+
+
+/********* avail list declarations ****************/
+
+curs1_a **curs1_a_list = 0;
+curs2_a **curs2_a_list = 0;
+curs2_b **curs2_b_list = 0;
+curs3_a **curs3_a_list = 0;
+curs3_b **curs3_b_list = 0;
+curs4_a **curs4_a_list = 0;
+curs4_b **curs4_b_list = 0;
+curs4_c **curs4_c_list = 0;
+curs4_d **curs4_d_list = 0;
+curs5_a **curs5_a_list = 0;
+curs5_b **curs5_b_list = 0;
+curs5_c **curs5_c_list = 0;
+curs5_d **curs5_d_list = 0;
+curs6_a **curs6_a_list = 0;
+curs6_b **curs6_b_list = 0;
+curs7_a **curs7_a_list = 0;
+curs7_b **curs7_b_list = 0;
+curs7_c **curs7_c_list = 0;
+curs7_d **curs7_d_list = 0;
+curs7_e **curs7_e_list = 0;
+curs8_a **curs8_a_list = 0;
+curs8_b **curs8_b_list = 0;
+curs8_c **curs8_c_list = 0;
+curs8_d **curs8_d_list = 0;
+curs8_e **curs8_e_list = 0;
+curs8_f **curs8_f_list = 0;
+curs9_a **curs9_a_list = 0;
+curs9_b **curs9_b_list = 0;
+curs9_c **curs9_c_list = 0;
+curs9_d **curs9_d_list = 0;
+curs9_e **curs9_e_list = 0;
+curs10_a **curs10_a_list = 0;
+curs10_b **curs10_b_list = 0;
+curs10_c **curs10_c_list = 0;
+curs10_d **curs10_d_list = 0;
+curs10_e **curs10_e_list = 0;
+curs10_f **curs10_f_list = 0;
+curs11_a **curs11_a_list = 0;
+curs11_b **curs11_b_list = 0;
+curs11_c **curs11_c_list = 0;
+curs12_a **curs12_a_list = 0;
+curs12_b **curs12_b_list = 0;
+curs12_c **curs12_c_list = 0;
+curs12_d **curs12_d_list = 0;
+curs13_a **curs13_a_list = 0;
+curs13_b **curs13_b_list = 0;
+curs13_c **curs13_c_list = 0;
+curs13_d **curs13_d_list = 0;
+curs14_a **curs14_a_list = 0;
+curs14_b **curs14_b_list = 0;
+curs14_c **curs14_c_list = 0;
+curs14_d **curs14_d_list = 0;
+curs15_a **curs15_a_list = 0;
+curs15_b **curs15_b_list = 0;
+curs15_c **curs15_c_list = 0;
+curs15_d **curs15_d_list = 0;
+curs15_e **curs15_e_list = 0;
+curs16_a **curs16_a_list = 0;
+curs16_b **curs16_b_list = 0;
+curs16_c **curs16_c_list = 0;
+curs16_d **curs16_d_list = 0;
+curs16_e **curs16_e_list = 0;
+curs17_a **curs17_a_list = 0;
+curs17_b **curs17_b_list = 0;
+curs17_c **curs17_c_list = 0;
+curs17_d **curs17_d_list = 0;
+curs17_e **curs17_e_list = 0;
+curs18_a **curs18_a_list = 0;
+curs18_b **curs18_b_list = 0;
+curs18_c **curs18_c_list = 0;
+curs18_d **curs18_d_list = 0;
+curs18_e **curs18_e_list = 0;
+curs19_a **curs19_a_list = 0;
+curs19_b **curs19_b_list = 0;
+curs19_c **curs19_c_list = 0;
+curs19_d **curs19_d_list = 0;
+curs19_e **curs19_e_list = 0;
+curs20_a **curs20_a_list = 0;
+curs20_b **curs20_b_list = 0;
+curs20_c **curs20_c_list = 0;
+curs20_d **curs20_d_list = 0;
+curs20_e **curs20_e_list = 0;
+curs21_a **curs21_a_list = 0;
+curs21_b **curs21_b_list = 0;
+curs21_c **curs21_c_list = 0;
+curs21_d **curs21_d_list = 0;
+curs21_e **curs21_e_list = 0;
+curs22_a **curs22_a_list = 0;
+curs22_b **curs22_b_list = 0;
+curs22_c **curs22_c_list = 0;
+curs22_d **curs22_d_list = 0;
+curs22_e **curs22_e_list = 0;
+curs23_a **curs23_a_list = 0;
+curs23_b **curs23_b_list = 0;
+curs23_c **curs23_c_list = 0;
+curs23_d **curs23_d_list = 0;
+curs23_e **curs23_e_list = 0;
+curs24_a **curs24_a_list = 0;
+curs24_b **curs24_b_list = 0;
+curs24_c **curs24_c_list = 0;
+curs24_d **curs24_d_list = 0;
+curs24_e **curs24_e_list = 0;
+curs25_a **curs25_a_list = 0;
+curs25_b **curs25_b_list = 0;
+curs25_c **curs25_c_list = 0;
+curs25_d **curs25_d_list = 0;
+curs25_e **curs25_e_list = 0;
+curs26_a **curs26_a_list = 0;
+curs26_b **curs26_b_list = 0;
+curs26_c **curs26_c_list = 0;
+curs26_d **curs26_d_list = 0;
+curs26_e **curs26_e_list = 0;
+curs27_a **curs27_a_list = 0;
+curs27_b **curs27_b_list = 0;
+curs27_c **curs27_c_list = 0;
+curs27_d **curs27_d_list = 0;
+curs27_e **curs27_e_list = 0;
+curs28_a **curs28_a_list = 0;
+curs28_b **curs28_b_list = 0;
+curs28_c **curs28_c_list = 0;
+curs28_d **curs28_d_list = 0;
+curs28_e **curs28_e_list = 0;
+curs29_a **curs29_a_list = 0;
+curs30_a **curs30_a_list = 0;
+curs30_b **curs30_b_list = 0;
+curs31_a **curs31_a_list = 0;
+curs31_b **curs31_b_list = 0;
+curs32_a **curs32_a_list = 0;
+curs32_b **curs32_b_list = 0;
+curs33_a **curs33_a_list = 0;
+
+
+
+
+/************* generated valid functions **********************/
+
+BOOLEAN valid_stage( void *o ) {
+   pos(a_stage, o);
+   return( !is_deleted(a_stage) );
+}
+
+BOOLEAN valid_line( void *o ) {
+   pos(a_line, o);
+   return( !is_deleted(a_line) );
+}
+
+BOOLEAN valid_shadow_line( void *o ) {
+   pos(a_shadow_line, o);
+   return( !is_deleted(a_shadow_line) );
+}
+
+BOOLEAN valid_edge( void *o ) {
+   pos(a_edge, o);
+   return( !is_deleted(a_edge) );
+}
+
+BOOLEAN valid_shadow_edge( void *o ) {
+   pos(a_shadow_edge, o);
+   return( !is_deleted(a_shadow_edge) );
+}
+
+BOOLEAN valid_junction( void *o ) {
+   pos(a_junction, o);
+   return( !is_deleted(a_junction) );
+}
+
+BOOLEAN valid_shadow_junction( void *o ) {
+   pos(a_shadow_junction, o);
+   return( !is_deleted(a_shadow_junction) );
+}
+
+
+
+BOOL_FUNC_PTR valid_vect[ ] = { 0, valid_stage, valid_line, valid_shadow_line, valid_edge, valid_shadow_edge, valid_junction, valid_shadow_junction, 0 };
+
+
+/*************** fire rule procs *****************/
+
+/**************************** rule begin :
+   (stage ^value  start  )
+    -->  *******************************/
+
+void fire_rule1( stage_cursor *a )
+{
+   /** (write  clr) **/
+   printf(" clr");
+
+   /** (make line ^p1  0122 ^p2  0107 ) **/
+   { line r;
+     r.p1 =  0122;
+     r.p2 =  0107;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  0107 ^p2  2207 ) **/
+   { line r;
+     r.p1 =  0107;
+     r.p2 =  2207;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  2207 ^p2  3204 ) **/
+   { line r;
+     r.p1 =  2207;
+     r.p2 =  3204;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  3204 ^p2  6404 ) **/
+   { line r;
+     r.p1 =  3204;
+     r.p2 =  6404;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  2216 ^p2  2207 ) **/
+   { line r;
+     r.p1 =  2216;
+     r.p2 =  2207;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  3213 ^p2  3204 ) **/
+   { line r;
+     r.p1 =  3213;
+     r.p2 =  3204;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  2216 ^p2  3213 ) **/
+   { line r;
+     r.p1 =  2216;
+     r.p2 =  3213;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  0107 ^p2  2601 ) **/
+   { line r;
+     r.p1 =  0107;
+     r.p2 =  2601;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  2601 ^p2  7401 ) **/
+   { line r;
+     r.p1 =  2601;
+     r.p2 =  7401;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  6404 ^p2  7401 ) **/
+   { line r;
+     r.p1 =  6404;
+     r.p2 =  7401;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  3213 ^p2  6413 ) **/
+   { line r;
+     r.p1 =  3213;
+     r.p2 =  6413;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  6413 ^p2  6404 ) **/
+   { line r;
+     r.p1 =  6413;
+     r.p2 =  6404;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  7416 ^p2  7401 ) **/
+   { line r;
+     r.p1 =  7416;
+     r.p2 =  7401;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  5216 ^p2  6413 ) **/
+   { line r;
+     r.p1 =  5216;
+     r.p2 =  6413;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  2216 ^p2  5216 ) **/
+   { line r;
+     r.p1 =  2216;
+     r.p2 =  5216;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  0122 ^p2  5222 ) **/
+   { line r;
+     r.p1 =  0122;
+     r.p2 =  5222;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  5222 ^p2  7416 ) **/
+   { line r;
+     r.p1 =  5222;
+     r.p2 =  7416;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (make line ^p1  5222 ^p2  5216 ) **/
+   { line r;
+     r.p1 =  5222;
+     r.p2 =  5216;
+     r._ts =  global_counter++;
+     insert_line(&r);
+   }
+
+   /** (modify 1 -- stage -- ^value  duplicate) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _duplicate;
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule reverse_edges :
+   (stage ^value  duplicate  )
+   (line ^p1  <p1> ^p2  <p2>  )
+    -->  *******************************/
+
+void fire_rule2( stage_cursor *a, line_cursor *b )
+{
+   /** (write  draw <p1> <p2> (CRLF)) **/
+   printf(" draw %d %d\n", b->p1, b->p2);
+
+   /** (make edge ^p1  <p1> ^p2  <p2> ^joined  false ) **/
+   { edge r;
+     r.p1 =  b->p1;
+     r.p2 =  b->p2;
+     r.joined = _false;
+     r.label = _nil;
+     r.plotted = _nil;
+     r._ts =  global_counter++;
+     insert_edge(&r);
+   }
+
+   /** (make edge ^p1  <p2> ^p2  <p1> ^joined  false ) **/
+   { edge r;
+     r.p1 =  b->p2;
+     r.p2 =  b->p1;
+     r.joined = _false;
+     r.label = _nil;
+     r.plotted = _nil;
+     r._ts =  global_counter++;
+     insert_edge(&r);
+   }
+
+   /** (remove 2 -- line -- ) **/
+   {  line r;
+      getrec(*b,r);
+      r._ts =  global_counter++;
+      insert_shadow_line(&r);
+   }
+   b->_ts = global_counter;
+   delete_line(b);
+
+}
+
+/**************************** rule done_reversing :
+   (stage ^value  duplicate  )
+   - (line  )
+    -->  *******************************/
+
+void fire_rule3( stage_cursor *a )
+{
+   /** (modify 1 -- stage -- ^value  detect_junctions) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _detect_junctions;
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule make-3_junction :
+   (stage ^value  detect_junctions  )
+   (edge ^p1  <base_point> ^p2  <p1> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p2> ^p2 <> <p1> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p3> ^p2 <> <p1> ^p2 <> <p2> ^joined  false  )
+    -->  *******************************/
+
+void fire_rule4( stage_cursor *a, edge_cursor *b, edge_cursor *c, edge_cursor *d )
+{
+   /** (make junction ^type  make_3_junction( b->p1, b->p2, c->p2, d->p2, &r ) ^base_point  <base_point> ) **/
+   { junction r;
+     r.p1 = NILVAL;
+     r.p2 = NILVAL;
+     r.p3 = NILVAL;
+     r.base_point =  b->p1;
+     r.type =  make_3_junction( b->p1, b->p2, c->p2, d->p2, &r );
+     r._ts =  global_counter++;
+     insert_junction(&r);
+   }
+
+   /** (modify 2 -- edge -- ^joined  true) **/
+   {  edge r;
+      getrec(*b,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.joined = _true;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      b->_ts = global_counter;
+      delete_edge(b);
+   }
+
+   /** (modify 3 -- edge -- ^joined  true) **/
+   {  edge r;
+      getrec(*c,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.joined = _true;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+   /** (modify 4 -- edge -- ^joined  true) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.joined = _true;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+}
+
+/**************************** rule make_L :
+   (stage ^value  detect_junctions  )
+   (edge ^p1  <base_point> ^p2  <p2> ^joined  false  )
+   (edge ^p1  <base_point> ^p2  <p3> ^p2 <> <p2> ^joined  false  )
+   - (edge ^p1  <base_point> ^p2 <> <p2> ^p2 <> <p3>  )
+    -->  *******************************/
+
+void fire_rule5( stage_cursor *a, edge_cursor *b, edge_cursor *c )
+{
+   /** (make junction ^type  L ^base_point  <base_point> ^p1  <p2> ^p2  <p3> ) **/
+   { junction r;
+     r.p1 =  b->p2;
+     r.p2 =  c->p2;
+     r.p3 = NILVAL;
+     r.base_point =  b->p1;
+     r.type = _L;
+     r._ts =  global_counter++;
+     insert_junction(&r);
+   }
+
+   /** (modify 2 -- edge -- ^joined  true) **/
+   {  edge r;
+      getrec(*b,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.joined = _true;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      b->_ts = global_counter;
+      delete_edge(b);
+   }
+
+   /** (modify 3 -- edge -- ^joined  true) **/
+   {  edge r;
+      getrec(*c,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.joined = _true;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+}
+
+/**************************** rule done_detecting :
+   (stage ^value  detect_junctions  )
+   - (edge ^joined  false  )
+    -->  *******************************/
+
+void fire_rule6( stage_cursor *a )
+{
+   /** (modify 1 -- stage -- ^value  find_initial_boundary) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _find_initial_boundary;
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule initial_boundary_junction_L :
+   (stage ^value  find_initial_boundary  )
+   (junction ^type  L ^base_point  <base_point> ^p1  <p1> ^p2  <p2>  )
+   (edge ^p1  <base_point> ^p2  <p1>  )
+   (edge ^p1  <base_point> ^p2  <p2>  )
+   - (junction ^base_point > <base_point>  )
+    -->  *******************************/
+
+void fire_rule7( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d )
+{
+   /** (modify 3 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*c,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+   /** (modify 4 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 1 -- stage -- ^value  find_second_boundary) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _find_second_boundary;
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule initial_boundary_junction_arrow :
+   (stage ^value  find_initial_boundary  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+   - (junction ^base_point > <bp>  )
+    -->  *******************************/
+
+void fire_rule8( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 3 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*c,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+   /** (modify 4 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+   /** (modify 1 -- stage -- ^value  find_second_boundary) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _find_second_boundary;
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule second_boundary_junction_L :
+   (stage ^value  find_second_boundary  )
+   (junction ^type  L ^base_point  <base_point> ^p1  <p1> ^p2  <p2>  )
+   (edge ^p1  <base_point> ^p2  <p1>  )
+   (edge ^p1  <base_point> ^p2  <p2>  )
+   - (junction ^base_point < <base_point>  )
+    -->  *******************************/
+
+void fire_rule9( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d )
+{
+   /** (modify 3 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*c,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+   /** (modify 4 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 1 -- stage -- ^value  labeling) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _labeling;
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule second_boundary_junction_arrow :
+   (stage ^value  find_second_boundary  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+   - (junction ^base_point < <bp>  )
+    -->  *******************************/
+
+void fire_rule10( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 3 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*c,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+   /** (modify 4 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+   /** (modify 1 -- stage -- ^value  labeling) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _labeling;
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule match_edge :
+   (stage ^value  labeling  )
+   (edge ^p1  <p1> ^p2  <p2> ^label  <label> ^label << PL  M  B >>  )
+   (edge ^p1  <p2> ^p2  <p1> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule11( stage_cursor *a, edge_cursor *b, edge_cursor *c )
+{
+   /** (modify 2 -- edge -- ^plotted  t) **/
+   {  edge r;
+      getrec(*b,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.plotted = _t;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      b->_ts = global_counter;
+      delete_edge(b);
+   }
+
+   /** (modify 3 -- edge -- ^label  <label> ^plotted  t) **/
+   {  edge r;
+      getrec(*c,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label =  b->label;
+      r.plotted = _t;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+   /** (write  plot <label> <p1> <p2> (CRLF)) **/
+   printf(" plot %s %d %d\n", b->label, b->p1, b->p2);
+
+}
+
+/**************************** rule label_L :
+   (stage ^value  labeling  )
+   (junction ^type  L ^base_point  <p1>  )
+   (edge ^p1  <p1> ^p2  <p2> ^label << PL  M >>  )
+   (edge ^p1  <p1> ^p2 <> <p2> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule12( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d )
+{
+   /** (modify 4 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+}
+
+/**************************** rule label_tee_A :
+   (stage ^value  labeling  )
+   (junction ^type  tee ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+    -->  *******************************/
+
+void fire_rule13( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d )
+{
+   /** (modify 3 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*c,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+   /** (modify 4 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+}
+
+/**************************** rule label_tee_B :
+   (stage ^value  labeling  )
+   (junction ^type  tee ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule14( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d )
+{
+   /** (modify 3 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*c,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      c->_ts = global_counter;
+      delete_edge(c);
+   }
+
+   /** (modify 4 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+}
+
+/**************************** rule label_fork-1 :
+   (stage ^value  labeling  )
+   (junction ^type  fork ^base_point  <bp>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2> ^p2 <> <p1> ^label  nil  )
+   (edge ^p1  <bp> ^p2 <> <p2> ^p2 <> <p1>  )
+    -->  *******************************/
+
+void fire_rule15( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_fork-2 :
+   (stage ^value  labeling  )
+   (junction ^type  fork ^base_point  <bp>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  B  )
+   (edge ^p1  <bp> ^p2  <p2> ^p2 <> <p1> ^label  M  )
+   (edge ^p1  <bp> ^p2 <> <p2> ^p2 <> <p1> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule16( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 5 -- edge -- ^label  B) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _B;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_fork-3 :
+   (stage ^value  labeling  )
+   (junction ^type  fork ^base_point  <bp>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  B  )
+   (edge ^p1  <bp> ^p2  <p2> ^p2 <> <p1> ^label  B  )
+   (edge ^p1  <bp> ^p2 <> <p2> ^p2 <> <p1> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule17( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 5 -- edge -- ^label  M) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _M;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_fork-4 :
+   (stage ^value  labeling  )
+   (junction ^type  fork ^base_point  <bp>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  M  )
+   (edge ^p1  <bp> ^p2  <p2> ^p2 <> <p1> ^label  M  )
+   (edge ^p1  <bp> ^p2 <> <p2> ^p2 <> <p1> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule18( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 5 -- edge -- ^label  M) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _M;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-1A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  <label> ^label << B  M >>  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+    -->  *******************************/
+
+void fire_rule19( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  <label>) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label =  c->label;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-1B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  <label> ^label << B  M >>  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule20( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  <label>) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label =  c->label;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-2A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  <label> ^label << B  M >>  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+    -->  *******************************/
+
+void fire_rule21( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  <label>) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label =  c->label;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-2B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  <label> ^label << B  M >>  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule22( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  <label>) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label =  c->label;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-3A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+    -->  *******************************/
+
+void fire_rule23( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  M) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _M;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-3B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule24( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  M) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _M;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-4A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+    -->  *******************************/
+
+void fire_rule25( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  M) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _M;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-4B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  PL  )
+   (edge ^p1  <bp> ^p2  <p2>  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule26( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  M) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _M;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-5A :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  M  )
+   (edge ^p1  <bp> ^p2  <p1>  )
+   (edge ^p1  <bp> ^p2  <p3> ^label  nil  )
+    -->  *******************************/
+
+void fire_rule27( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule label_arrow-5B :
+   (stage ^value  labeling  )
+   (junction ^type  arrow ^base_point  <bp> ^p1  <p1> ^p2  <p2> ^p3  <p3>  )
+   (edge ^p1  <bp> ^p2  <p2> ^label  M  )
+   (edge ^p1  <bp> ^p2  <p1> ^label  nil  )
+   (edge ^p1  <bp> ^p2  <p3>  )
+    -->  *******************************/
+
+void fire_rule28( stage_cursor *a, junction_cursor *b, edge_cursor *c, edge_cursor *d, edge_cursor *e )
+{
+   /** (modify 4 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*d,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      d->_ts = global_counter;
+      delete_edge(d);
+   }
+
+   /** (modify 5 -- edge -- ^label  PL) **/
+   {  edge r;
+      getrec(*e,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.label = _PL;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      e->_ts = global_counter;
+      delete_edge(e);
+   }
+
+}
+
+/**************************** rule done_labeling :
+   (stage ^value  labeling  )
+    -->  *******************************/
+
+void fire_rule29( stage_cursor *a )
+{
+   /** (modify 1 -- stage -- ^value  plot_remaining_edges) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _plot_remaining_edges;
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule plot_remaining :
+   (stage ^value  plot_remaining_edges  )
+   (edge ^plotted  nil ^label  <label> ^label <> nil ^p1  <p1> ^p2  <p2>  )
+    -->  *******************************/
+
+void fire_rule30( stage_cursor *a, edge_cursor *b )
+{
+   /** (write  plot <label> <p1> <p2> (CRLF)) **/
+   printf(" plot %s %d %d\n", b->label, b->p1, b->p2);
+
+   /** (modify 2 -- edge -- ^plotted  t) **/
+   {  edge r;
+      getrec(*b,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.plotted = _t;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      b->_ts = global_counter;
+      delete_edge(b);
+   }
+
+}
+
+/**************************** rule plot_boundaries :
+   (stage ^value  plot_remaining_edges  )
+   (edge ^plotted  nil ^label  nil ^p1  <p1> ^p2  <p2>  )
+    -->  *******************************/
+
+void fire_rule31( stage_cursor *a, edge_cursor *b )
+{
+   /** (write  plot B <p1> <p2> (CRLF)) **/
+   printf(" plot B %d %d\n", b->p1, b->p2);
+
+   /** (modify 2 -- edge -- ^plotted  t) **/
+   {  edge r;
+      getrec(*b,r);
+      r._ts =  global_counter++;
+      insert_shadow_edge(&r);
+      r.plotted = _t;
+      r._ts =  global_counter++;
+      insert_edge(&r);
+      b->_ts = global_counter;
+      delete_edge(b);
+   }
+
+}
+
+/**************************** rule done_plotting :
+   (stage ^value  plot_remaining_edges  )
+   - (edge ^plotted  nil  )
+    -->  *******************************/
+
+void fire_rule32( stage_cursor *a )
+{
+   /** (modify 1 -- stage -- ^value  done) **/
+   {  stage r;
+      global_counter++;
+      getrec(*a,r);
+      r.value = _done;
+      r._ts =  global_counter++;
+      insert_stage(&r);
+      a->_ts = global_counter;
+      delete_stage(a);
+   }
+
+}
+
+/**************************** rule done :
+   (stage ^value  done  )
+    -->  *******************************/
+
+void fire_rule33( stage_cursor *a )
+{
+   /** (write  see trace.waltz for description of execution- hit CR to end (CRLF)) **/
+   printf(" see trace.waltz for description of execution- hit CR to end\n");
+
+   /** (halt) **/
+   printf("OPS5c terminated via halt statement.\n");
+   printf("OPS5c terminated via halt statement.\n");
+   exit(0);
+}
+
+
+VOID_FUNC_PTR first_rule[] =
+   { 0, i8_a, i2_b, i3_b, i8_c, i5_d, i8_b, i8_f, 0};
+
+int rfc = 1;
+
+void i1_a(void)
+{
+   bind(curs1_a, c->a, active_rule1, i29_a, curs1_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 1 (begin)  %d\n",rfc++,c->a._ts);
+   fire_rule1( &c->a );
+   next_rule( i29_a, curs1_a_list );
+}
+
+void i2_a(void)
+{
+   bind(curs2_a, c->a, active_rule2, i3_a, curs2_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 2 (reverse_edges)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule2( &c->a, &c->b );
+   next_rule( i3_a, curs2_a_list );
+}
+
+void i2_b(void)
+{
+   bind(curs2_b, c->b, active_rule2, pop, curs2_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 2 (reverse_edges)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule2( &c->a, &c->b );
+   next_rule( pop, curs2_b_list );
+}
+
+void i3_a(void)
+{
+   bind(curs3_a, c->a, active_rule3, i6_a, curs3_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 3 (done_reversing)  %d\n",rfc++,c->a._ts);
+   fire_rule3( &c->a );
+   next_rule( i6_a, curs3_a_list );
+}
+
+void i3_b(void)
+{
+   bind(curs3_b, c->b, active_rule3, pop, curs3_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 3 (done_reversing)  %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule3( &c->a );
+   next_rule( pop, curs3_b_list );
+}
+
+void i4_a(void)
+{
+   bind(curs4_a, c->a, active_rule4, i5_a, curs4_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 4 (make-3_junction)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule4( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i5_a, curs4_a_list );
+}
+
+void i4_b(void)
+{
+   bind(curs4_b, c->b, active_rule4, i5_b, curs4_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 4 (make-3_junction)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule4( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i4_c, curs4_b_list );
+}
+
+void i4_c(void)
+{
+   bind(curs4_c, c->c, active_rule4, i5_b, curs4_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 4 (make-3_junction)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule4( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i4_d, curs4_c_list );
+}
+
+void i4_d(void)
+{
+   bind(curs4_d, c->d, active_rule4, i5_b, curs4_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 4 (make-3_junction)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule4( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i5_b, curs4_d_list );
+}
+
+void i5_a(void)
+{
+   bind(curs5_a, c->a, active_rule5, i12_a, curs5_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 5 (make_L)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule5( &c->a, &c->b, &c->c );
+   next_rule( i12_a, curs5_a_list );
+}
+
+void i5_b(void)
+{
+   bind(curs5_b, c->b, active_rule5, i12_c, curs5_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 5 (make_L)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule5( &c->a, &c->b, &c->c );
+   next_rule( i5_c, curs5_b_list );
+}
+
+void i5_c(void)
+{
+   bind(curs5_c, c->c, active_rule5, i12_c, curs5_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 5 (make_L)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule5( &c->a, &c->b, &c->c );
+   next_rule( i12_c, curs5_c_list );
+}
+
+void i5_d(void)
+{
+   bind(curs5_d, c->d, active_rule5, i6_b, curs5_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 5 (make_L)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule5( &c->a, &c->b, &c->c );
+   next_rule( i6_b, curs5_d_list );
+}
+
+void i6_a(void)
+{
+   bind(curs6_a, c->a, active_rule6, i30_a, curs6_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 6 (done_detecting)  %d\n",rfc++,c->a._ts);
+   fire_rule6( &c->a );
+   next_rule( i30_a, curs6_a_list );
+}
+
+void i6_b(void)
+{
+   bind(curs6_b, c->b, active_rule6, i32_b, curs6_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 6 (done_detecting)  %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule6( &c->a );
+   next_rule( i32_b, curs6_b_list );
+}
+
+void i7_a(void)
+{
+   bind(curs7_a, c->a, active_rule7, i9_a, curs7_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 7 (initial_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule7( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i9_a, curs7_a_list );
+}
+
+void i7_b(void)
+{
+   bind(curs7_b, c->b, active_rule7, i9_b, curs7_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 7 (initial_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule7( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i9_b, curs7_b_list );
+}
+
+void i7_c(void)
+{
+   bind(curs7_c, c->c, active_rule7, i9_c, curs7_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 7 (initial_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule7( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i7_d, curs7_c_list );
+}
+
+void i7_d(void)
+{
+   bind(curs7_d, c->d, active_rule7, i9_c, curs7_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 7 (initial_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule7( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i9_c, curs7_d_list );
+}
+
+void i7_e(void)
+{
+   bind(curs7_e, c->e, active_rule7, i9_e, curs7_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 7 (initial_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule7( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i9_e, curs7_e_list );
+}
+
+void i8_a(void)
+{
+   bind(curs8_a, c->a, active_rule8, i10_a, curs8_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 8 (initial_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule8( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i10_a, curs8_a_list );
+}
+
+void i8_b(void)
+{
+   bind(curs8_b, c->b, active_rule8, i10_b, curs8_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 8 (initial_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule8( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i10_b, curs8_b_list );
+}
+
+void i8_c(void)
+{
+   bind(curs8_c, c->c, active_rule8, i10_c, curs8_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 8 (initial_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule8( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i8_d, curs8_c_list );
+}
+
+void i8_d(void)
+{
+   bind(curs8_d, c->d, active_rule8, i10_c, curs8_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 8 (initial_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule8( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i8_e, curs8_d_list );
+}
+
+void i8_e(void)
+{
+   bind(curs8_e, c->e, active_rule8, i10_c, curs8_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 8 (initial_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule8( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i10_c, curs8_e_list );
+}
+
+void i8_f(void)
+{
+   bind(curs8_f, c->f, active_rule8, i10_f, curs8_f_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 8 (initial_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts,c->f._ts);
+   fire_rule8( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i10_f, curs8_f_list );
+}
+
+void i9_a(void)
+{
+   bind(curs9_a, c->a, active_rule9, i15_a, curs9_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 9 (second_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule9( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i15_a, curs9_a_list );
+}
+
+void i9_b(void)
+{
+   bind(curs9_b, c->b, active_rule9, i15_b, curs9_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 9 (second_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule9( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i15_b, curs9_b_list );
+}
+
+void i9_c(void)
+{
+   bind(curs9_c, c->c, active_rule9, i15_c, curs9_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 9 (second_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule9( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i9_d, curs9_c_list );
+}
+
+void i9_d(void)
+{
+   bind(curs9_d, c->d, active_rule9, i15_c, curs9_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 9 (second_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule9( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i15_c, curs9_d_list );
+}
+
+void i9_e(void)
+{
+   bind(curs9_e, c->e, active_rule9, pop, curs9_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 9 (second_boundary_junction_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule9( &c->a, &c->b, &c->c, &c->d );
+   next_rule( pop, curs9_e_list );
+}
+
+void i10_a(void)
+{
+   bind(curs10_a, c->a, active_rule10, i7_a, curs10_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 10 (second_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule10( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i7_a, curs10_a_list );
+}
+
+void i10_b(void)
+{
+   bind(curs10_b, c->b, active_rule10, i7_b, curs10_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 10 (second_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule10( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i7_b, curs10_b_list );
+}
+
+void i10_c(void)
+{
+   bind(curs10_c, c->c, active_rule10, i7_c, curs10_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 10 (second_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule10( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i10_d, curs10_c_list );
+}
+
+void i10_d(void)
+{
+   bind(curs10_d, c->d, active_rule10, i7_c, curs10_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 10 (second_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule10( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i10_e, curs10_d_list );
+}
+
+void i10_e(void)
+{
+   bind(curs10_e, c->e, active_rule10, i7_c, curs10_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 10 (second_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule10( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i7_c, curs10_e_list );
+}
+
+void i10_f(void)
+{
+   bind(curs10_f, c->f, active_rule10, i7_e, curs10_f_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 10 (second_boundary_junction_arrow)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts,c->f._ts);
+   fire_rule10( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i7_e, curs10_f_list );
+}
+
+void i11_a(void)
+{
+   bind(curs11_a, c->a, active_rule11, i2_a, curs11_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 11 (match_edge)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule11( &c->a, &c->b, &c->c );
+   next_rule( i2_a, curs11_a_list );
+}
+
+void i11_b(void)
+{
+   bind(curs11_b, c->b, active_rule11, i30_b, curs11_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 11 (match_edge)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule11( &c->a, &c->b, &c->c );
+   next_rule( i11_c, curs11_b_list );
+}
+
+void i11_c(void)
+{
+   bind(curs11_c, c->c, active_rule11, i30_b, curs11_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 11 (match_edge)  %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts);
+   fire_rule11( &c->a, &c->b, &c->c );
+   next_rule( i30_b, curs11_c_list );
+}
+
+void i12_a(void)
+{
+   bind(curs12_a, c->a, active_rule12, i13_a, curs12_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 12 (label_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule12( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i13_a, curs12_a_list );
+}
+
+void i12_b(void)
+{
+   bind(curs12_b, c->b, active_rule12, i13_b, curs12_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 12 (label_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule12( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i13_b, curs12_b_list );
+}
+
+void i12_c(void)
+{
+   bind(curs12_c, c->c, active_rule12, i13_c, curs12_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 12 (label_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule12( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i12_d, curs12_c_list );
+}
+
+void i12_d(void)
+{
+   bind(curs12_d, c->d, active_rule12, i13_c, curs12_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 12 (label_L)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule12( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i13_c, curs12_d_list );
+}
+
+void i13_a(void)
+{
+   bind(curs13_a, c->a, active_rule13, i14_a, curs13_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 13 (label_tee_A)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule13( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i14_a, curs13_a_list );
+}
+
+void i13_b(void)
+{
+   bind(curs13_b, c->b, active_rule13, i14_b, curs13_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 13 (label_tee_A)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule13( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i14_b, curs13_b_list );
+}
+
+void i13_c(void)
+{
+   bind(curs13_c, c->c, active_rule13, i14_c, curs13_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 13 (label_tee_A)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule13( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i13_d, curs13_c_list );
+}
+
+void i13_d(void)
+{
+   bind(curs13_d, c->d, active_rule13, i14_c, curs13_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 13 (label_tee_A)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule13( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i14_c, curs13_d_list );
+}
+
+void i14_a(void)
+{
+   bind(curs14_a, c->a, active_rule14, i11_a, curs14_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 14 (label_tee_B)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule14( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i11_a, curs14_a_list );
+}
+
+void i14_b(void)
+{
+   bind(curs14_b, c->b, active_rule14, pop, curs14_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 14 (label_tee_B)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule14( &c->a, &c->b, &c->c, &c->d );
+   next_rule( pop, curs14_b_list );
+}
+
+void i14_c(void)
+{
+   bind(curs14_c, c->c, active_rule14, i11_b, curs14_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 14 (label_tee_B)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule14( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i14_d, curs14_c_list );
+}
+
+void i14_d(void)
+{
+   bind(curs14_d, c->d, active_rule14, i11_b, curs14_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 14 (label_tee_B)  %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts);
+   fire_rule14( &c->a, &c->b, &c->c, &c->d );
+   next_rule( i11_b, curs14_d_list );
+}
+
+void i15_a(void)
+{
+   bind(curs15_a, c->a, active_rule15, i16_a, curs15_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 15 (label_fork-1)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule15( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i16_a, curs15_a_list );
+}
+
+void i15_b(void)
+{
+   bind(curs15_b, c->b, active_rule15, i16_b, curs15_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 15 (label_fork-1)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule15( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i16_b, curs15_b_list );
+}
+
+void i15_c(void)
+{
+   bind(curs15_c, c->c, active_rule15, i16_c, curs15_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 15 (label_fork-1)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule15( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i15_d, curs15_c_list );
+}
+
+void i15_d(void)
+{
+   bind(curs15_d, c->d, active_rule15, i16_c, curs15_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 15 (label_fork-1)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule15( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i15_e, curs15_d_list );
+}
+
+void i15_e(void)
+{
+   bind(curs15_e, c->e, active_rule15, i16_c, curs15_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 15 (label_fork-1)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule15( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i16_c, curs15_e_list );
+}
+
+void i16_a(void)
+{
+   bind(curs16_a, c->a, active_rule16, i17_a, curs16_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 16 (label_fork-2)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule16( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i17_a, curs16_a_list );
+}
+
+void i16_b(void)
+{
+   bind(curs16_b, c->b, active_rule16, i17_b, curs16_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 16 (label_fork-2)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule16( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i17_b, curs16_b_list );
+}
+
+void i16_c(void)
+{
+   bind(curs16_c, c->c, active_rule16, i17_c, curs16_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 16 (label_fork-2)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule16( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i16_d, curs16_c_list );
+}
+
+void i16_d(void)
+{
+   bind(curs16_d, c->d, active_rule16, i17_c, curs16_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 16 (label_fork-2)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule16( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i16_e, curs16_d_list );
+}
+
+void i16_e(void)
+{
+   bind(curs16_e, c->e, active_rule16, i17_c, curs16_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 16 (label_fork-2)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule16( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i17_c, curs16_e_list );
+}
+
+void i17_a(void)
+{
+   bind(curs17_a, c->a, active_rule17, i18_a, curs17_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 17 (label_fork-3)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule17( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i18_a, curs17_a_list );
+}
+
+void i17_b(void)
+{
+   bind(curs17_b, c->b, active_rule17, i18_b, curs17_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 17 (label_fork-3)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule17( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i18_b, curs17_b_list );
+}
+
+void i17_c(void)
+{
+   bind(curs17_c, c->c, active_rule17, i18_c, curs17_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 17 (label_fork-3)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule17( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i17_d, curs17_c_list );
+}
+
+void i17_d(void)
+{
+   bind(curs17_d, c->d, active_rule17, i18_c, curs17_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 17 (label_fork-3)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule17( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i17_e, curs17_d_list );
+}
+
+void i17_e(void)
+{
+   bind(curs17_e, c->e, active_rule17, i18_c, curs17_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 17 (label_fork-3)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule17( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i18_c, curs17_e_list );
+}
+
+void i18_a(void)
+{
+   bind(curs18_a, c->a, active_rule18, i19_a, curs18_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 18 (label_fork-4)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule18( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i19_a, curs18_a_list );
+}
+
+void i18_b(void)
+{
+   bind(curs18_b, c->b, active_rule18, i19_b, curs18_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 18 (label_fork-4)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule18( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i19_b, curs18_b_list );
+}
+
+void i18_c(void)
+{
+   bind(curs18_c, c->c, active_rule18, i19_c, curs18_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 18 (label_fork-4)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule18( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i18_d, curs18_c_list );
+}
+
+void i18_d(void)
+{
+   bind(curs18_d, c->d, active_rule18, i19_c, curs18_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 18 (label_fork-4)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule18( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i18_e, curs18_d_list );
+}
+
+void i18_e(void)
+{
+   bind(curs18_e, c->e, active_rule18, i19_c, curs18_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 18 (label_fork-4)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule18( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i19_c, curs18_e_list );
+}
+
+void i19_a(void)
+{
+   bind(curs19_a, c->a, active_rule19, i20_a, curs19_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 19 (label_arrow-1A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule19( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i20_a, curs19_a_list );
+}
+
+void i19_b(void)
+{
+   bind(curs19_b, c->b, active_rule19, i20_b, curs19_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 19 (label_arrow-1A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule19( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i20_b, curs19_b_list );
+}
+
+void i19_c(void)
+{
+   bind(curs19_c, c->c, active_rule19, i20_c, curs19_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 19 (label_arrow-1A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule19( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i19_d, curs19_c_list );
+}
+
+void i19_d(void)
+{
+   bind(curs19_d, c->d, active_rule19, i20_c, curs19_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 19 (label_arrow-1A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule19( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i19_e, curs19_d_list );
+}
+
+void i19_e(void)
+{
+   bind(curs19_e, c->e, active_rule19, i20_c, curs19_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 19 (label_arrow-1A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule19( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i20_c, curs19_e_list );
+}
+
+void i20_a(void)
+{
+   bind(curs20_a, c->a, active_rule20, i21_a, curs20_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 20 (label_arrow-1B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule20( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i21_a, curs20_a_list );
+}
+
+void i20_b(void)
+{
+   bind(curs20_b, c->b, active_rule20, i21_b, curs20_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 20 (label_arrow-1B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule20( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i21_b, curs20_b_list );
+}
+
+void i20_c(void)
+{
+   bind(curs20_c, c->c, active_rule20, i21_c, curs20_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 20 (label_arrow-1B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule20( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i20_d, curs20_c_list );
+}
+
+void i20_d(void)
+{
+   bind(curs20_d, c->d, active_rule20, i21_c, curs20_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 20 (label_arrow-1B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule20( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i20_e, curs20_d_list );
+}
+
+void i20_e(void)
+{
+   bind(curs20_e, c->e, active_rule20, i21_c, curs20_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 20 (label_arrow-1B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule20( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i21_c, curs20_e_list );
+}
+
+void i21_a(void)
+{
+   bind(curs21_a, c->a, active_rule21, i22_a, curs21_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 21 (label_arrow-2A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule21( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i22_a, curs21_a_list );
+}
+
+void i21_b(void)
+{
+   bind(curs21_b, c->b, active_rule21, i22_b, curs21_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 21 (label_arrow-2A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule21( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i22_b, curs21_b_list );
+}
+
+void i21_c(void)
+{
+   bind(curs21_c, c->c, active_rule21, i22_c, curs21_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 21 (label_arrow-2A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule21( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i21_d, curs21_c_list );
+}
+
+void i21_d(void)
+{
+   bind(curs21_d, c->d, active_rule21, i22_c, curs21_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 21 (label_arrow-2A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule21( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i21_e, curs21_d_list );
+}
+
+void i21_e(void)
+{
+   bind(curs21_e, c->e, active_rule21, i22_c, curs21_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 21 (label_arrow-2A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule21( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i22_c, curs21_e_list );
+}
+
+void i22_a(void)
+{
+   bind(curs22_a, c->a, active_rule22, i23_a, curs22_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 22 (label_arrow-2B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule22( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i23_a, curs22_a_list );
+}
+
+void i22_b(void)
+{
+   bind(curs22_b, c->b, active_rule22, i23_b, curs22_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 22 (label_arrow-2B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule22( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i23_b, curs22_b_list );
+}
+
+void i22_c(void)
+{
+   bind(curs22_c, c->c, active_rule22, i23_c, curs22_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 22 (label_arrow-2B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule22( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i22_d, curs22_c_list );
+}
+
+void i22_d(void)
+{
+   bind(curs22_d, c->d, active_rule22, i23_c, curs22_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 22 (label_arrow-2B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule22( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i22_e, curs22_d_list );
+}
+
+void i22_e(void)
+{
+   bind(curs22_e, c->e, active_rule22, i23_c, curs22_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 22 (label_arrow-2B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule22( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i23_c, curs22_e_list );
+}
+
+void i23_a(void)
+{
+   bind(curs23_a, c->a, active_rule23, i24_a, curs23_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 23 (label_arrow-3A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule23( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i24_a, curs23_a_list );
+}
+
+void i23_b(void)
+{
+   bind(curs23_b, c->b, active_rule23, i24_b, curs23_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 23 (label_arrow-3A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule23( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i24_b, curs23_b_list );
+}
+
+void i23_c(void)
+{
+   bind(curs23_c, c->c, active_rule23, i24_c, curs23_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 23 (label_arrow-3A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule23( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i23_d, curs23_c_list );
+}
+
+void i23_d(void)
+{
+   bind(curs23_d, c->d, active_rule23, i24_c, curs23_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 23 (label_arrow-3A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule23( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i23_e, curs23_d_list );
+}
+
+void i23_e(void)
+{
+   bind(curs23_e, c->e, active_rule23, i24_c, curs23_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 23 (label_arrow-3A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule23( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i24_c, curs23_e_list );
+}
+
+void i24_a(void)
+{
+   bind(curs24_a, c->a, active_rule24, i25_a, curs24_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 24 (label_arrow-3B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule24( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i25_a, curs24_a_list );
+}
+
+void i24_b(void)
+{
+   bind(curs24_b, c->b, active_rule24, i25_b, curs24_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 24 (label_arrow-3B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule24( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i25_b, curs24_b_list );
+}
+
+void i24_c(void)
+{
+   bind(curs24_c, c->c, active_rule24, i25_c, curs24_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 24 (label_arrow-3B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule24( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i24_d, curs24_c_list );
+}
+
+void i24_d(void)
+{
+   bind(curs24_d, c->d, active_rule24, i25_c, curs24_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 24 (label_arrow-3B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule24( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i24_e, curs24_d_list );
+}
+
+void i24_e(void)
+{
+   bind(curs24_e, c->e, active_rule24, i25_c, curs24_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 24 (label_arrow-3B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule24( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i25_c, curs24_e_list );
+}
+
+void i25_a(void)
+{
+   bind(curs25_a, c->a, active_rule25, i26_a, curs25_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 25 (label_arrow-4A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule25( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i26_a, curs25_a_list );
+}
+
+void i25_b(void)
+{
+   bind(curs25_b, c->b, active_rule25, i26_b, curs25_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 25 (label_arrow-4A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule25( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i26_b, curs25_b_list );
+}
+
+void i25_c(void)
+{
+   bind(curs25_c, c->c, active_rule25, i26_c, curs25_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 25 (label_arrow-4A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule25( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i25_d, curs25_c_list );
+}
+
+void i25_d(void)
+{
+   bind(curs25_d, c->d, active_rule25, i26_c, curs25_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 25 (label_arrow-4A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule25( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i25_e, curs25_d_list );
+}
+
+void i25_e(void)
+{
+   bind(curs25_e, c->e, active_rule25, i26_c, curs25_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 25 (label_arrow-4A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule25( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i26_c, curs25_e_list );
+}
+
+void i26_a(void)
+{
+   bind(curs26_a, c->a, active_rule26, i27_a, curs26_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 26 (label_arrow-4B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule26( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i27_a, curs26_a_list );
+}
+
+void i26_b(void)
+{
+   bind(curs26_b, c->b, active_rule26, i27_b, curs26_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 26 (label_arrow-4B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule26( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i27_b, curs26_b_list );
+}
+
+void i26_c(void)
+{
+   bind(curs26_c, c->c, active_rule26, i27_c, curs26_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 26 (label_arrow-4B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule26( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i26_d, curs26_c_list );
+}
+
+void i26_d(void)
+{
+   bind(curs26_d, c->d, active_rule26, i27_c, curs26_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 26 (label_arrow-4B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule26( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i26_e, curs26_d_list );
+}
+
+void i26_e(void)
+{
+   bind(curs26_e, c->e, active_rule26, i27_c, curs26_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 26 (label_arrow-4B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule26( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i27_c, curs26_e_list );
+}
+
+void i27_a(void)
+{
+   bind(curs27_a, c->a, active_rule27, i28_a, curs27_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 27 (label_arrow-5A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule27( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i28_a, curs27_a_list );
+}
+
+void i27_b(void)
+{
+   bind(curs27_b, c->b, active_rule27, i28_b, curs27_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 27 (label_arrow-5A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule27( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i28_b, curs27_b_list );
+}
+
+void i27_c(void)
+{
+   bind(curs27_c, c->c, active_rule27, i28_c, curs27_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 27 (label_arrow-5A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule27( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i27_d, curs27_c_list );
+}
+
+void i27_d(void)
+{
+   bind(curs27_d, c->d, active_rule27, i28_c, curs27_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 27 (label_arrow-5A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule27( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i27_e, curs27_d_list );
+}
+
+void i27_e(void)
+{
+   bind(curs27_e, c->e, active_rule27, i28_c, curs27_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 27 (label_arrow-5A)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule27( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i28_c, curs27_e_list );
+}
+
+void i28_a(void)
+{
+   bind(curs28_a, c->a, active_rule28, i4_a, curs28_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 28 (label_arrow-5B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule28( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i4_a, curs28_a_list );
+}
+
+void i28_b(void)
+{
+   bind(curs28_b, c->b, active_rule28, i12_b, curs28_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 28 (label_arrow-5B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule28( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i12_b, curs28_b_list );
+}
+
+void i28_c(void)
+{
+   bind(curs28_c, c->c, active_rule28, i4_b, curs28_c_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 28 (label_arrow-5B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule28( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i28_d, curs28_c_list );
+}
+
+void i28_d(void)
+{
+   bind(curs28_d, c->d, active_rule28, i4_b, curs28_d_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 28 (label_arrow-5B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule28( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i28_e, curs28_d_list );
+}
+
+void i28_e(void)
+{
+   bind(curs28_e, c->e, active_rule28, i4_b, curs28_e_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 28 (label_arrow-5B)  %d %d %d %d %d\n",rfc++,c->a._ts,c->b._ts,c->c._ts,c->d._ts,c->e._ts);
+   fire_rule28( &c->a, &c->b, &c->c, &c->d, &c->e );
+   next_rule( i4_b, curs28_e_list );
+}
+
+void i29_a(void)
+{
+   bind(curs29_a, c->a, active_rule29, i33_a, curs29_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 29 (done_labeling)  %d\n",rfc++,c->a._ts);
+   fire_rule29( &c->a );
+   next_rule( i33_a, curs29_a_list );
+}
+
+void i30_a(void)
+{
+   bind(curs30_a, c->a, active_rule30, i31_a, curs30_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 30 (plot_remaining)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule30( &c->a, &c->b );
+   next_rule( i31_a, curs30_a_list );
+}
+
+void i30_b(void)
+{
+   bind(curs30_b, c->b, active_rule30, i31_b, curs30_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 30 (plot_remaining)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule30( &c->a, &c->b );
+   next_rule( i31_b, curs30_b_list );
+}
+
+void i31_a(void)
+{
+   bind(curs31_a, c->a, active_rule31, i32_a, curs31_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 31 (plot_boundaries)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule31( &c->a, &c->b );
+   next_rule( i32_a, curs31_a_list );
+}
+
+void i31_b(void)
+{
+   bind(curs31_b, c->b, active_rule31, pop, curs31_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 31 (plot_boundaries)  %d %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule31( &c->a, &c->b );
+   next_rule( pop, curs31_b_list );
+}
+
+void i32_a(void)
+{
+   bind(curs32_a, c->a, active_rule32, i1_a, curs32_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 32 (done_plotting)  %d\n",rfc++,c->a._ts);
+   fire_rule32( &c->a );
+   next_rule( i1_a, curs32_a_list );
+}
+
+void i32_b(void)
+{
+   bind(curs32_b, c->b, active_rule32, pop, curs32_b_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 32 (done_plotting)  %d\n",rfc++,c->a._ts,c->b._ts);
+   fire_rule32( &c->a );
+   next_rule( pop, curs32_b_list );
+}
+
+void i33_a(void)
+{
+   bind(curs33_a, c->a, active_rule33, pop, curs33_a_list );
+   if (watch)
+      fprintf(stderr,"%d. Firing rule 33 (done)  %d\n",rfc++,c->a._ts);
+   fire_rule33( &c->a );
+   next_rule( pop, curs33_a_list );
+}
+
+
+void insert_data_tuple (void)
+{
+char      cont_name[TOKEN_LEN];
+char      skip[TOKEN_LEN];
+FIELDNAME fieldname[TOKEN_LEN];
+char      brace[TOKEN_LEN];
+string words[5];
+
+   sscanf (inp_line, "(make %s", cont_name);
+   if (strcmp(cont_name,"stage") == 0) {
+      stage r;
+      sscanf(inp_line, "%s %s %s %s %s", skip, cont_name, fieldname[0], words[0], brace);
+      if (strcmp(fieldname[0], "^value") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r.value = add_unique_symbol(words[0]);
+      r._ts = global_counter++;
+      insert_stage(&r);
+      push_wl( a_stage.obj, a_stage._ts, stage_num );
+      return;
+   }
+   if (strcmp(cont_name,"line") == 0) {
+      line r;
+      sscanf(inp_line, "%s %s %s %d %s %d %s", skip, cont_name, fieldname[0], &r.p1, fieldname[1], &r.p2, brace);
+      if (strcmp(fieldname[0], "^p1") !=0) input_format_error();
+      if (strcmp(fieldname[1], "^p2") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r._ts = global_counter++;
+      insert_line(&r);
+      push_wl( a_line.obj, a_line._ts, line_num );
+      return;
+   }
+   if (strcmp(cont_name,"edge") == 0) {
+      edge r;
+      sscanf(inp_line, "%s %s %s %d %s %d %s %s %s %s %s %s %s", skip, cont_name, fieldname[0], &r.p1, fieldname[1], &r.p2, fieldname[2], words[0], fieldname[3], words[1], fieldname[4], words[2], brace);
+      if (strcmp(fieldname[0], "^p1") !=0) input_format_error();
+      if (strcmp(fieldname[1], "^p2") !=0) input_format_error();
+      if (strcmp(fieldname[2], "^joined") !=0) input_format_error();
+      if (strcmp(fieldname[3], "^label") !=0) input_format_error();
+      if (strcmp(fieldname[4], "^plotted") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r.joined = add_unique_symbol(words[0]);
+      r.label = add_unique_symbol(words[1]);
+      r.plotted = add_unique_symbol(words[2]);
+      r._ts = global_counter++;
+      insert_edge(&r);
+      push_wl( a_edge.obj, a_edge._ts, edge_num );
+      return;
+   }
+   if (strcmp(cont_name,"junction") == 0) {
+      junction r;
+      sscanf(inp_line, "%s %s %s %d %s %d %s %d %s %d %s %s %s", skip, cont_name, fieldname[0], &r.p1, fieldname[1], &r.p2, fieldname[2], &r.p3, fieldname[3], &r.base_point, fieldname[4], words[0], brace);
+      if (strcmp(fieldname[0], "^p1") !=0) input_format_error();
+      if (strcmp(fieldname[1], "^p2") !=0) input_format_error();
+      if (strcmp(fieldname[2], "^p3") !=0) input_format_error();
+      if (strcmp(fieldname[3], "^base_point") !=0) input_format_error();
+      if (strcmp(fieldname[4], "^type") !=0) input_format_error();
+      if (brace[0] != R_PAREN) input_format_error();
+      r.type = add_unique_symbol(words[0]);
+      r._ts = global_counter++;
+      insert_junction(&r);
+      push_wl( a_junction.obj, a_junction._ts, junction_num );
+      return;
+   }
+   printf("*** unrecognizable make - no action taken***\n");
+}
+
+
+void init_all(void)
+{
+   init_symbol_table();
+   P2_init_fastmalloc();
+   open_cont( stack );
+
+   open_cont( cont_stage );
+   init_curs( a_stage );
+
+   open_cont( cont_line );
+   init_curs( a_line );
+
+   open_cont( shadow_line );
+   init_curs( a_shadow_line );
+
+   open_cont( cont_edge );
+   init_curs( a_edge );
+
+   open_cont( shadow_edge );
+   init_curs( a_shadow_edge );
+
+   open_cont( cont_junction );
+   init_curs( a_junction );
+
+   open_cont( shadow_junction );
+   init_curs( a_shadow_junction );
+}
+
+#include "leaps.c"

@@ -1,0 +1,57 @@
+// $Id: top2ds.xp,v 45.1 1997/09/23 09:07:35 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer top top2ds[ ds ] stable no annotation retrieval_never
+
+// This layer:
+//   1. Translates {for,rof}each
+//   2. Maintains {schema,container}.initialized
+
+!#include "type.h"    // new_label_name(), enable_continue_labels
+!#include "xmalloc.h" // xfree()
+
+foreach(cursor, expr)
+{
+  char *label = new_label_name(loop_id_counter, cursor_id);
+  %{
+     reset_start(cursor);
+     while(!(end_adv(cursor)))
+     {
+       {
+         expr
+       }
+  %}
+  if (enable_continue_labels)
+  %{
+        %v.label:;
+  %}
+  %{     
+       adv(cursor);
+     } // while
+  %}
+  xfree(label);
+}
+
+rofeach(cursor, expr)
+{
+  char *label = new_label_name(loop_id_counter, cursor_id);
+  %{
+     reset_end(cursor);
+     while(!(end_rev(cursor)))
+     {
+       {
+         expr
+       }
+  %}
+  if (enable_continue_labels)
+  %{
+        %v.label:;
+  %}
+  %{     
+       rev(cursor);
+     } // while
+  %}
+  xfree(label);
+}
+
+#include "top2ds.xph"

@@ -1,0 +1,87 @@
+/* $Id: compcurs12.p2,v 45.0 1997/09/19 05:42:59 jthomas Exp $ */
+/* Copyright (C) 1996, The University of Texas at Austin. */
+
+/* This file demonstrates the bug: proceduralized special operation
+   using qualified composite cursor.  This bug is caused by the fact
+   that when we proceduralize a special operation, a cursor argument
+   is passed as a reference to a cursor (e.g., *P2_curs0), rather than
+   a composite cursor member (e.g., ( * c ) . b). This the procedure
+   has no way to get to the other members of the composite cursor
+   (e.g., ( * c ) . a) if required (e.g., to expand a predicate
+   "$b.v == $a.w") */
+
+#include "P2_paces.h"
+
+typedef struct {
+  int  empno;
+  int  deptno;
+  char *dept_name;
+  char *name;
+} EMPLOYEE;
+
+typex {
+#if 0
+  t = top2link[nloops[linkterm[
+        top2ds[inbetween[qualify[
+          P2_DELFLAG_LAYER[P2_BOTTOM_LAYER]]]]]]];
+#elif 1
+  t = top2link[nloops[linkterm[
+        conceptual[kcur[
+          P2_DELFLAG_LAYER[P2_BOTTOM_LAYER]]]]]];
+#else
+  t = top2link[nloops[linkterm[
+        top2ds[init_generic[generic_funcall[inbetween[qualify[kcur[
+          P2_DELFLAG_LAYER[P2_BOTTOM_LAYER]]]]]]]]]];
+#endif
+}
+
+container <EMPLOYEE> stored_as t with {
+  P2_COMPCURS_ANNOTE(name, 10);
+} employee;
+
+/* Need a self-join to demonstrate bug. */
+compcurs < e1 employee, e2 employee >
+  where "$e1.empno == $e2.empno"
+  orderby $e1.empno
+xx;
+
+cursor < employee > eee;
+
+void
+read_data (void)
+{
+  /* deptno == 1 is dept_name == "Biology" */
+  EMPLOYEE employee_data[] = {
+   { 10000,1,"Biology","Akers, Mark" },
+   { 10070,1,"Biology","Andrews, Kay" },
+   { 10020,1,"Biology","Alexander, Joe" },
+   { 10010,2,"History","Akin, Monica" },
+   { 10050,1,"Biology","Akerson, Suzanne" },
+   { 10040,3,"Physics","Akerson, Mary" },
+   { 10060,1,"Biology","Andrews, John" },
+   { 10030,1,"Biology","Akerson, Gwyn" },
+   { -1 }
+  };
+  EMPLOYEE *p;
+  init_curs(eee);
+  for (p = employee_data; p->empno != -1; p++) {
+    insert(eee, *p);
+  }
+}
+
+int
+main ()
+{
+  open_cont(employee);
+  read_data();
+
+  initk(xx);
+  foreachk(xx) {
+    printf("%d %-16s %6s     %d %-16s %6s\n",
+     (xx.e1).empno, (xx.e1).name, (xx.e1).dept_name,
+     (xx.e2).empno, (xx.e2).name, (xx.e2).dept_name);
+  }
+
+  close_cont(employee);
+  return(0);
+}

@@ -1,0 +1,20 @@
+// $Id: id.xp,v 45.0 1997/09/19 05:46:28 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+// This layer implements cont_id() and curs_id().
+
+// This layer is used in paces/op-vec-manager.p2
+// (which only exists to test paces/P2_op-vec-manager.p2)
+// (JAT)
+
+layer ds id [ ds ] stable
+
+adhoc cont_id (container)
+%{
+    (container_id)
+%}
+
+adhoc curs_id (cursor)
+%{
+    (cursor_id)
+%}

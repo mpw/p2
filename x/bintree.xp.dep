@@ -1,0 +1,1 @@
+bintree.o: bintree.xp ../common/qopt.h bintree.h

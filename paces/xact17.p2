@@ -1,0 +1,72 @@
+/* $Id: xact17.p2,v 45.0 1997/09/19 05:45:37 jthomas Exp $ */
+/* Copyright (C) 1997, The University of Texas at Austin. */
+
+/* Deadlock? */
+
+#include "assert.h"   /* assert() */
+#include "P2_paces.h" /* P2_XACT_TYPEX */
+
+typedef struct {
+  int x;
+} E;
+
+typex {
+  t = P2_XACT_TYPEX(P2_PROTOCOL_LAYER, P2_BOTTOM_LAYER);
+}
+
+schema {
+  container <E> cont;
+} stored_as t with {
+  P2_BOTTOM_SCHEMA_ANNOTE(cont, x, 1);
+} s;
+
+P2_PROCESS_ID child_pid[2];
+int i;
+
+int
+main()
+{
+  /* Open schema. */
+  open_schema(s);
+
+  /*** Populate container. ****/
+
+  /*** Fork children. ***/
+
+  /* Fork child 0. */
+  child_pid[0] = P2_fork_process();
+  if (child_pid[0] == -1)
+  {
+    /* This is an error. */
+    P2_runtime_perror("Could not fork child 0");
+  }
+  else if (child_pid[0] == 0)
+  {
+    /* This is the child. */
+    exit(0);
+  }
+  else
+  {
+    /* This is the parent. */
+    /* Fork child 1. */
+    child_pid[1] = P2_fork_process();
+    if (child_pid[1] == -1)
+    {
+      /* This is an error. */
+      P2_runtime_perror("Could not fork child 0");
+    }
+    else if (child_pid[1] == 0)
+    {
+      /* This is the child. */
+      exit(0);
+    }
+  }
+
+  /* This is the parent. */
+  assert(child_pid[0] != 0);
+  assert(child_pid[1] != 0);
+  /* Close schema. */
+  close_schema(s);
+  /* Exit. */
+  return(0);
+}

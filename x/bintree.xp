@@ -1,0 +1,630 @@
+// $Id: bintree.xp,v 45.0 1997/09/19 05:46:17 jthomas Exp $
+// Copyright (C) 1997, The University of Texas at Austin.
+
+layer ds bintree[ ds ] unstable annotation curs_state retrieval_sometimes
+
+!#include "qopt.h"
+!#include "bintree.h"
+
+// ordered binary tree
+// orders on te->ofield, bounds impact function te->bi
+// adds left, right, parent to elements
+// adds root to container
+
+#define ADV1(RIGHT, LEFT) \
+   /* Continue up parent chain until we know a LEFT branch was taken. */ \
+   while (cursor.parent && cursor.parent->RIGHT == cursor.obj) \
+     cursor.obj = cursor.parent; \
+   cursor.obj = cursor.parent;
+
+#define ADV(RIGHT, LEFT) \
+  if (cursor.RIGHT) { \
+     /* Go to RIGHT child and follow down all LEFT branches. */ \
+     cursor.obj = cursor.RIGHT; \
+     while (cursor.LEFT) \
+       cursor.obj = cursor.LEFT; \
+  } \
+  else { \
+    ADV1(RIGHT, LEFT) \
+  }
+
+#define INSERT(OP) \
+{ \
+  char   func[MAX_IDENT_LEN]; \
+  char   type[MAX_IDENT_LEN]; \
+\
+  strcpy(func, %a.ofield_type); \
+  if (%c.b.inc_lower) \
+    strcat(func, "_GE"); \
+  else \
+    strcat(func, "_GT"); \
+\
+  if (strcmp(%a.ofield_type, "str") == 0) \
+    sprintf(type, "char*"); \
+  else \
+    sprintf(type, "%s", %a.ofield_type); \
+\
+  %{ \
+     OP; \
+     { \
+       %v.type val; \
+       val = (record).%a.ofield; \
+       call link(cursor, "func"); \
+     } \
+  %} \
+}
+
+// Called from insert() and upd()
+cursor_func link(cursor, "char *func")
+{
+  char p[20], q[20];
+  sprintf(p, "P2_temp%d", other_id_counter++);
+  sprintf(q, "P2_temp%d", other_id_counter++);
+  %{
+    {
+      struct obj_type *%v.p, *%v.q;
+  
+      %v.p = cursor.obj;
+  
+      // use cursor to find position
+      if (!container.root)
+      {
+        cursor.left    = 0;
+        cursor.right   = 0;
+        cursor.parent  = 0;
+        container.root = %v.p;
+      }
+      else
+      {
+        cursor.obj = container.root;
+        while (1)
+        {
+          // if cursor.ofield > record.ofield then goto left
+          if (%v.func(cursor.%a.ofield, val))
+          {
+            if (cursor.left)
+            {
+              cursor.obj = cursor.left;
+              continue;
+            }
+            else
+            {
+              // left is empty--insert here
+              cursor.left = %v.p;
+              %v.q = cursor.obj;
+              cursor.obj = %v.p;
+              cursor.left = 0;
+              cursor.right = 0;
+              cursor.parent = %v.q;
+              break;
+            }
+          }
+          else
+          {
+            // goto right
+            if (cursor.right)
+            {
+              cursor.obj = cursor.right;
+              continue;
+            }
+            else
+            {
+              // right is empty--insert here
+              cursor.right = %v.p;
+              %v.q = cursor.obj;
+              cursor.obj = %v.p;
+              cursor.left = 0;
+              cursor.right = 0;
+              cursor.parent = %v.q;
+              break;
+            }
+          }
+        }
+      }
+    }
+  %}
+}
+
+// Called from delete() and upd()
+cursor_func unlink(cursor, "char *left, char *right, char *parent, char *s, char *c")
+{ 
+  %{
+    if (!%v.right && !%v.left)
+    {
+      if (!%v.parent)
+      {
+        cursor.obj = 0;
+        container.root = 0;
+      }
+      else
+      {
+        cursor.obj = %v.parent;
+        if (cursor.left == %v.s)
+          cursor.left = 0;
+        else
+        {
+          cursor.right = 0;
+          ADV1(right, left);
+        }
+      }
+    }
+    else
+    {
+      if (!%v.right)
+        cursor.obj = %v.left;
+      else
+      {
+        cursor.obj = %v.right;
+        if (cursor.left)
+        {
+          while (cursor.left)
+            cursor.obj = cursor.left;
+          cursor.parent->left = cursor.right;
+          if (cursor.right)
+            cursor.right->parent = cursor.parent;
+          cursor.right = %v.right;
+          cursor.right->parent = cursor.obj;
+        }
+        cursor.left = %v.left;
+        if (%v.left)
+          cursor.left->parent = cursor.obj;
+      }
+
+      cursor.parent = %v.parent;
+      if (!%v.parent)
+      {
+        container.root = cursor.obj;
+        if (!%v.right)
+          cursor.obj = 0;
+      }
+      else
+      {
+        if (cursor.parent->left == %v.s)
+        {
+          cursor.parent->left = cursor.obj;
+          if (!%v.right)
+            cursor.obj = %v.parent;
+        }
+        else
+        {
+          cursor.parent->right = cursor.obj;
+          if (!%v.right)
+            cursor.obj = 0;
+        }
+      }
+    }
+  %}
+}
+
+xform(element, container, cursor)
+{
+  // Step 1:  add pointers to element and container
+  add element : struct element *left;
+  add element : struct element *right;
+  add element : struct element *parent;
+  add container : struct element *root;
+
+  // Step 2:  remember additional info about annotations
+  %a.typeptr     = find_data_type(element, %a.ofield);
+  %a.ofield_type = %a.typeptr->typename;
+  %a.bi          = %a.typeptr->bounds_impact;
+
+  // Step 3:  transform the input data types
+  xform(element, container, cursor);
+}
+
+#define COST0   LINEAR_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR*2
+#define COST1   LINEAR_TIME_QOPT_COST*RANGE_QOPT_SEL*PTR_FOLLOWING_QOPT_FACTOR*2
+#define COST2   LOG_TIME_QOPT_COST*PTR_FOLLOWING_QOPT_FACTOR
+
+optimize(cursor)
+{
+  optimize(cursor);
+  switch(use_layer(te, &(%c.b), cursor, predicate, %a.ofield, %a.bi))
+  {
+
+  case 0:
+    // Use this layer if there is nothing else available.
+    if (cost > COST0)
+    {
+      cost = COST0;
+      layer = %ln;
+      if (strcmp(%a.ofield, orderby_field) == 0)
+        retrieval_direction = 1;
+      else
+        retrieval_direction = 0;
+    }
+    break;
+
+   case 1:
+     // We can do a range search--use this layer if there is nothing better.
+     if (cost>COST1)
+     {
+       cost = COST1;
+       layer = %ln;
+       if (strcmp(%a.ofield, orderby_field) == 0)
+         retrieval_direction = 1;
+       else
+         retrieval_direction = 0;
+     }
+     break;
+            
+   case 2:
+     // Bingo--this is probably the best layer to use.
+     if (cost > COST2)
+     {
+       cost = COST2;
+       layer = %ln;
+       if (strcmp(%a.ofield, orderby_field) == 0)
+         retrieval_direction = 1;
+       else
+         retrieval_direction = 0;
+     }
+     break;
+
+   default:
+     error("use_layer failed");
+  }
+}
+
+
+init_curs(cursor)
+{
+  define_bounds(te, &(%c.b), cursor, predicate, %a.ofield, %a.bi);      
+  %{
+     init_curs(cursor);
+     cursor.obj = 0;
+  %}
+}
+
+query(cursor)
+{
+#if 0
+  BOUNDS b;
+  char   rresult[MAX_IDENT_LEN];
+  char *p;
+
+  // query() is called only within a FOREACH construct
+  // we have already satisfied the lower-bound (since we
+  // are advancing in a forward direction.  Thus, we
+  // can simplify the predicate by eliminating the test
+  // for the lower bound
+  // we modify the query, however only if this is the
+  // layer that is doing the retrieval
+
+  if (layer == %ln) {
+     define_bounds(te, &b, cursor, predicate, %a.ofield, %a.bi);
+     simplify_predicate(predicate, &(%c.b), %a.ofield,TRUE,rresult);
+     strcpy(predicate, rresult);
+     p = bind_predicate(te, cursor, obj_type, predicate);
+     %{
+        %v.parent
+     %}
+     xfree(p);
+  }
+  else
+#endif
+  %{
+     query(cursor)
+  %}
+}
+
+//******************************************************
+//  ddlhints are of the form:
+//
+//  bintree KEY [container] IS _expr 
+//  
+//  Note: since we don't know the element type, annotations
+//  (bi, typeptr) won't be filled in until xform is called.
+//
+//**********************************************************
+
+ddlhint(argc, argv)
+{
+   limit 1 argument;
+   get_ddlhint_argument(%a.ofield, argv[1]);
+}
+
+
+init_cont(container)
+%{
+   init_cont(container);
+   container.root = 0;
+%}
+
+
+insert(cursor, record)
+{
+  INSERT(insert(cursor, record))
+}
+
+
+varinsert(cursor, record, expr)
+{
+  INSERT(varinsert(cursor, record, expr))
+}
+
+end_adv(cursor)
+{
+  char   lim[MAX_IDENT_LEN];
+  char   func[MAX_IDENT_LEN];
+  char   fld[MAX_IDENT_LEN];
+
+  if (%c.b.top)
+  %{ 
+    !cursor.obj
+  %}
+  else
+  {
+    strcpy(lim, %c.b.upper);
+    strcpy(func, %a.ofield_type);
+    if (%c.b.inc_upper) 
+      strcat(func, "_GT");
+    else
+      strcat(func, "_GE");
+  %{
+    (!cursor.obj || %v.func(cursor.%a.ofield, %v.lim))
+  %}
+  }
+}
+
+end_rev(cursor)
+{
+  char   lim[MAX_IDENT_LEN];
+  char   func[MAX_IDENT_LEN];
+  char   fld[MAX_IDENT_LEN];
+
+  if (%c.b.bottom)
+  %{
+    !cursor.obj
+  %}
+  else
+  {
+    strcpy(lim, %c.b.lower);
+    strcpy(func, %a.ofield_type);
+    if (%c.b.inc_lower)
+      strcat(func, "_LT");
+    else
+      strcat(func, "_LE");
+  %{
+    (!cursor.obj || %v.func(cursor.%a.ofield, %v.lim))
+  %}
+  }
+}
+
+adv(cursor)
+{
+   if (layer != %ln)
+   %{
+      adv(cursor);
+   %}
+   else 
+   %{
+      ADV(right, left)
+   %}
+}
+
+rev(cursor)
+{
+   if (layer != %ln)
+   %{
+      rev(cursor);
+   %}
+   else
+   %{
+      ADV(left, right)
+   %}
+}
+
+delete(cursor)
+{
+  char left[20], right[20], parent[20], s[20], c[20];
+  sprintf(left, "P2_temp%d", other_id_counter++);
+  sprintf(right, "P2_temp%d", other_id_counter++);
+  sprintf(parent, "P2_temp%d", other_id_counter++);
+  sprintf(s, "P2_temp%d", other_id_counter++);
+  sprintf(c, "P2_temp%d", other_id_counter++);
+  %{
+    {
+      struct obj_type *%v.left, *%v.right, *%v.parent, *%v.s, *%v.c;
+
+      %v.left = cursor.left;
+      %v.right = cursor.right;
+      %v.parent = cursor.parent;
+      %v.s = cursor.obj;
+
+      call unlink(cursor, "left, right, parent, s, c");
+  %}
+  if (layer == %ln)
+  %{
+      %v.c = cursor.obj;
+      cursor.obj = %v.s;
+      delete(cursor);
+      cursor.obj = %v.c;
+      cursor.inbetween = 1;
+  %}
+  else
+  %{
+      cursor.obj = %v.s;
+      delete(cursor);
+  %}
+
+  %{
+    }
+  %}
+}
+
+reset_start(cursor)
+{
+  char   lim[MAX_IDENT_LEN];
+  char   func[MAX_IDENT_LEN];
+  char   p[MAX_IDENT_LEN];
+
+  strcpy(func, %a.ofield_type);
+  sprintf(p, "P2_temp%d", other_id_counter++);
+
+  // First position semantics.
+
+  if (!%c.b.bottom)
+  {
+    if (%c.b.inc_lower) 
+      strcat(func, "_GE");
+    else 
+      strcat(func, "_GT");
+    strcpy(lim, %c.b.lower);
+  }
+  else
+  {
+    strcat(func, "_TRUE");
+    strcpy(lim, "0");
+  }
+
+%{
+  if (container.root) 
+  {
+     struct obj_type *%v.p = 0; // previous left
+     cursor.obj = container.root;
+     while (1)
+     {
+       if (%v.func(cursor.%a.ofield, %v.lim))
+       {
+         if (cursor.left == 0)
+           break;
+         else
+         {
+           %v.p = cursor.obj;
+           cursor.obj = cursor.left;
+         }
+       }
+       else
+       {
+         if (cursor.right)
+           cursor.obj = cursor.right;
+         else
+         {
+           cursor.obj = %v.p;
+           break;
+         }
+       }
+     }
+  }
+%}
+}
+
+reset_end(cursor)
+{
+  char   lim[MAX_IDENT_LEN];
+  char   func[MAX_IDENT_LEN];
+  char   p[MAX_IDENT_LEN];
+
+  strcpy(func, %a.ofield_type);
+  sprintf(p, "P2_temp%d", other_id_counter++);
+
+  // First position semantics.
+
+  if (!%c.b.top)
+  {
+    if (%c.b.inc_upper)
+      strcat(func, "_LE");
+    else
+      strcat(func, "_LT");
+    strcpy(lim, %c.b.upper);
+  }
+  else
+  {
+    strcat(func, "_TRUE");
+    strcpy(lim, "0");
+  }
+%{
+  if (container.root)
+    {
+      struct obj_type *%v.p = 0;  // previous right
+      cursor.obj = container.root;
+      while (1)
+      {
+        if (%v.func(cursor.%a.ofield, %v.lim)) {
+          if (cursor.right == 0)
+            break;
+          else
+          {
+            %v.p = cursor.obj;
+            cursor.obj = cursor.right;
+          }
+        }
+        else
+        {
+          if (cursor.left)
+            cursor.obj = cursor.left;
+          else
+          {
+            cursor.obj = %v.p;
+            break;
+          }
+        }
+      }
+    }
+  %}
+}
+
+swap(cursor0, cursor1) 
+%{
+   P2_runtime_error("cannot swap records in binary tree");
+%}
+
+upd(cursor, field, expr)
+{
+  char left[20], right[20], parent[20], s[20], c[20];
+  sprintf(left, "P2_temp%d", other_id_counter++);
+  sprintf(right, "P2_temp%d", other_id_counter++);
+  sprintf(parent, "P2_temp%d", other_id_counter++);
+  sprintf(s, "P2_temp%d", other_id_counter++);
+  sprintf(c, "P2_temp%d", other_id_counter++);
+
+  if (strcmp(field, %a.ofield) != 0)
+  %{
+     upd(cursor, field, expr);
+  %}
+  else
+  {
+    if (layer == %ln)
+    %{
+      // This error is run-time rather than compile-time
+      // because we may generate upd code that is never called
+      // (especially when proceduralizing). (JAT)
+      P2_runtime_error("halloween: cannot update key field in bintree");
+    %}
+    else
+    {
+      char func[MAX_IDENT_LEN];
+      char type[MAX_IDENT_LEN];
+
+      strcpy(func, %a.ofield_type);
+      if (%c.b.inc_lower)
+        strcat(func, "_GE");
+      else
+        strcat(func, "_GT");
+
+      if (strcmp(%a.ofield_type, "str") == 0)
+        sprintf(type, "char*");
+      else
+        sprintf(type, "%s", %a.ofield_type);
+
+   %{
+      {
+        struct obj_type *%v.left, *%v.right, *%v.parent, *%v.s, *%v.c;
+        %v.type val;
+
+        %v.left = cursor.left;
+        %v.right = cursor.right;
+        %v.parent = cursor.parent;
+        %v.s = cursor.obj;
+
+        val = cursor.%a.ofield;
+   
+        call unlink(cursor, "left, right, parent, s, c");
+        call link(cursor, "func");
+      }
+   %}
+    }
+  }
+}

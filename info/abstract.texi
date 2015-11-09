@@ -1,0 +1,23 @@
+@c $Id: abstract.texi,v 45.0 1997/09/19 05:42:00 jthomas Exp $
+@c Copyright (C) 1994, The University of Texas at Austin.
+
+@node    Abstract
+@chapter Abstract
+@cindex P2, abstract
+@cindex abstract
+
+A @dfn{lightweight database management system} (@dfn{LWDB}) is a
+high-performance, application-specific DBMS.  It differs from a general
+purpose (heavyweight) DBMS in that it omits one or more features and
+specializes the implementation of the remaining features to meet the
+needs of individual applications.  Existing LWDBs are hand-coded
+monolithic systems which are expensive to build and tune.  P2 is an
+extensible LWDB based on GenVoca software system generation
+technology. P2 provides a library of interchangeable, plug-compatible
+components and an optimizing compiler that automatically constructs
+LWDBs that are customized to the needs of target applications.
+
+P2 currently provides only a subset of its potential features, but
+preliminary experiments indicate that P2 offers substantial programmer
+productivity and generated code performance advantages over hand
+coding.

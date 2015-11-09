@@ -1,0 +1,14 @@
+Join obtained by hand:
+10000          Akers, Mark Biology Faculty   
+10020       Alexander, Joe Biology Graduate  
+10030        Akerson, Gwyn Biology Faculty   
+10050     Akerson, Suzanne Biology Staff     
+10060        Andrews, John Biology Graduate  
+10070         Andrews, Kay Biology Staff     
+Join obtained using a composite cursor:
+10000          Akers, Mark Biology Faculty   
+10020       Alexander, Joe Biology Graduate  
+10030        Akerson, Gwyn Biology Faculty   
+10050     Akerson, Suzanne Biology Staff     
+10060        Andrews, John Biology Graduate  
+10070         Andrews, Kay Biology Staff     
